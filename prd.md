@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.5 — fases 0, 1, 2 y 3a completas · 2026-09-25
+**Estado:** v0.6 — fases 0 a 3b completas · 2026-09-25
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -154,6 +154,14 @@ Acciones disponibles desde el menú, el atajo o el clic derecho:
 - **Menos permisos que en el plan original:** las tareas llevan su texto en el prompt, así que no leen archivos. "Investigar" usa solo WebSearch y WebFetch; "Criticar" y "Mejorar" no usan ninguna herramienta. Todas corren en una carpeta vacía y aislada, sin cargar la configuración personal de Claude Code.
 - **Licencia:** el Claude Agent SDK es de Anthropic y se rige por sus términos comerciales, no por MIT. Mutiny usa el `claude` que el usuario ya tiene instalado y no incluye su binario en el AppImage. Si se publica, el README debe decirlo.
 
+**Decisiones y hallazgos de la fase 3b (2026-09-26):**
+- **Proveedores con suscripción:** Claude Code (plan de Claude) y **Codex** (plan de ChatGPT), cada uno usando su propia CLI con la sesión del usuario.
+- **Gemini con cuenta personal no es posible:** Google cerró el login de Gemini CLI para usuarios individuales y los manda a Antigravity, que es un editor y no sirve para usarse por debajo. Gemini queda disponible con una API key de AI Studio mediante el proveedor compatible con OpenAI.
+- **"Investigar" con proveedores compatibles con OpenAI:** desactivado en el MVP (opción a), porque no tienen búsqueda web.
+- **Chat:** cada mensaje se arma desde cero con el ensayo actual, el esquema, las notas, las fuentes y el historial. No se guardan sesiones fuera de la carpeta del ensayo: Claude Code corre con `persistSession: false` y Codex con `--ephemeral`.
+- **Encierro de Codex:** se desactivan la shell y el resto de familias de herramientas. Se verificó que así no puede leer el disco.
+- **Keys:** una key guardada en Mutiny tiene prioridad; si no hay, se usa la variable de entorno estándar del proveedor.
+
 ### 6.6 Reordenar (fase 4)
 
 - Vista de **tarjetas**: cada párrafo de una sección se muestra como una tarjeta que se arrastra. Con zoom, también frases dentro de un párrafo.
@@ -221,9 +229,11 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
   - La IA nunca modifica un archivo por sí misma.
   - Cancelar una tarea la detiene en menos de 1 s.
 
-### Fase 3b — IA por API key + chat del ensayo
-- [ ] Proveedor compatible con OpenAI y Anthropic API; key cifrada; "probar conexión".
-- [ ] Degradación clara: sin búsqueda web, "Investigar" se desactiva con una explicación.
+### Fase 3b — IA por API key + chat del ensayo ✅
+- [x] Proveedor compatible con OpenAI (presets: OpenAI, Gemini, OpenRouter, Cerebras, Ollama, llama.cpp) y API de Anthropic; key cifrada o variable de entorno; "probar conexión".
+- [x] **Codex con tu login de ChatGPT** (sin shell, solo lectura, efímero), además de Claude Code.
+- [x] Chat del ensayo en el panel derecho ("En el texto | Chat", Ctrl+Shift+A).
+- [x] Degradación clara: sin búsqueda web, "Investigar" se desactiva con una explicación.
 - **Aceptación:** funciona con un endpoint local (llama.cpp/Ollama) y uno en la nube.
 
 ### Fase 4 — Reordenar + Rewrite manual

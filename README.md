@@ -25,7 +25,14 @@ Your essays live in `~/Documents/Mutiny Library` — separate from any NEO libra
 
 ## The assistant (optional)
 
-Mutiny can research the facts you mark, critique your argument and suggest better wording. It runs through **your own [Claude Code](https://claude.com/claude-code)** install and login — no API key — using the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview), locked down to web search/fetch for research and no tools at all for critique and rewriting; it never writes files and never changes your text unless you accept a suggestion. Turn it on in the Assistant menu.
+Mutiny can research the facts you mark, critique your argument, suggest better wording and chat about your essay. It never writes files and never changes your text unless you accept a suggestion. Turn it on in the Assistant menu and pick what it runs on:
+
+- **Claude Code** — your own install and Claude plan, through the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview), locked down to web search/fetch for research and no tools otherwise.
+- **Codex** — OpenAI's Codex CLI on your ChatGPT plan, with its shell and other tools switched off.
+- **Anthropic API** — an API key (Claude Opus 5 by default).
+- **OpenAI-compatible** — OpenAI, Google Gemini (AI Studio key), OpenRouter, Cerebras, Ollama, llama.cpp… (no web research).
+
+API keys are stored encrypted on your computer (or read from the usual environment variable) and only sent to their service.
 
 The Claude Agent SDK is © Anthropic and licensed under [Anthropic's terms](https://code.claude.com/docs/en/legal-and-compliance), not MIT; Mutiny doesn't bundle the Claude Code binary and uses the one you already have.
 
