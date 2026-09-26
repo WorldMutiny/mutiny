@@ -7,7 +7,8 @@ let library = null;          // library.json
 let book = null;             // current book.json
 let chapterHTML = {};        // chapterId -> html (loaded at open)
 let stickies = [];           // [{id, chapterId, text, resolved}]
-let darlings = [];           // [{id, html, text, chapterId, chapterLabel, date}]
+let darlings = [];           // [{id, html, text, chapterId, chapterNum, date}]
+let sources = [];            // sources.json — see SOURCES below
 let currentTab = 'manuscript';
 let currentChapterId = null; // chapter the caret/scroll is in
 let wordMode = 'book';       // 'book' | 'chapter'
@@ -23,6 +24,7 @@ const KZ = K('⌘Z', 'Ctrl+Z');
 const KPH = K('⌘⇧X', 'Ctrl+Shift+X');
 const KDA = K('⌘⇧D', 'Ctrl+Shift+D');
 const KHELP = K('⌘/', 'Ctrl+/');
+const KCITE = K('⌘⇧K', 'Ctrl+Shift+K');
 
 // Scrollbars stay invisible until you scroll, then fade away again —
 // chrome only when needed.
@@ -105,7 +107,7 @@ function cleanChapterEl(id) {
   const el = document.querySelector(`.chapter[data-id="${id}"] .chapter-body`);
   const holder = document.createElement('div');
   holder.innerHTML = el ? el.innerHTML : (chapterHTML[id] || '');
-  holder.querySelectorAll('.darling-anchor, .ph-mark, .ghost').forEach((n) => n.remove());
+  holder.querySelectorAll('.darling-anchor, .ph-mark, .ghost, .cite-mark').forEach((n) => n.remove());
   return holder;
 }
 const chapterText = (id) => cleanChapterEl(id).innerText;
@@ -762,6 +764,7 @@ async function openBook(bookId) {
     chapterHTML[chId] = await window.neo.readChapter(bookId, chId);
   }
   stickies = await window.neo.readJSON(bookId, 'stickies', []);
+  sources = await window.neo.readJSON(bookId, 'sources', []);
   darlings = await window.neo.readJSON(bookId, 'darlings', []);
 
   $('#bookshelf-view').hidden = true;
@@ -885,6 +888,7 @@ function renderChapters() {
     wrap.appendChild(sec);
   });
   renderNav();
+  renumberCites();
 }
 
 async function deleteChapterToDarlings(chId) {
@@ -1004,6 +1008,15 @@ function wireChapterBody(body, chId) {
       s.removeAllRanges();
       s.addRange(r);
     }
+    // a [n] opens its menu on a click; cited words need the caret, so theirs is on right-click
+    const citeMark = e.target.closest('.cite-mark');
+    if (citeMark) citeMenu(citeMark);
+  });
+  body.addEventListener('contextmenu', (e) => {
+    const cite = e.target.closest('.cite, .cite-mark');
+    if (!cite) return;
+    e.preventDefault(); // the spellcheck menu stands aside (it checks defaultPrevented)
+    citeMenu(cite);
   });
   // the moment writing hits a ghost, it becomes prose
   // (it keeps its data-sec-id so the outline knows it's been written)
@@ -1253,7 +1266,7 @@ function guardMarkerDelete(e, body, chId) {
   const node = r.startContainer;
   const back = e.key === 'Backspace';
   const isMark = (n) => n && n.nodeType === Node.ELEMENT_NODE &&
-    (n.classList.contains('ph-mark') || n.classList.contains('darling-anchor'));
+    (n.classList.contains('ph-mark') || n.classList.contains('darling-anchor') || n.classList.contains('cite-mark'));
 
   // Case 1: the deletion would cross INTO a marker (caret at a node boundary,
   // marker on the far side) — delete the marker itself, cleanly.
@@ -1298,8 +1311,9 @@ function guardMarkerDelete(e, body, chId) {
 // The engine wraps text in style-carrying spans during merges and splits
 // ("<span style='text-indent...'>"). They corrupt later edits — unwrap them,
 // keeping only NEO's own marks.
+const JUNK_SPANS = 'span:not(.ph-mark):not(.cite):not(.cite-mark)';
 function stripJunkSpans(el) {
-  for (const s of [...el.querySelectorAll('span:not(.ph-mark)')]) {
+  for (const s of [...el.querySelectorAll(JUNK_SPANS)]) {
     while (s.firstChild) s.before(s.firstChild);
     s.remove();
   }
@@ -1391,7 +1405,7 @@ function handleEnter(e, body, chId) {
     // normal Enter — native split so ⌘Z keeps working; junk spans (which
     // make the engine clone whole paragraphs) are stripped first if present
     e.preventDefault();
-    if (block.querySelector('span:not(.ph-mark)')) stripJunkSpans(block);
+    if (block.querySelector(JUNK_SPANS)) stripJunkSpans(block);
     document.execCommand('insertParagraph');
     syncChapter(body, chId);
     return true;
@@ -1469,6 +1483,7 @@ function syncChapter(body, chId) {
   wordCache[chId] = null;
   scheduleChapterSave(chId);
   updateCounters();
+  renumberCites(); // structural edits can move, add or drop citations
   scheduleNavRefresh();
 }
 
@@ -1505,19 +1520,32 @@ function cleanPasteHtml(html) {
   let blocks = [...holder.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6')];
   if (!blocks.length) blocks = [holder]; // inline-only clipboard
   const out = blocks.map((b) => {
-    const inner = paraRuns(b.innerHTML).map((r) => {
+    let inner = '';
+    let openSrc;
+    const closeCite = () => { if (openSrc) { inner += '</span>'; openSrc = undefined; } };
+    for (const r of paraRuns(b.innerHTML)) {
       if (r.mark !== undefined) {
         // placeholder marks travel with their text; reconcileMarks pairs
         // each one back up with a note after the paste lands
-        return r.mark
-          ? `<span class="ph-mark" data-sid="${escHtml(r.mark)}" contenteditable="false">⚑</span>`
-          : '';
+        closeCite();
+        if (r.mark) inner += `<span class="ph-mark" data-sid="${escHtml(r.mark)}" contenteditable="false">⚑</span>`;
+        continue;
+      }
+      if (r.citeMark) {
+        closeCite();
+        inner += `<span class="cite-mark" data-src="${escHtml(r.citeMark)}" contenteditable="false">[·]</span>`;
+        continue;
+      }
+      if (r.src !== openSrc) {
+        closeCite();
+        if (r.src) { inner += `<span class="cite" data-src="${escHtml(r.src)}">`; openSrc = r.src; }
       }
       let t = escHtml(r.text);
       if (r.i) t = '<i>' + t + '</i>';
       if (r.b) t = '<b>' + t + '</b>';
-      return t;
-    }).join('');
+      inner += t;
+    }
+    closeCite();
     return inner.trim() ? '<p>' + inner + '</p>' : '';
   }).filter(Boolean);
   // single block pastes inline (no forced new paragraph)
@@ -1599,6 +1627,10 @@ document.addEventListener('keydown', (e) => {
   if (cmd && e.shiftKey && e.code === 'KeyX') {
     e.preventDefault();
     if (currentTab === 'manuscript') insertPlaceholder();
+  }
+  if (cmd && e.shiftKey && e.code === 'KeyK') {
+    e.preventDefault();
+    if (currentTab === 'manuscript') insertCitation();
   }
   if (cmd && e.shiftKey && e.code === 'KeyD') {
     e.preventDefault();
@@ -1947,7 +1979,7 @@ function highlightNav() {
 
 function scheduleNavRefresh() {
   clearTimeout(saveTimers.nav);
-  saveTimers.nav = setTimeout(renderNav, 1200);
+  saveTimers.nav = setTimeout(() => { renderNav(); renumberCites(); }, 1200);
 }
 
 // Hover behavior for both side panes:
@@ -2260,6 +2292,7 @@ function switchTab(name) {
   const aux = $('#aux-paper');
   const auxEditor = $('#aux-editor');
   const dList = $('#darlings-list');
+  const sList = $('#sources-list');
   const oList = $('#outline-list');
   const back = tabPlaces[name];
   const returnTo = () => { if (back && typeof back.scroll === 'number') scroller.scrollTop = back.scroll; };
@@ -2278,9 +2311,15 @@ function switchTab(name) {
   aux.hidden = false;
   auxEditor.hidden = true;
   dList.hidden = true;
+  sList.hidden = true;
   oList.hidden = true;
 
-  if (name === 'darlings') {
+  if (name === 'sources') {
+    $('#aux-title').textContent = t('tab.sources');
+    sList.hidden = false;
+    renderSources();
+    returnTo();
+  } else if (name === 'darlings') {
     $('#aux-title').textContent = t('tab.darlings');
     dList.hidden = false;
     renderDarlings();
@@ -2695,6 +2734,380 @@ async function restoreDarling(id) {
 }
 
 /* ================================================================== */
+/*  SOURCES                                                            */
+/*  sources.json: [{ id, kind: web|article|book|other, url, title,     */
+/*  author, site, published, accessed, quote, doi?, isbn?,             */
+/*  status: accepted|candidate, addedBy: me|ai, added }]               */
+/*  Citations live in the text as .cite spans (cited words) and        */
+/*  .cite-mark flags ([n]); both carry data-src.                       */
+/* ================================================================== */
+
+function saveSources() {
+  if (book) window.neo.writeJSON(book.id, 'sources', sources);
+}
+
+// every citation in the essay, in reading order
+function citeElements() {
+  const out = [];
+  for (const chId of book.chapterOrder) {
+    const body = document.querySelector(`.chapter[data-id="${chId}"] .chapter-body`);
+    if (body) out.push(...body.querySelectorAll('.cite[data-src], .cite-mark[data-src]'));
+  }
+  return out;
+}
+
+// source id → its number, by first appearance in the text
+function citationNumbers() {
+  const nums = new Map();
+  for (const el of citeElements()) {
+    const id = el.dataset.src;
+    // candidates (unreviewed AI finds) never get a number — exports leave them out too
+    if (!nums.has(id) && sources.some((s) => s.id === id && s.status !== 'candidate')) nums.set(id, nums.size + 1);
+  }
+  return nums;
+}
+
+const sourceLine = (s) => [s.author, s.site, s.published].filter(Boolean).join(' · ');
+
+function renderSources() {
+  const wrap = $('#sources-list');
+  wrap.innerHTML = `
+    <form class="src-add">
+      <input type="text" class="src-input" spellcheck="false" placeholder="${t('src.addPh')}" />
+      <button type="submit" class="btn-gold">${t('src.add')}</button>
+    </form>
+    <div class="src-manual"><button class="btn-quiet src-manual-btn">${t('src.addManual')}</button></div>
+    <div class="src-items"></div>`;
+  const form = wrap.querySelector('.src-add');
+  const input = wrap.querySelector('.src-input');
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (!q) return;
+    input.disabled = true;
+    const found = await addSourceFrom(q);
+    input.disabled = false;
+    if (found) input.value = '';
+    input.focus();
+  };
+  wrap.querySelector('.src-manual-btn').onclick = () => editSource(null);
+
+  const items = wrap.querySelector('.src-items');
+  const nums = citationNumbers();
+  const uses = {};
+  for (const el of citeElements()) uses[el.dataset.src] = (uses[el.dataset.src] || 0) + 1;
+  // cited sources in citation order, then the rest newest first
+  const list = [...sources].sort((a, b) => (nums.get(a.id) || 1e9) - (nums.get(b.id) || 1e9) ||
+    String(b.added || '').localeCompare(String(a.added || '')));
+  if (!list.length) {
+    items.innerHTML = `<div class="darlings-empty">${t('src.empty', { key: KCITE })}</div>`;
+    return;
+  }
+  for (const s of list) {
+    const el = document.createElement('div');
+    el.className = 'src-item' + (s.status === 'candidate' ? ' candidate' : '');
+    const n = nums.get(s.id);
+    el.innerHTML = `
+      <div class="src-num">${n ? n : '·'}</div>
+      <div class="src-body">
+        <div class="src-title"></div>
+        <div class="src-meta"></div>
+        <a class="src-url" href="#"></a>
+        <div class="src-quote"></div>
+        <div class="src-actions">
+          <span class="soft src-uses"></span>
+          <button class="src-go">${t('src.goTo')}</button>
+          <button class="src-edit">${t('src.edit')}</button>
+          <button class="src-del">${t('src.delete')}</button>
+        </div>
+      </div>`;
+    el.querySelector('.src-title').textContent = s.title || s.url || t('src.untitled');
+    el.querySelector('.src-meta').textContent = sourceLine(s);
+    const a = el.querySelector('.src-url');
+    if (s.url) { a.textContent = s.url; a.onclick = (e) => { e.preventDefault(); window.neo.openLink(s.url); }; } else a.remove();
+    const qEl = el.querySelector('.src-quote');
+    if (s.quote) qEl.textContent = '“' + s.quote + '”'; else qEl.remove();
+    const u = uses[s.id] || 0;
+    el.querySelector('.src-uses').textContent = u ? tn('src.uses', u) : t('src.unused');
+    const go = el.querySelector('.src-go');
+    if (u) go.onclick = () => goToCitation(s.id); else go.remove();
+    el.querySelector('.src-edit').onclick = () => editSource(s);
+    el.querySelector('.src-del').onclick = () => deleteSource(s, u);
+    items.appendChild(el);
+  }
+}
+
+// paste → lookup → review → saved. Resolves to the source (null if dropped).
+async function addSourceFrom(q) {
+  toast(t('src.looking'), 15000);
+  const res = await window.neo.lookupSource(q);
+  if (res.error === 'unrecognised') { toast(t('src.unrecognised'), 6000); return false; }
+  const draft = res.source || res.partial || {};
+  const dup = sources.find((s) => (draft.url && s.url === draft.url) || (draft.doi && s.doi === draft.doi) || (draft.isbn && s.isbn === draft.isbn));
+  if (dup) { toast(t('src.duplicate')); return (await editSource(dup)) || dup; }
+  toast(res.error ? t(res.error === 'notFound' ? 'src.notFound' : 'src.lookupFailed') : t('src.found'), res.error ? 7000 : 2500);
+  return editSource(null, draft);
+}
+
+// the review form; a null source means a new one. Resolves to the saved
+// source, or null on cancel.
+function editSource(src, draft) {
+  return new Promise((resolve) => {
+    const d = src || { kind: 'web', ...(draft || {}) };
+    const bd = document.createElement('div');
+    bd.className = 'modal-backdrop';
+    const field = (name, label, value, type = 'text') => `
+      <label>${label}<input class="sf-${name}" type="${type}" spellcheck="false" value="${escHtml(value || '').replace(/"/g, '&quot;')}"/></label>`;
+    bd.innerHTML = `
+      <div class="modal src-form" style="width:520px">
+        <h2 style="font-size:16px">${t(src ? 'src.editTitle' : 'src.newTitle')}</h2>
+        ${field('title', t('src.fTitle'), d.title)}
+        ${field('author', t('src.fAuthor'), d.author)}
+        <div class="stats-row">
+          ${field('site', t(d.kind === 'book' ? 'src.fPublisher' : 'src.fSite'), d.site)}
+          ${field('published', t('src.fDate'), d.published)}
+        </div>
+        ${field('url', t('src.fUrl'), d.url, 'url')}
+        <label>${t('src.fQuote')}<textarea class="sf-quote" rows="3" spellcheck="false"></textarea></label>
+        <div style="text-align:right;margin-top:10px">
+          <button class="m-cancel btn-quiet" style="margin-right:10px">${t('common.cancel')}</button>
+          <button class="m-ok btn-gold">${t('src.save')}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(bd);
+    bd.querySelector('.sf-quote').value = d.quote || '';
+    const val = (n) => bd.querySelector('.sf-' + n).value.trim();
+    const done = (v) => { bd.remove(); resolve(v); };
+    bd.querySelector('.m-cancel').onclick = () => done(null);
+    bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(null); } });
+    bd.querySelector('.m-ok').onclick = () => {
+      if (!val('title') && !val('url')) { toast(t('src.needTitle')); return; }
+      const rec = src || {
+        id: 'src-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        kind: d.kind || 'web', doi: d.doi, isbn: d.isbn,
+        status: 'accepted', addedBy: 'me', added: new Date().toISOString(),
+        accessed: new Date().toISOString().slice(0, 10)
+      };
+      Object.assign(rec, {
+        title: val('title'), author: val('author'), site: val('site'),
+        published: val('published'), url: val('url'), quote: val('quote')
+      });
+      if (!src) sources.push(rec);
+      saveSources();
+      if (currentTab === 'sources') renderSources();
+      done(rec);
+    };
+    bd.querySelector('.sf-title').focus();
+  });
+}
+
+async function deleteSource(s, uses) {
+  const choice = await optionModal(t('src.deleteQ'), uses ? escHtml(tn('src.deleteCited', uses)) : null,
+    [{ label: t('src.delete'), desc: t(uses ? 'src.deleteCitedDesc' : 'src.deleteDesc'), danger: true, value: 'del' }]);
+  if (choice !== 'del') return;
+  if (uses) {
+    snapshotStructure('source delete');
+    for (const el of citeElements().filter((e) => e.dataset.src === s.id)) uncite(el);
+  }
+  sources = sources.filter((x) => x.id !== s.id);
+  saveSources();
+  renderSources();
+}
+
+// scroll the draft to a source's first citation
+function goToCitation(id) {
+  switchTab('manuscript');
+  const el = citeElements().find((e) => e.dataset.src === id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+
+// ---- citations in the text ----
+
+// the [n] beside each citation, renumbered by first appearance
+function renumberCites() {
+  if (!book) return;
+  const nums = citationNumbers();
+  for (const el of citeElements()) {
+    const n = nums.get(el.dataset.src);
+    const label = n ? String(n) : '?'; // a citation whose source was deleted
+    const known = sources.find((x) => x.id === el.dataset.src);
+    const s = n && known;
+    const tip = s ? [s.title || s.url, sourceLine(s)].filter(Boolean).join(' — ')
+      : t(known ? 'cite.candidate' : 'cite.orphan');
+    if (el.title !== tip) el.title = tip;
+    if (el.classList.contains('cite-mark')) {
+      if (el.textContent !== '[' + label + ']') el.textContent = '[' + label + ']';
+    } else if (el.dataset.n !== label) {
+      el.dataset.n = label;
+    }
+    el.classList.toggle('orphan', !n);
+  }
+}
+
+// Ctrl/⌘⇧K: cite the selected words, or drop a [n] at the caret
+async function insertCitation() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0).cloneRange();
+  let el = range.startContainer;
+  if (el.nodeType === Node.TEXT_NODE) el = el.parentElement;
+  const body = el && el.closest ? el.closest('.chapter-body') : null;
+  if (!body) { toast(t('cite.needSection', { key: KCITE })); return; }
+  const blockOf = (n) => { if (n.nodeType === Node.TEXT_NODE) n = n.parentElement; return n && n.closest && n.closest('p'); };
+  if (!range.collapsed && blockOf(range.startContainer) !== blockOf(range.endContainer)) {
+    toast(t('cite.oneParagraph'));
+    return;
+  }
+  const chId = body.closest('.chapter').dataset.id;
+  const src = await pickSource();
+  if (!src) { body.focus(); sel.removeAllRanges(); sel.addRange(range); return; }
+  snapshotStructure('cite');
+  body.focus();
+  if (range.collapsed) {
+    const mark = document.createElement('span');
+    mark.className = 'cite-mark';
+    mark.dataset.src = src.id;
+    mark.contentEditable = 'false';
+    mark.textContent = '[·]';
+    range.insertNode(mark);
+    const after = document.createRange();
+    after.setStartAfter(mark);
+    after.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(after);
+  } else {
+    const inside = blockOf(range.startContainer) && (range.startContainer.parentElement || {}).closest &&
+      range.startContainer.parentElement.closest('.cite');
+    if (inside && inside.contains(range.endContainer)) {
+      inside.dataset.src = src.id; // re-citing cited words: point them elsewhere
+    } else {
+      const span = document.createElement('span');
+      span.className = 'cite';
+      span.dataset.src = src.id;
+      span.appendChild(range.extractContents());
+      // citations don't nest — flatten any caught inside the selection
+      span.querySelectorAll('.cite').forEach((c) => { while (c.firstChild) c.before(c.firstChild); c.remove(); });
+      range.insertNode(span);
+      const after = document.createRange();
+      after.setStartAfter(span);
+      after.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(after);
+    }
+  }
+  syncChapter(body, chId);
+  renumberCites();
+  resetNativeUndo();
+}
+
+// remove a citation: cited words stay, [n] flags go
+function uncite(el) {
+  const body = el.closest('.chapter-body');
+  if (el.classList.contains('cite-mark')) el.remove();
+  else { while (el.firstChild) el.before(el.firstChild); el.remove(); }
+  if (body) {
+    try { body.normalize(); } catch { /* fine */ }
+    syncChapter(body, body.closest('.chapter').dataset.id);
+  }
+  renumberCites();
+}
+
+async function citeMenu(el) {
+  const s = sources.find((x) => x.id === el.dataset.src);
+  const opts = [];
+  if (s && s.url) opts.push({ label: t('cite.open'), desc: escHtml(s.url), value: 'open' });
+  opts.push({ label: t('cite.showSources'), value: 'show' });
+  opts.push({ label: t('cite.change'), value: 'change' });
+  opts.push({ label: t('cite.remove'), desc: t(el.classList.contains('cite') ? 'cite.removeWordsDesc' : 'cite.removeMarkDesc'), danger: true, value: 'remove' });
+  const title = s ? escHtml(s.title || s.url || t('src.untitled')) : t('cite.orphan');
+  const choice = await optionModal(title, s ? escHtml(sourceLine(s)) : null, opts);
+  if (choice === 'open') window.neo.openLink(s.url);
+  else if (choice === 'show') switchTab('sources');
+  else if (choice === 'change') {
+    const next = await pickSource();
+    if (next) {
+      snapshotStructure('cite');
+      el.dataset.src = next.id;
+      const body = el.closest('.chapter-body');
+      if (body) syncChapter(body, body.closest('.chapter').dataset.id);
+      renumberCites();
+    }
+  } else if (choice === 'remove') {
+    snapshotStructure('uncite');
+    uncite(el);
+  }
+}
+
+// choose a source to cite: search the list, or add a new one on the spot
+function pickSource() {
+  return new Promise((resolve) => {
+    const bd = document.createElement('div');
+    bd.className = 'modal-backdrop';
+    bd.innerHTML = `
+      <div class="modal" style="width:500px">
+        <h2 style="font-size:16px">${t('cite.pickTitle')}</h2>
+        <input type="text" class="sf-search" spellcheck="false" placeholder="${t('cite.pickPh')}" />
+        <div class="sf-list"></div>
+        <div style="text-align:right;margin-top:14px">
+          <button class="m-cancel btn-quiet">${t('common.cancel')}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(bd);
+    const list = bd.querySelector('.sf-list');
+    const search = bd.querySelector('.sf-search');
+    const done = (v) => { bd.remove(); resolve(v); };
+    let active = 0;
+    const draw = () => {
+      const q = search.value.trim().toLowerCase();
+      const shown = sources.filter((s) => s.status !== 'candidate' &&
+        [s.title, s.author, s.site, s.url].join(' ').toLowerCase().includes(q));
+      list.innerHTML = '';
+      active = Math.min(active, Math.max(0, shown.length - 1));
+      shown.forEach((s, i) => {
+        const b = document.createElement('button');
+        b.className = 'sf-item src-pick' + (i === active ? ' sel' : '');
+        b.innerHTML = `<div class="src-title"></div><div class="src-meta"></div>`;
+        b.querySelector('.src-title').textContent = s.title || s.url || t('src.untitled');
+        b.querySelector('.src-meta').textContent = sourceLine(s);
+        b.onclick = () => done(s);
+        list.appendChild(b);
+      });
+      // what's typed looks like a link, DOI or ISBN: offer to add it right here
+      if (q && /^(https?:\/\/|www\.|doi:|10\.\d{4,}\/|[\d -]{10,17}x?$)/i.test(search.value.trim())) {
+        const add = document.createElement('button');
+        add.className = 'sf-item src-pick';
+        add.textContent = t('cite.addNew', { q: search.value.trim() });
+        add.onclick = async () => {
+          bd.style.display = 'none';
+          done(await addSourceFrom(search.value.trim()));
+        };
+        list.appendChild(add);
+      } else if (!shown.length) {
+        list.innerHTML = `<div class="soft">${t(sources.length ? 'cite.noMatch' : 'cite.noSources')}</div>`;
+      }
+    };
+    search.oninput = () => { active = 0; draw(); };
+    search.onkeydown = (e) => {
+      const items = [...list.querySelectorAll('.sf-item')];
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = Math.max(0, Math.min(items.length - 1, active + (e.key === 'ArrowDown' ? 1 : -1)));
+        items.forEach((b, i) => b.classList.toggle('sel', i === active));
+        if (items[active]) items[active].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (items[active]) items[active].click();
+      }
+    };
+    bd.querySelector('.m-cancel').onclick = () => done(null);
+    bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(null); } });
+    draw();
+    search.focus();
+  });
+}
+
+/* ================================================================== */
 /*  COUNTERS                                                           */
 /* ================================================================== */
 
@@ -2961,7 +3374,8 @@ function snapshotStructure(label, opts) {
     chapterNotes: { ...(book.chapterNotes || {}) },
     sectionNotes: JSON.parse(JSON.stringify(book.sectionNotes || {})),
     darlings: JSON.parse(JSON.stringify(darlings)),
-    stickies: JSON.parse(JSON.stringify(stickies))
+    stickies: JSON.parse(JSON.stringify(stickies)),
+    sources: JSON.parse(JSON.stringify(sources))
   });
   if (undoStack.length > 10) undoStack.shift();
 }
@@ -2976,18 +3390,21 @@ async function structuralUndo() {
   book.sectionNotes = snap.sectionNotes;
   darlings = snap.darlings;
   stickies = snap.stickies;
+  sources = snap.sources || sources;
   // resurrect any chapter files the action may have deleted
   for (const chId of book.chapterOrder) {
     await window.neo.writeChapter(book.id, chId, chapterHTML[chId] || '<p><br></p>');
   }
   await window.neo.writeJSON(book.id, 'darlings', darlings);
   await window.neo.writeJSON(book.id, 'stickies', stickies);
+  saveSources();
   await saveMeta();
   currentChapterId = book.chapterOrder.includes(currentChapterId) ? currentChapterId : null;
   renderChapters();
   renderStickies();
   if (currentTab === 'darlings') renderDarlings();
   if (currentTab === 'outline') renderOutline();
+  if (currentTab === 'sources') renderSources();
   updateCounters();
   restoreCaret(snap.caret); // back to work, no announcement
   if (snap.rejoin) rejoinAtCaret();
@@ -3310,7 +3727,7 @@ async function spellScanEl(el, key) {
   let n;
   while ((n = walker.nextNode())) {
     const p = n.parentElement;
-    if (p && p.closest('.scene-break, .ghost, .ph-mark')) continue;
+    if (p && p.closest('.scene-break, .ghost, .ph-mark, .cite-mark')) continue;
     let m;
     re.lastIndex = 0;
     while ((m = re.exec(n.data))) {
@@ -3383,7 +3800,7 @@ function toggleSpellcheck() {
 
 // right-click a flagged word for suggestions
 document.addEventListener('contextmenu', async (e) => {
-  if (!spellOn) return;
+  if (!spellOn || e.defaultPrevented) return;
   const editor = e.target.closest && e.target.closest('.chapter-body, #aux-editor');
   if (!editor) return;
   const pos = document.caretRangeFromPoint(e.clientX, e.clientY);
@@ -3904,21 +4321,66 @@ function parasFromHtml(html) {
   return [...holder.querySelectorAll('p')].map((p) => {
     const sceneBreak = p.classList.contains('scene-break');
     const align = (p.style && p.style.textAlign) || '';
-    const runs = paraRuns(p.innerHTML).filter((r) => r.text);
-    const inner = runs.map((r) => {
-      let t = escHtml(r.text);
-      if (r.i) t = '<i>' + t + '</i>';
-      if (r.b) t = '<b>' + t + '</b>';
-      return t;
-    }).join('');
-    return {
-      sceneBreak,
-      text: p.innerText.replace(/\u00a0/g, ' ').trim(),
-      runs,
-      align,
-      html: `<p${align ? ` style="text-align:${align}"` : ''}>${inner}</p>`
-    };
+    // text runs plus [n] flags; the words alone make the paragraph's text
+    const runs = paraRuns(p.innerHTML).filter((r) => r.text || r.citeMark);
+    const text = runs.filter((r) => r.text).map((r) => r.text).join('').trim();
+    return { sceneBreak, text, runs, align };
   }).filter((p) => p.sceneBreak || p.text);
+}
+
+// A paragraph's runs as pieces for the builders: plain text runs, cited
+// groups (consecutive runs citing one source) and bare [n] flags.
+function citePieces(runs) {
+  const out = [];
+  for (const r of runs) {
+    if (r.citeMark) { out.push({ mark: r.citeMark }); continue; }
+    if (!r.text) continue;
+    const last = out[out.length - 1];
+    if (r.src && last && last.src === r.src) last.runs.push(r);
+    else if (r.src) out.push({ src: r.src, runs: [r] });
+    else out.push({ run: r });
+  }
+  return out;
+}
+
+// Number the sources an export actually cites, by first appearance.
+function citeIndex(d) {
+  const byId = new Map((d.sources || []).map((s) => [s.id, s]));
+  const nums = new Map();
+  const list = [];
+  for (const ch of d.sections) for (const p of ch.paras) for (const r of p.runs || []) {
+    const id = r.src || r.citeMark;
+    if (id && byId.has(id) && !nums.has(id)) { nums.set(id, list.length + 1); list.push(byId.get(id)); }
+  }
+  return { nums, list, get: (id) => (nums.has(id) ? { n: nums.get(id), s: byId.get(id) } : null) };
+}
+
+// "2025", "2025-03" or "2025-03-01" as a reader writes it, in the document's
+// language; anything else the writer typed is left as typed
+function readableDate(v, lang) {
+  const m = String(v || '').trim().match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/);
+  if (!m) return String(v || '').trim();
+  if (!m[2]) return m[1];
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +(m[3] || 1)));
+  const opts = m[3] ? { day: 'numeric', month: 'long', year: 'numeric' } : { month: 'long', year: 'numeric' };
+  try { return new Intl.DateTimeFormat(lang, { ...opts, timeZone: 'UTC' }).format(d); } catch { return v; }
+}
+
+// One bibliography entry in plain text, in the document's language:
+// Author. “Title”. Site, date. URL (accessed …).
+function sourceEntry(s, lang) {
+  const parts = [];
+  if (s.author) parts.push(s.author);
+  if (s.title) parts.push(s.kind === 'book' ? s.title : `“${s.title}”`);
+  const where = [s.site, readableDate(s.published, lang)].filter(Boolean).join(', ');
+  if (where) parts.push(where);
+  let out = parts.join('. ');
+  if (out) out = (out + '.').replace(/([.?!”])\.$/, '$1').replace(/([.?!])”\./g, '$1”');
+  if (s.url) {
+    out += (out ? ' ' : '') + s.url;
+    if (s.accessed && s.kind !== 'book') out += ' (' + te(lang, 'export.accessed', { date: readableDate(s.accessed, lang) }) + ')';
+  }
+  return out;
 }
 
 function exportChapters() {
@@ -3944,6 +4406,7 @@ function bookExportData() {
     author: book.author && book.author !== 'Anonymous' ? book.author : te(lang, 'author.anonymous'),
     coverSeed: book.coverSeed,
     coverImage: book.coverImage || null,
+    sources: sources.filter((s) => s.status !== 'candidate'),
     sections: exportChapters()
   };
 }
@@ -3953,10 +4416,18 @@ function buildTxt(data) {
   let out = `${d.title.toUpperCase()}\n`;
   if (d.subtitle) out += `${d.subtitle}\n`;
   out += te(d.lang, 'export.by', { author: d.author }) + '\n\n\n';
+  const cx = citeIndex(d);
+  const num = (id) => { const c = cx.get(id); return c ? `[${c.n}]` : ''; };
+  const line = (p) => citePieces(p.runs).map((pc) =>
+    pc.mark ? num(pc.mark) : pc.src ? pc.runs.map((r) => r.text).join('') + num(pc.src) : pc.run.text).join('').trim();
   for (const ch of d.sections) {
     if (ch.heading) out += `${ch.heading.toUpperCase()}\n\n`;
-    for (const p of ch.paras) out += p.sceneBreak ? '\n***\n\n' : p.text + '\n\n';
+    for (const p of ch.paras) out += p.sceneBreak ? '\n***\n\n' : line(p) + '\n\n';
     out += '\n';
+  }
+  if (cx.list.length) {
+    out += te(d.lang, 'export.sources').toUpperCase() + '\n\n';
+    cx.list.forEach((s, i) => { out += `${i + 1}. ${sourceEntry(s, d.lang)}\n`; });
   }
   return out;
 }
@@ -3965,7 +4436,7 @@ function buildMd(data) {
   const d = data || bookExportData();
   // wrap a run in emphasis markers, keeping boundary spaces outside them
   const mdRun = (r) => {
-    let t = r.text.replace(/([\\*_`])/g, '\\$1');
+    let t = r.text.replace(/([\\*_`\[\]])/g, '\\$1');
     const mark = r.b && r.i ? '***' : r.b ? '**' : r.i ? '*' : '';
     if (!mark) return t;
     const lead = t.match(/^\s*/)[0];
@@ -3976,11 +4447,25 @@ function buildMd(data) {
   let out = `# ${d.title}\n\n`;
   if (d.subtitle) out += `*${d.subtitle}*\n\n`;
   out += `**${te(d.lang, 'export.by', { author: d.author })}**\n\n`;
+  // cited words become a link with a footnote; a bare [n] is the footnote alone
+  const cx = citeIndex(d);
+  const note = (id) => { const c = cx.get(id); return c ? `[^${c.n}]` : ''; };
+  const line = (p) => citePieces(p.runs).map((pc) => {
+    if (pc.mark) return note(pc.mark);
+    if (!pc.src) return mdRun(pc.run);
+    const words = pc.runs.map(mdRun).join('');
+    const c = cx.get(pc.src);
+    return (c && c.s.url ? `[${words}](${c.s.url.replace(/[()\s]/g, encodeURIComponent)})` : words) + note(pc.src);
+  }).join('');
   for (const ch of d.sections) {
     if (ch.heading) out += `\n## ${ch.heading}\n\n`;
     for (const p of ch.paras) {
-      out += p.sceneBreak ? '\n***\n\n' : p.runs.map(mdRun).join('') + '\n\n';
+      out += p.sceneBreak ? '\n***\n\n' : line(p) + '\n\n';
     }
+  }
+  if (cx.list.length) {
+    out += '\n';
+    cx.list.forEach((s, i) => { out += `[^${i + 1}]: ${sourceEntry(s, d.lang).replace(/([\\*_`])/g, '\\$1')}\n`; });
   }
   return out;
 }
@@ -3988,24 +4473,30 @@ function buildMd(data) {
 function buildHtml(data, opts = {}) {
   const d = data || bookExportData();
   const total = d.sections.reduce((s, ch) => s + ch.paras.reduce((n, p) => n + countWords(p.text || ''), 0), 0);
-  const stamp = new Date().toLocaleString();
+  const stamp = new Date().toLocaleString(d.lang);
+  const cx = citeIndex(d);
+  const styled = (r) => {
+    let t = escHtml(r.text);
+    if (r.i) t = '<i>' + t + '</i>';
+    if (r.b) t = '<b>' + t + '</b>';
+    return t;
+  };
+  const sup = (id) => { const c = cx.get(id); return c ? `<sup class="cn"><a href="#src-${c.n}">${c.n}</a></sup>` : ''; };
+  const inner = (p) => citePieces(p.runs).map((pc) => {
+    if (pc.mark) return sup(pc.mark);
+    if (!pc.src) return styled(pc.run);
+    const words = pc.runs.map(styled).join('');
+    const c = cx.get(pc.src);
+    return (c && c.s.url ? `<a href="${escHtml(c.s.url).replace(/"/g, '&quot;')}">${words}</a>` : words) + sup(pc.src);
+  }).join('');
   const chaptersHtml = d.sections.map((ch) => {
-    // only the chapter's opening paragraph gets the enlarged initial —
-    // scene breaks resume ordinary body text
+    // the section's opening paragraph (and the one after a break) starts flush
     let first = true;
     const paras = ch.paras.map((p) => {
       if (p.sceneBreak) return '<p class="brk">***</p>';
-      let html = p.html;
-      if (first) {
-        const h = document.createElement('div');
-        h.innerHTML = html;
-        if (h.firstElementChild) {
-          h.firstElementChild.classList.add('first');
-          html = h.innerHTML;
-        }
-      }
+      const cls = first ? ' class="first"' : '';
       first = false;
-      return html;
+      return `<p${cls}${p.align ? ` style="text-align:${p.align}"` : ''}>${inner(p)}</p>`;
     }).join('\n');
     return `
     <section class="chapter">
@@ -4027,11 +4518,21 @@ function buildHtml(data, opts = {}) {
   .chapter h2 + p, .brk + p, .chapter p.first { text-indent: 0; }
   .brk { text-align: center; text-indent: 0 !important; letter-spacing: 8px; color: #888; margin: 2.5em 0; }
   .prov { margin-top: 80px; text-align: center; color: #999; font-size: 9pt; }
+  a { color: inherit; text-decoration-color: #999; }
+  sup.cn { font-size: 0.65em; line-height: 0; }
+  sup.cn a { text-decoration: none; color: #8a7a55; }
+  .sources { margin-top: 3em; font-size: 10.5pt; line-height: 1.5; }
+  .sources h2 { font-size: 13pt; margin: 0 0 0.8em; }
+  .sources ol { padding-left: 1.6em; }
+  .sources li { margin-bottom: 0.5em; overflow-wrap: anywhere; }
 </style></head><body>
 <div class="titlepage"><h1>${escHtml(d.title)}</h1>
 ${d.subtitle ? `<p class="sub">${escHtml(d.subtitle)}</p>` : ''}
 <p class="auth">${escHtml(d.author)}</p></div>
 ${chaptersHtml}
+${cx.list.length ? `<section class="sources"><h2>${escHtml(te(d.lang, 'export.sources'))}</h2><ol>
+${cx.list.map((s, i) => `<li id="src-${i + 1}">${escHtml(sourceEntry(s, d.lang))}</li>`).join('\n')}
+</ol></section>` : ''}
 ${opts.stamp ? `<p class="prov">${escHtml(te(d.lang, 'export.stamp', { words: tn('count.words', total), date: stamp }))}</p>` : ''}
 </body></html>`;
 }
@@ -4042,26 +4543,33 @@ const escXml = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
-// Walk a paragraph's DOM and emit [{text, b, i}] so docx/epub get real bold/italic
+// Walk a paragraph's DOM and emit [{text, b, i, src}] so exports get real
+// bold/italic and citations; ⚑ marks come out as {mark}, [n] flags as {citeMark}
 function paraRuns(pHtml) {
   const holder = document.createElement('div');
   holder.innerHTML = pHtml;
   const runs = [];
-  const walk = (node, b, i) => {
+  const walk = (node, b, i, src) => {
     for (const child of node.childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
-        if (child.textContent) runs.push({ text: child.textContent.replace(/\u00a0/g, ' '), b, i });
+        if (child.textContent) runs.push({ text: child.textContent.replace(/\u00a0/g, ' '), b, i, src });
       } else if (child.nodeType === Node.ELEMENT_NODE) {
-        if (child.classList && child.classList.contains('ph-mark')) {
+        const cls = child.classList;
+        if (cls && cls.contains('ph-mark')) {
           runs.push({ mark: child.dataset.sid || '' });
           continue;
         }
+        if (cls && cls.contains('cite-mark')) {
+          if (child.dataset.src) runs.push({ citeMark: child.dataset.src });
+          continue;
+        }
         const tag = child.tagName;
-        walk(child, b || tag === 'B' || tag === 'STRONG', i || tag === 'I' || tag === 'EM');
+        const inner = cls && cls.contains('cite') && child.dataset.src ? child.dataset.src : src;
+        walk(child, b || tag === 'B' || tag === 'STRONG', i || tag === 'I' || tag === 'EM', inner);
       }
     }
   };
-  walk(holder, false, false);
+  walk(holder, false, false, undefined);
   return runs;
 }
 
@@ -4074,7 +4582,8 @@ function docxP(runs, opts = {}) {
   if (opts.indent) pPr.push('<w:ind w:firstLine="480"/>');
   if (opts.spaceBefore) pPr.push(`<w:spacing w:before="${opts.spaceBefore}" w:line="360" w:lineRule="auto"/>`);
   const rXml = runs.map((r) => {
-    const rPr = (r.b ? '<w:b/>' : '') + (r.i ? '<w:i/>' : '') + (opts.size ? `<w:sz w:val="${opts.size}"/>` : '');
+    const rPr = (r.b ? '<w:b/>' : '') + (r.i ? '<w:i/>' : '') + (r.sup ? '<w:vertAlign w:val="superscript"/>' : '') +
+      (opts.size ? `<w:sz w:val="${opts.size}"/>` : '');
     return `<w:r>${rPr ? '<w:rPr>' + rPr + '</w:rPr>' : ''}<w:t xml:space="preserve">${escXml(r.text)}</w:t></w:r>`;
   }).join('');
   return `<w:p><w:pPr>${pPr.join('')}</w:pPr>${rXml}</w:p>`;
@@ -4083,6 +4592,14 @@ function docxP(runs, opts = {}) {
 function buildDocxEntries(data) {
   const d = data || bookExportData();
   const body = [];
+  const cx = citeIndex(d);
+  // runs with each citation's number as a superscript run after it
+  const citedRuns = (p) => citePieces(p.runs).flatMap((pc) => {
+    const n = (id) => { const c = cx.get(id); return c ? [{ text: String(c.n), sup: true }] : []; };
+    if (pc.mark) return n(pc.mark);
+    if (pc.src) return [...pc.runs, ...n(pc.src)];
+    return [pc.run];
+  });
   // title page
   body.push(docxP([{ text: d.title, b: true }], { size: 48 }));
   if (d.subtitle) body.push(docxP([{ text: d.subtitle, i: true }], { size: 28 }));
@@ -4095,10 +4612,14 @@ function buildDocxEntries(data) {
     }
     for (const p of ch.paras) {
       if (p.sceneBreak) body.push(docxP([{ text: '***' }], { align: 'center', spaceBefore: 240 }));
-      else if (p.align === 'center' || p.align === 'right') body.push(docxP(paraRuns(p.html), { align: p.align }));
-      else body.push(docxP(paraRuns(p.html), { indent: true }));
+      else if (p.align === 'center' || p.align === 'right') body.push(docxP(citedRuns(p), { align: p.align }));
+      else body.push(docxP(citedRuns(p), { indent: true }));
     }
   });
+  if (cx.list.length) {
+    body.push(docxP([{ text: te(d.lang, 'export.sources'), b: true }], { spaceBefore: 600, size: 26 }));
+    cx.list.forEach((s, i) => body.push(docxP([{ text: `${i + 1}. ${sourceEntry(s, d.lang)}` }], { size: 20 })));
+  }
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body.join('')}
 <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
@@ -4136,15 +4657,24 @@ function buildDocxEntries(data) {
 // their chapters as continuation sections.
 async function shelfExportData(shelf, anthologyTitle) {
   const sections = [];
+  const allSources = [];
   let num = 0;
   for (const bookId of shelf.bookIds) {
     const meta = await window.neo.readBookMeta(bookId);
     if (!meta || !meta.chapterOrder) continue;
+    const ns = (id) => bookId + '/' + id;
+    for (const s of await window.neo.readJSON(bookId, 'sources', [])) {
+      if (s.status !== 'candidate') allSources.push({ ...s, id: ns(s.id) });
+    }
     const multi = meta.chapterOrder.length > 1;
     for (let i = 0; i < meta.chapterOrder.length; i++) {
       const html = await window.neo.readChapter(bookId, meta.chapterOrder[i]);
       const paras = parasFromHtml(html);
       if (!paras.length) continue;
+      for (const p of paras) for (const r of p.runs) {
+        if (r.src) r.src = ns(r.src);
+        if (r.citeMark) r.citeMark = ns(r.citeMark);
+      }
       num++;
       const t = ((meta.chapterTitles || {})[meta.chapterOrder[i]] || '').trim();
       const heading = !multi || i === 0 ? meta.title : (t ? `${meta.title} — ${t}` : '');
@@ -4158,6 +4688,7 @@ async function shelfExportData(shelf, anthologyTitle) {
     subtitle: '',
     author: displayAuthor(),
     coverSeed: shelf.id + ':' + anthologyTitle,
+    sources: allSources,
     sections
   };
 }

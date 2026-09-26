@@ -827,3 +827,50 @@ body.night .chapter-head .ch-num { color: #5f5b52; }
 }
 .sf-item:hover { background: #2a2a2a; }
 .sf-item.sel { border-color: var(--accent); color: var(--accent); }
+
+/* ---- sources ---- */
+.src-add { display: flex; gap: 8px; margin: 6px 0 4px; }
+.src-input {
+  flex: 1; background: transparent; border: 1px solid #cfc9bb; border-radius: 6px;
+  padding: 8px 10px; color: var(--ink); font-size: 14px; font-family: inherit;
+}
+body.night .src-input { border-color: #4a4742; }
+.src-manual { margin-bottom: 22px; }
+.src-manual .btn-quiet { font-size: 12px; padding: 0; }
+.src-item { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid #e3ded2; }
+body.night .src-item { border-top-color: #34322e; }
+.src-item.candidate { opacity: 0.6; }
+.src-num { min-width: 22px; text-align: right; color: var(--accent); font-family: var(--body-font); font-size: 15px; }
+.src-body { flex: 1; min-width: 0; }
+.src-title { font-family: var(--body-font); font-size: 16px; font-weight: 700; line-height: 1.35; }
+.src-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.src-url { display: block; font-size: 12px; color: #8a7a55; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.src-quote { font-family: var(--body-font); font-style: italic; font-size: 14px; margin-top: 8px; }
+.src-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; }
+.src-actions button { background: none; border: none; color: var(--muted); font-size: 12px; padding: 0; }
+.src-actions button:hover { color: var(--accent); }
+.src-uses { margin-right: auto; }
+.src-form label input, .src-form label textarea {
+  display: block; width: 100%; margin-top: 4px; background: var(--bg); border: 1px solid #3a3a3a;
+  border-radius: 6px; padding: 7px 9px; color: #ddd; font: inherit; font-size: 13px;
+}
+.src-form .stats-row label { flex: 1; }
+.src-pick { font-size: 14px; }
+.src-pick .src-title { font-size: 14px; }
+
+/* citations in the text: cited words carry a dotted underline and their
+   number; a bare [n] is a small raised flag */
+.chapter-body .cite {
+  text-decoration: underline dotted; text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+.chapter-body .cite::after {
+  content: attr(data-n); font-size: 0.62em; vertical-align: super; line-height: 0;
+  color: var(--accent); margin-left: 1px; user-select: none;
+}
+.chapter-body .cite-mark {
+  font-size: 0.66em; vertical-align: super; line-height: 0; color: var(--accent);
+  cursor: pointer; user-select: none; margin: 0 1px;
+}
+.chapter-body .cite.orphan, .chapter-body .cite-mark.orphan { text-decoration-color: #c0392b; color: inherit; }
+.chapter-body .cite-mark.orphan { color: #c0392b; }
