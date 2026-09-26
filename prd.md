@@ -140,6 +140,13 @@ Acciones disponibles desde el menú, el atajo o el clic derecho:
 - Al exportar: enlaces en línea (HTML/MD) o superíndices numerados, más una sección **"Fuentes"** al final (DOCX/PDF).
 - Agregar fuentes a mano: pegar una URL y Mutiny obtiene título, sitio y fecha de sus metadatos (OpenGraph).
 
+**Decisiones (2026-09-26):**
+- **Cita en el texto:** con texto seleccionado, ese texto se vuelve la cita (estilo enlace); sin selección, se inserta una marca numerada [n].
+- **La lista vive en una pestaña propia, "Fuentes".**
+- **Metadatos:** al pegar una URL, Mutiny descarga la página sin preguntar (http/https, tiempo y tamaño limitados, sin ejecutar JavaScript).
+- **DOI e ISBN:** un DOI se busca en Crossref y un ISBN en Open Library.
+- **Exportación:** numeración por orden de primera aparición. PDF, DOCX y TXT llevan números volados y una lista "Fuentes" al final; Markdown y HTML llevan además el enlace en el texto.
+
 ### 6.6 Reordenar (fase 4)
 
 - Vista de **tarjetas**: cada párrafo de una sección se muestra como una tarjeta que se arrastra. Con zoom, también frases dentro de un párrafo.
