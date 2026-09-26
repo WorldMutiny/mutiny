@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.3 — fases 0 y 1 completas · 2026-09-25
+**Estado:** v0.4 — fases 0, 1 y 2 completas · 2026-09-25
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -201,8 +201,9 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] Quitar la pintura de portadas con OpenAI y el EPUB.
 - **Aceptación:** escribir un ensayo de 1 500 palabras de principio a fin y exportarlo a PDF/DOCX sin que aparezcan términos de novela.
 
-### Fase 2 — Fuentes
-- [ ] `sources.json`, panel de fuentes, pegar URL → metadatos, insertar cita, sección "Fuentes" al exportar.
+### Fase 2 — Fuentes ✅
+- [x] `sources.json`, panel de fuentes, pegar URL → metadatos, insertar cita, sección "Fuentes" al exportar.
+- [x] DOI (Crossref) e ISBN (Open Library → Google Books); fuentes candidatas con "Aceptar" (listas para la fase 3).
 - **Aceptación:** un ensayo con 5 citas se exporta con la bibliografía correcta en DOCX, PDF y MD.
 
 ### Fase 3a — IA con Claude Code (MVP de IA)

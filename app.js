@@ -2767,7 +2767,7 @@ function citationNumbers() {
   return nums;
 }
 
-const sourceLine = (s) => [s.author, s.site, s.published].filter(Boolean).join(' · ');
+const sourceLine = (s) => [s.author, s.site, readableDate(s.published, I18N.lang)].filter(Boolean).join(' · ');
 
 function renderSources() {
   const wrap = $('#sources-list');
@@ -2816,6 +2816,7 @@ function renderSources() {
         <div class="src-quote"></div>
         <div class="src-actions">
           <span class="soft src-uses"></span>
+          <button class="src-accept">${t('src.accept')}</button>
           <button class="src-go">${t('src.goTo')}</button>
           <button class="src-edit">${t('src.edit')}</button>
           <button class="src-del">${t('src.delete')}</button>
@@ -2828,7 +2829,12 @@ function renderSources() {
     const qEl = el.querySelector('.src-quote');
     if (s.quote) qEl.textContent = '“' + s.quote + '”'; else qEl.remove();
     const u = uses[s.id] || 0;
-    el.querySelector('.src-uses').textContent = u ? tn('src.uses', u) : t('src.unused');
+    el.querySelector('.src-uses').textContent = (s.status === 'candidate' ? t('src.candidate') + ' · ' : '') +
+      (u ? tn('src.uses', u) : t('src.unused'));
+    const accept = el.querySelector('.src-accept');
+    if (s.status === 'candidate') {
+      accept.onclick = () => { s.status = 'accepted'; saveSources(); renderSources(); renumberCites(); };
+    } else accept.remove();
     const go = el.querySelector('.src-go');
     if (u) go.onclick = () => goToCitation(s.id); else go.remove();
     el.querySelector('.src-edit').onclick = () => editSource(s);
@@ -4248,6 +4254,7 @@ function showHelp() {
         ${row(t('help.enter3'), t('help.enter3Desc'))}
         ${row(KPH, t('help.mark'))}
         ${row(KDA, t('help.later'))}
+        ${row(KCITE, t('help.cite'))}
         ${row(KZ, t('help.undo'))}
         ${row(t('help.dashesKey'), t('help.dashes'))}
         ${row(K('⌘B · ⌘I', 'Ctrl+B · Ctrl+I'), t('help.bold'))}
@@ -4375,7 +4382,8 @@ function sourceEntry(s, lang) {
   const where = [s.site, readableDate(s.published, lang)].filter(Boolean).join(', ');
   if (where) parts.push(where);
   let out = parts.join('. ');
-  if (out) out = (out + '.').replace(/([.?!”])\.$/, '$1').replace(/([.?!])”\./g, '$1”');
+  // no doubled stop after a title that ends in its own (“Why?”, “…end.”)
+  if (out) out = (out + '.').replace(/([.?!])\.$/, '$1').replace(/([.?!])”\./g, '$1”');
   if (s.url) {
     out += (out ? ' ' : '') + s.url;
     if (s.accessed && s.kind !== 'book') out += ' (' + te(lang, 'export.accessed', { date: readableDate(s.accessed, lang) }) + ')';
