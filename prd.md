@@ -245,6 +245,9 @@ Decisiones tomadas en el camino que no estaban en el plan:
 - **Import de Markdown:** `#` es el título del ensayo y `##` crea secciones con nombre.
 - **Bugs heredados de NEO corregidos:** temporizadores de guardado que se disparaban tras cerrar un libro (error visible y posible escritura en el libro equivocado), y HTML exportado sin escapar el título.
 
+### Fase final — Pulido de la experiencia de usuario
+- [ ] Revisión completa de la UX una vez que todas las funciones estén en su lugar (pedido 2026-09-26).
+
 ## 8. Riesgos
 
 | Riesgo | Mitigación |
