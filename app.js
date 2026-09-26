@@ -605,6 +605,7 @@ async function refreshCover(meta, el) {
 
 async function createBookOnShelf(shelf) {
   const meta = await window.neo.createBook({ author: displayAuthor() });
+  meta.language = library.language || 'en';
   meta.tabNames = {
     notes: (library.tabDefaults && library.tabDefaults.notes) || 'Notes',
     outline: (library.tabDefaults && library.tabDefaults.outline) || 'Outline'
@@ -3175,6 +3176,7 @@ async function addImportedBooks(results, shelf) {
       title: r.title || r.name
     });
     meta.title = r.title || r.name;
+    meta.language = library.language || 'en';
     meta.tabNames = {
       notes: (library.tabDefaults && library.tabDefaults.notes) || 'Notes',
       outline: (library.tabDefaults && library.tabDefaults.outline) || 'Outline'
@@ -3222,6 +3224,12 @@ let spellRanges = new Map();     // key → [Range]
 const spellCache = new Map();    // word → correct?
 
 const spellNorm = (w) => w.replace(/’/g, "'").replace(/^'+|'+$/g, '');
+// any letter in any script — Spanish words carry accents and ñ
+const SPELL_WORD = /[\p{L}'’]+/gu;
+const isSpellChar = (c) => /[\p{L}'’]/u.test(c);
+// each essay is checked in its own language
+const spellLang = () => (book && book.language) || library.language || 'en';
+const spellKey = (w) => spellLang() + ':' + w;
 
 function spellElFor(key) {
   return key.startsWith('aux-')
@@ -3234,7 +3242,7 @@ async function spellScanEl(el, key) {
   spellScanned.add(key);
   const occurrences = [];
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-  const re = /[A-Za-z'’]+/g;
+  const re = SPELL_WORD;
   let n;
   while ((n = walker.nextNode())) {
     const p = n.parentElement;
@@ -3244,19 +3252,19 @@ async function spellScanEl(el, key) {
     while ((m = re.exec(n.data))) {
       const word = spellNorm(m[0]);
       if (word.length < 2) continue;
-      if (/^[A-Z'’]+$/.test(m[0])) continue; // acronyms and shouting are legal
+      if (/^[\p{Lu}'’]+$/u.test(m[0])) continue; // acronyms and shouting are legal
       occurrences.push({ node: n, start: m.index, end: m.index + m[0].length, word });
     }
   }
-  const unknown = [...new Set(occurrences.map((o) => o.word))].filter((w) => !spellCache.has(w));
+  const unknown = [...new Set(occurrences.map((o) => o.word))].filter((w) => !spellCache.has(spellKey(w)));
   if (unknown.length) {
-    const res = await window.neo.spellCheckWords(unknown);
-    for (const w of unknown) spellCache.set(w, res[w] !== false);
+    const res = await window.neo.spellCheckWords(unknown, spellLang());
+    for (const w of unknown) spellCache.set(spellKey(w), res[w] !== false);
   }
   if (!spellOn) return; // toggled off while we were checking
   const ranges = [];
   for (const o of occurrences) {
-    if (spellCache.get(o.word) || !o.node.isConnected) continue;
+    if (spellCache.get(spellKey(o.word)) || !o.node.isConnected) continue;
     try {
       const r = new Range();
       r.setStart(o.node, o.start);
@@ -3318,19 +3326,18 @@ document.addEventListener('contextmenu', async (e) => {
   if (!pos || pos.startContainer.nodeType !== Node.TEXT_NODE) return;
   const node = pos.startContainer;
   const text = node.data;
-  const isW = (c) => /[A-Za-z'’]/.test(c);
   let a = pos.startOffset, b = pos.startOffset;
-  while (a > 0 && isW(text[a - 1])) a--;
-  while (b < text.length && isW(text[b])) b++;
+  while (a > 0 && isSpellChar(text[a - 1])) a--;
+  while (b < text.length && isSpellChar(text[b])) b++;
   if (a === b) return;
   const word = spellNorm(text.slice(a, b));
-  if (spellCache.get(word) !== false) return; // only flagged words get our menu
+  if (spellCache.get(spellKey(word)) !== false) return; // only flagged words get our menu
   e.preventDefault();
   const chEl = editor.closest ? editor.closest('.chapter') : null;
   const key = editor.id === 'aux-editor'
     ? 'aux-' + (editor.dataset.kind || 'notes')
     : (chEl ? chEl.dataset.id : null);
-  const sugg = await window.neo.spellSuggest(word);
+  const sugg = await window.neo.spellSuggest(word, spellLang());
   showSpellMenu(e.clientX, e.clientY, word, sugg, {
     replace: (s) => {
       const sel = window.getSelection();
@@ -3345,7 +3352,7 @@ document.addEventListener('contextmenu', async (e) => {
       if (!library.customWords.includes(word)) library.customWords.push(word);
       await window.neo.writeLibrary(library);
       await window.neo.spellLearn(word);
-      spellCache.set(word, true);
+      for (const lang of ['en', 'es']) spellCache.set(lang + ':' + word, true);
       for (const k of [...spellScanned]) spellScanEl(spellElFor(k), k);
     }
   });
@@ -3503,6 +3510,15 @@ function openStats() {
       </div>
       ${hasBook ? `
       <div class="stats-row">
+        <label>Essay language
+          <select id="st-lang">
+            <option value="es"${spellLang() === 'es' ? ' selected' : ''}>Español</option>
+            <option value="en"${spellLang() === 'en' ? ' selected' : ''}>English</option>
+          </select>
+        </label>
+        <span class="soft">for the spellcheck pass</span>
+      </div>
+      <div class="stats-row">
         <label>Sprint <input id="st-sprint" type="number" min="50" value="${sprint ? sprint.target : 500}"/> words</label>
         <button id="st-sprint-btn">${sprint && !sprint.done ? 'End sprint' : 'Start sprint'}</button>
         <span id="st-sprint-info" class="soft">${sprint && !sprint.done ? 'sprint running…' : 'a small hill to charge up'}</span>
@@ -3526,6 +3542,11 @@ function openStats() {
     library.writingStyle = bd.querySelector('#st-style').value;
     if (hasBook) {
       book.wordGoal = parseInt(bd.querySelector('#st-book').value, 10) || 0;
+      const lang = bd.querySelector('#st-lang').value;
+      if (lang !== spellLang()) {
+        book.language = lang;
+        if (spellOn) { toggleSpellcheck(); toggleSpellcheck(); } // rescan in the new language
+      }
       scheduleMetaSave();
     }
     await window.neo.writeLibrary(library);

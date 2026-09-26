@@ -661,38 +661,61 @@ function createWindow() {
 }
 
 // ---------------------------------------------------------------------------
-// Spellcheck: NEO's own dictionary (Hunspell en-US via nspell), identical on
-// every platform. The renderer paints the squiggles and asks for suggestions.
+// Spellcheck: our own Hunspell dictionaries via nspell, identical on every
+// platform — English and Spanish, chosen per essay. Each loads on first use
+// (Spanish takes about a second). The renderer paints the squiggles and asks
+// for suggestions.
 // ---------------------------------------------------------------------------
-let neoSpell = null;
+const SPELL_DICTS = { en: 'dictionary-en-us', es: 'dictionary-es' };
+const spellers = {}; // lang → nspell instance
 
-function initSpell() {
+function speller(lang) {
+  if (!SPELL_DICTS[lang]) lang = 'en';
+  if (spellers[lang]) return spellers[lang];
   try {
     const nspell = require('nspell');
-    require('dictionary-en-us')((err, dict) => {
-      if (err) { logError('spell', err); return; }
-      neoSpell = nspell(dict);
-      try {
-        const lib = readJSON(LIBRARY_FILE, {});
-        for (const w of lib.customWords || []) neoSpell.add(w);
-      } catch { /* custom words are a nicety */ }
+    const dir = path.join(__dirname, 'node_modules', SPELL_DICTS[lang]);
+    const sp = nspell({
+      aff: fs.readFileSync(path.join(dir, 'index.aff')),
+      dic: fs.readFileSync(path.join(dir, 'index.dic'))
     });
+    try {
+      const lib = readJSON(LIBRARY_FILE, {});
+      for (const w of lib.customWords || []) sp.add(w);
+    } catch { /* custom words are a nicety */ }
+    spellers[lang] = sp;
   } catch (err) {
     logError('spell', err);
+    spellers[lang] = null;
   }
+  return spellers[lang];
 }
 
-ipcMain.handle('spell:check', (_e, words) => {
+// warm the library's language after startup so the first pass is instant
+function initSpell() {
+  setTimeout(() => {
+    const lib = readJSON(LIBRARY_FILE, {});
+    speller(lib.language || 'en');
+  }, 3000);
+}
+
+ipcMain.handle('spell:check', (_e, words, lang) => {
+  const sp = speller(lang);
   const out = {};
-  // dictionary still loading: report everything correct rather than crying wolf
-  for (const w of words) out[w] = neoSpell ? neoSpell.correct(w) : true;
+  // no dictionary: report everything correct rather than crying wolf
+  for (const w of words) out[w] = sp ? sp.correct(w) : true;
   return out;
 });
 
-ipcMain.handle('spell:suggest', (_e, word) => (neoSpell ? neoSpell.suggest(word).slice(0, 6) : []));
+ipcMain.handle('spell:suggest', (_e, word, lang) => {
+  const sp = speller(lang);
+  return sp ? sp.suggest(word).slice(0, 6) : [];
+});
 
+// a learned word is learned in every language
 ipcMain.handle('spell:learn', (_e, word) => {
-  if (neoSpell && typeof word === 'string') neoSpell.add(word);
+  if (typeof word !== 'string') return true;
+  for (const sp of Object.values(spellers)) if (sp) sp.add(word);
   return true;
 });
 
