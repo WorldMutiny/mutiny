@@ -136,6 +136,15 @@ button { font: inherit; cursor: pointer; }
 @font-face { font-family: 'Mutiny EB Garamond'; src: url('fonts/eb-garamond-latin-ext-700-italic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 @font-face { font-family: 'Mutiny EB Garamond'; src: url('fonts/eb-garamond-latin-700-italic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 
+@font-face { font-family: 'Mutiny iA Writer Quattro'; src: url('fonts/iAWriterQuattroS-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Mutiny iA Writer Quattro'; src: url('fonts/iAWriterQuattroS-Italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Mutiny iA Writer Quattro'; src: url('fonts/iAWriterQuattroS-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Mutiny iA Writer Quattro'; src: url('fonts/iAWriterQuattroS-BoldItalic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Mutiny iA Writer Duo'; src: url('fonts/iAWriterDuoS-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Mutiny iA Writer Duo'; src: url('fonts/iAWriterDuoS-Italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Mutiny iA Writer Duo'; src: url('fonts/iAWriterDuoS-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Mutiny iA Writer Duo'; src: url('fonts/iAWriterDuoS-BoldItalic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; }
+
 @font-face { font-family: 'NEO Anton'; src: url('fonts/anton-latin-400-normal.woff2') format('woff2'); font-weight: 400; }
 @font-face { font-family: 'NEO Bebas'; src: url('fonts/bebas-neue-latin-400-normal.woff2') format('woff2'); font-weight: 400; }
 @font-face { font-family: 'NEO Oswald'; src: url('fonts/oswald-latin-700-normal.woff2') format('woff2'); font-weight: 700; }
@@ -805,3 +814,16 @@ body.night .chapter-head { color: var(--ink); }
 body.night .chapter-head .ch-num { color: #5f5b52; }
 /* the opening section flows straight on from the title — no marker */
 .chapter:first-child .chapter-head:not(.has-title) .ch-num { display: none; }
+
+/* system font picker */
+.sf-search {
+  width: 100%; background: var(--bg); border: 1px solid #3a3a3a; border-radius: 6px;
+  padding: 8px 10px; color: #ddd; font-size: 14px; margin-bottom: 10px;
+}
+.sf-list { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.sf-item {
+  text-align: left; background: none; border: 1px solid transparent; border-radius: 6px;
+  padding: 7px 10px; color: #ddd; font-size: 17px;
+}
+.sf-item:hover { background: #2a2a2a; }
+.sf-item.sel { border-color: var(--accent); color: var(--accent); }

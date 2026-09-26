@@ -193,7 +193,7 @@ function showFirstRun() {
 
   // Step 2: fonts, with a WYSIWYG sample
   function preview() {
-    document.documentElement.style.setProperty('--body-font', BODY_FONTS[picked.body]);
+    document.documentElement.style.setProperty('--body-font', fontStack(picked.body));
   }
   function buildFontStep() {
     const bodyRow = $('#fr-bodyfonts');
@@ -212,6 +212,17 @@ function showFirstRun() {
       };
       bodyRow.appendChild(b);
     }
+    const sys = document.createElement('button');
+    const isSys = picked.body.startsWith(SYSTEM_FONT);
+    sys.className = 'fr-font' + (isSys ? ' sel' : '');
+    sys.textContent = isSys ? fontLabel(picked.body) : t('font.fromSystem');
+    if (isSys) sys.style.fontFamily = fontStack(picked.body);
+    sys.onclick = async () => {
+      const chosen = await pickSystemFont(picked.body);
+      if (chosen) picked.body = chosen;
+      buildFontStep();
+    };
+    bodyRow.appendChild(sys);
     preview();
   }
 
@@ -3658,13 +3669,92 @@ const BODY_FONTS = {
   'Literata': "'Mutiny Literata', Georgia, serif",
   'Source Serif': "'Mutiny Source Serif 4', Georgia, serif",
   'Lora': "'Mutiny Lora', Georgia, serif",
-  'EB Garamond': "'Mutiny EB Garamond', Garamond, Georgia, serif"
+  'EB Garamond': "'Mutiny EB Garamond', Garamond, Georgia, serif",
+  'iA Writer Quattro': "'Mutiny iA Writer Quattro', 'iA Writer Quattro S', sans-serif",
+  'iA Writer Duo': "'Mutiny iA Writer Duo', 'iA Writer Duo S', monospace"
 };
 const DEFAULT_BODY_FONT = 'Literata';
+// a font installed on this computer is stored as "system:<family>" — it
+// doesn't travel with the library, so a stack falls back to the default
+const SYSTEM_FONT = 'system:';
+function fontStack(name) {
+  if (name && name.startsWith(SYSTEM_FONT)) {
+    return `"${name.slice(SYSTEM_FONT.length).replace(/["\\]/g, '')}", ${BODY_FONTS[DEFAULT_BODY_FONT]}`;
+  }
+  return BODY_FONTS[name] || BODY_FONTS[DEFAULT_BODY_FONT];
+}
+const fontLabel = (name) => (name && name.startsWith(SYSTEM_FONT) ? name.slice(SYSTEM_FONT.length) : name);
+
+// Families installed on this computer (Local Font Access), icon fonts left out.
+let systemFamilies = null;
+async function listSystemFonts() {
+  if (systemFamilies) return systemFamilies;
+  try {
+    const fonts = await window.queryLocalFonts();
+    const skip = /awesome|emoji|symbol|icon|nerd font|dingbat|^d05|omarchy|wingding|webdings/i;
+    systemFamilies = [...new Set(fonts.map((f) => f.family))]
+      .filter((f) => !skip.test(f))
+      .sort((a, b) => a.localeCompare(b));
+  } catch (err) {
+    window.neo.logError('local fonts: ' + err);
+    systemFamilies = [];
+  }
+  return systemFamilies;
+}
+
+// Pick any installed font, previewed live on the page. Resolves to the
+// stored name ("system:<family>") or null.
+function pickSystemFont(current) {
+  return new Promise(async (resolve) => {
+    let families = [];
+    const root = document.documentElement.style;
+    const before = root.getPropertyValue('--body-font');
+    const bd = document.createElement('div');
+    bd.className = 'modal-backdrop';
+    bd.innerHTML = `
+      <div class="modal" style="width:460px">
+        <h2 style="font-size:16px">${t('font.systemTitle')}</h2>
+        <p class="soft" style="margin-bottom:10px">${t('font.systemNote')}</p>
+        <input type="text" class="sf-search" spellcheck="false" placeholder="${t('font.search')}" />
+        <div class="sf-list"></div>
+        <div style="text-align:right;margin-top:14px">
+          <button class="m-cancel btn-quiet">${t('common.cancel')}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(bd);
+    const list = bd.querySelector('.sf-list');
+    const done = (val) => { if (!val) root.setProperty('--body-font', before); bd.remove(); resolve(val); };
+    const draw = (q) => {
+      if (!systemFamilies) { list.innerHTML = `<div class="soft">…</div>`; return; }
+      list.innerHTML = '';
+      const shown = families.filter((f) => f.toLowerCase().includes(q.toLowerCase()));
+      if (!shown.length) list.innerHTML = `<div class="soft">${t(families.length ? 'font.noMatch' : 'font.none')}</div>`;
+      for (const fam of shown) {
+        const b = document.createElement('button');
+        b.className = 'sf-item' + (current === SYSTEM_FONT + fam ? ' sel' : '');
+        b.textContent = fam;
+        b.style.fontFamily = `"${fam.replace(/"/g, '')}"`;
+        b.onmouseenter = () => root.setProperty('--body-font', fontStack(SYSTEM_FONT + fam));
+        b.onclick = () => done(SYSTEM_FONT + fam);
+        list.appendChild(b);
+      }
+    };
+    const search = bd.querySelector('.sf-search');
+    search.oninput = () => draw(search.value);
+    list.onmouseleave = () => root.setProperty('--body-font', before);
+    bd.querySelector('.m-cancel').onclick = () => done(null);
+    bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(null); } });
+    draw('');
+    search.focus();
+    // the first read of the system's fonts takes a moment — the dialog is up meanwhile
+    families = await listSystemFonts();
+    if (bd.isConnected) draw(search.value);
+  });
+}
 
 function applyFonts() {
   const f = library.fonts || {};
-  document.documentElement.style.setProperty('--body-font', BODY_FONTS[f.body] || BODY_FONTS[DEFAULT_BODY_FONT]);
+  document.documentElement.style.setProperty('--body-font', fontStack(f.body));
   document.body.classList.toggle('night', library.pageTheme === 'night');
   document.body.classList.toggle('bright', !!library.uiBright);
   const size = Math.min(22, Math.max(14, library.editorFontSize || 17));
@@ -4253,6 +4343,15 @@ window.neo.onMenu(async (msg) => {
     library.editorFontSize = msg.value === 0 ? 17 : Math.min(22, Math.max(14, cur + msg.value));
     if (msg.value === 0) library.pageZoom = 1; // ⌘0 resets pinch zoom too
     await window.neo.writeLibrary(library);
+    applyFonts();
+  }
+  if (msg.type === 'systemFont') {
+    const chosen = await pickSystemFont((library.fonts || {}).body);
+    if (chosen) {
+      library.fonts = library.fonts || {};
+      library.fonts.body = chosen;
+      await window.neo.writeLibrary(library);
+    }
     applyFonts();
   }
   if (msg.type === 'bodyFont') {

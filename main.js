@@ -777,7 +777,7 @@ function buildMenu() {
   // "&" marks a mnemonic outside macOS — a literal one is written "&&"
   const T = (key) => (isMac ? mt(key) : mt(key).replace(/&/g, '&&'));
   // bundled typefaces — keep in step with BODY_FONTS in app.js
-  const bodyFonts = ['Literata', 'Source Serif', 'Lora', 'EB Garamond'];
+  const bodyFonts = ['Literata', 'Source Serif', 'Lora', 'EB Garamond', 'iA Writer Quattro', 'iA Writer Duo'];
   const template = [
     // appMenu exists only on macOS — including it on Windows throws,
     // which is exactly what kept NEO from ever opening a window there
@@ -842,10 +842,14 @@ function buildMenu() {
       submenu: [
         {
           label: T('menu.bodyFont'),
-          submenu: bodyFonts.map((f) => ({
-            label: f,
-            click: () => sendToWindow({ type: 'bodyFont', value: f })
-          }))
+          submenu: [
+            ...bodyFonts.map((f) => ({
+              label: f,
+              click: () => sendToWindow({ type: 'bodyFont', value: f })
+            })),
+            { type: 'separator' },
+            { label: T('menu.systemFont'), click: () => sendToWindow({ type: 'systemFont' }) }
+          ]
         },
         {
           label: T('menu.align'),
