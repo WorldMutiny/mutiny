@@ -1594,6 +1594,7 @@ document.addEventListener('keydown', (e) => {
     if (currentTab === 'manuscript') darlingFromKeyboard();
   }
   if (e.key === 'Escape') {
+    if (closeSidePane()) return;
     if (!$('#searchbar').hidden) closeSearch();
     else window.neo.fullscreenEscape().then((exited) => { if (!exited) backToShelf(); });
   }
@@ -1952,6 +1953,9 @@ function wireHoverPane(hotzone, pane, isPinnable) {
   });
   pane.addEventListener('mouseleave', () => {
     if (pinned()) return;
+    // mid-note, drifting the mouse away mustn't hide what's being typed —
+    // a click outside (below) closes it instead
+    if (pane.contains(document.activeElement)) return;
     pane.classList.remove('open');
   });
 }
@@ -1965,6 +1969,23 @@ function closeUnpinnedPanes() {
 }
 document.documentElement.addEventListener('mouseleave', closeUnpinnedPanes);
 window.addEventListener('blur', closeUnpinnedPanes);
+
+// A click on a ⚑ opens the notes pane without the mouse ever entering it,
+// so hover alone could never close it again. A click anywhere outside the
+// pane closes it, and so does Esc (see the editor shortcuts).
+function closeSidePane() {
+  const pane = $('#side-pane');
+  if (pane.dataset.pinned === '1' || !pane.classList.contains('open')) return false;
+  if (pane.contains(document.activeElement)) document.activeElement.blur();
+  pane.classList.remove('open');
+  return true;
+}
+document.addEventListener('mousedown', (e) => {
+  const t = e.target;
+  if ($('#side-pane').contains(t) || $('#side-hotzone').contains(t)) return;
+  if (t.closest && t.closest('.ph-mark, .modal-backdrop')) return; // the ⚑ reopens it; dialogs aren't "outside"
+  closeSidePane();
+}, true);
 
 // the wheel scrolls the manuscript even when the pointer floats over the
 // dark margins beside the (narrower) page column
