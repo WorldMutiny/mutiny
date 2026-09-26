@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** borrador v0.1 · 2026-09-25
+**Estado:** borrador v0.2 · 2026-09-25
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -47,9 +47,11 @@ NEO es deliberadamente solo para novelas, y su autor rechaza funciones que lo ag
 | Portadas (arte seed + OpenAI) | Portadas seed simples | Quitar la pintura con OpenAI; quedan las portadas seed como identidad visual |
 | Export EPUB (KDP) | — | Quitar |
 | Export DOCX / PDF / HTML / MD / TXT | Se conserva + **sección de Fuentes** | Añadir bibliografía al exportar |
-| Metas diarias estilo NaNoWriMo | Meta de palabras por ensayo | Simplificar |
+| Estadísticas: palabras del día, meta diaria, meta por libro, sprints, gráfica de progreso, "mi día termina a las…" | **Se conserva completo** | Solo cambia "meta del libro" por "meta del ensayo" (placeholder 1 500 en vez de 80 000) |
+| Onboarding (nombre, seudónimo, pantser/plotter, tipografía + capitulares) | **Onboarding para ensayistas** | Adaptar (§6.8) |
+| UI solo en inglés | **UI en español e inglés** | i18n mínimo (§6.9) |
 | Corrector `en-US` | **`es` + `en`** | Añadir `dictionary-es` y elegir idioma por ensayo |
-| Autotipografía (comillas curvas, —, …) | + reglas de español | Comillas «» o “” configurables, ¿¡ sin romper el autoformato |
+| Autotipografía (comillas curvas, —, …) | Se conserva, **comillas inglesas “ ”** | Sin cambios de comillas. Solo verificar que ¿¡ no rompan el autoformato |
 
 ## 5. Arquitectura actual (referencia)
 
@@ -152,19 +154,44 @@ La versión sin complicaciones, sin fine-tuning:
 - **Extraer mi estilo:** la IA lee tus ensayos marcados y propone un borrador de `estilo.md`, que tú editas.
 - Como es un archivo plano, el mismo `estilo.md` sirve desde Claude Code en la terminal.
 
+### 6.8 Onboarding para ensayistas
+
+Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable después en Ajustes.
+
+1. **Idioma** (nuevo, primer paso): Español / English. Define el idioma de la UI y el del corrector por defecto.
+2. **Quién eres:** nombre (autor en cada exportación) y seudónimo o firma opcional.
+3. **Cómo escribes** (equivalente a pantser/plotter):
+   - **Descubro escribiendo:** los ensayos nuevos abren en página en blanco.
+   - **Parto de un esquema:** los ensayos nuevos abren en Outline con la plantilla Peterson (tesis + frases-esqueleto).
+4. **Cómo se ve la página:** tipografía con muestra WYSIWYG. Se quita la elección de capitulares.
+5. **Asistente de IA** (nuevo, **opcional y saltable**):
+   - Si detecta `claude` en el PATH, ofrece "Usar Claude Code" con un botón para probar la conexión.
+   - Si no, muestra "Configurar después" o "Usar una API key" (a partir de la fase 3b).
+   - Una línea clara sobre qué hace la IA y que nunca cambia tu texto sin permiso.
+
+### 6.9 Idiomas (i18n)
+
+- Una función `t('clave')` con diccionarios `locales/es.json` y `locales/en.json`. **Sin librerías.**
+- Aplica a cadenas de la UI, menús nativos (`main.js`), toasts, onboarding y textos de exportación ("Fuentes" / "Sources").
+- Las instrucciones a la IA también dependen del idioma: la IA responde en el idioma del ensayo.
+- Contribuir un idioma nuevo = añadir un JSON.
+
 ## 7. Fases y criterios de aceptación
 
 ### Fase 0 — Fork habilitado
 - [ ] `appId` propio, `productName: Mutiny`, biblioteca en `~/Documents/Mutiny Library`: **coexiste con NEO** sin tocar su biblioteca.
 - [ ] `electron-updater` desactivado o apuntando al repo propio. **Crítico: si no, se "actualizaría" a NEO.**
 - [ ] README con créditos a NEO / Hugh Howey. Se conserva el LICENSE MIT (copyright original + nuevo).
-- [ ] `npm start` funciona en Linux y el `.desktop` aparece en el launcher de Omarchy.
+- [ ] `npm start` funciona en Linux. `npm run package:linux` genera un AppImage que se instala como NEO (`~/.local/opt/mutiny` + `.desktop` en el launcher de Omarchy).
 
 ### Fase 1 — De novela a ensayo
+- [ ] i18n (§6.9): extraer las cadenas existentes a `en.json` y traducir `es.json`.
 - [ ] Renombrados de §4 en la UI; sin capitulares ni numeración de secciones.
+- [ ] Onboarding para ensayistas (§6.8, pasos 1–4; el paso 5 llega en la fase 3a).
 - [ ] Outline con plantilla Peterson (tesis + frases-esqueleto → párrafos fantasma).
-- [ ] Corrector en español y autotipografía española.
-- [ ] Quitar la pintura de portadas con OpenAI, el EPUB y el tracker NaNoWriMo.
+- [ ] Corrector `es` + `en`.
+- [ ] Estadísticas y metas conservadas, con textos de ensayo.
+- [ ] Quitar la pintura de portadas con OpenAI y el EPUB.
 - **Aceptación:** escribir un ensayo de 1 500 palabras de principio a fin y exportarlo a PDF/DOCX sin que aparezcan términos de novela.
 
 ### Fase 2 — Fuentes
@@ -186,6 +213,10 @@ La versión sin complicaciones, sin fine-tuning:
 
 ### Fase 4 — Reordenar + Rewrite manual
 ### Fase 5 — Mi estilo + Verificar fuentes
+### Fase 6 — Multiplataforma y publicación
+- [ ] Builds de Mac (dmg) y Windows (exe) con GitHub Actions. NEO ya tiene la configuración de electron-builder para las tres plataformas.
+- [ ] Notarización de Mac: requiere una cuenta de Apple Developer (99 USD/año). Sin ella, el usuario tiene que autorizar la app a mano en macOS.
+- [ ] Auto-updater apuntando a los releases del repo propio.
 
 ## 8. Riesgos
 
@@ -198,14 +229,24 @@ La versión sin complicaciones, sin fine-tuning:
 | Nombre "Mutiny" muy usado fuera de la serie | Verificar la disponibilidad del repo y el nombre antes de publicar. Si hay conflicto, usar un sufijo (p. ej. `mutiny-write`) |
 | Proveedores de API sin tool-calling | Detectarlo en "probar conexión" y desactivar las funciones que lo requieren |
 
-## 9. Relación con NEO (upstream)
+## 9. Relación con NEO (upstream) y GitHub
 
-- Remote `upstream` = `hughhowey/neo`. Sin merges automáticos: se revisan sus releases y se hace **cherry-pick manual** de arreglos del editor, import y export que apliquen.
-- Créditos visibles en README y en "Acerca de".
+- Local: remote `upstream` = `hughhowey/neo`. Sin merges automáticos: se revisan sus releases y se hace **cherry-pick manual** de arreglos del editor, import y export que apliquen.
+- Créditos visibles en README y en "Acerca de". El LICENSE MIT conserva el copyright de Hugh Howey y añade el nuestro.
+- **En GitHub: repo independiente, no "fork" de GitHub** (pendiente de confirmar):
+  - Un *fork* de GitHub muestra la etiqueta "forked from hughhowey/neo" y está pensado para mandar cambios de vuelta al original.
+  - Mutiny es otro producto, y los forks tienen limitaciones: no pueden ser privados, aparecen menos en búsquedas y tienen issues desactivados por defecto.
+  - Un repo propio `mutiny` conserva todo el historial de NEO (el crédito queda en cada commit) y se puede mantener **privado** hasta que esté listo.
+  - Si algún día un arreglo sirve a NEO, se le puede mandar un PR desde un fork aparte.
 
-## 10. Preguntas abiertas
+## 10. Decisiones tomadas (2026-09-25)
 
-1. **Idioma de la UI:** ¿solo español, o i18n (es/en) desde la fase 1? (Recomendación: un `t()` mínimo desde la fase 1 si se quiere contribuir a la comunidad; retrofitearlo después cuesta más.)
-2. **Repo público:** nombre y cuenta de GitHub, y cuándo publicarlo.
-3. **Plataformas de build:** ¿solo Linux (AppImage) al inicio, o también Mac/Windows?
-4. **Comillas por defecto:** ¿«latinas» o “inglesas”?
+1. **UI:** español e inglés desde la fase 1.
+2. **Plataformas:** MVP en Linux; Mac y Windows en la fase 6.
+3. **Comillas:** inglesas “ ”.
+4. **Onboarding:** se conserva, adaptado a ensayos.
+5. **Estadísticas y metas:** se conservan completas.
+
+## 11. Preguntas abiertas
+
+1. Confirmar repo independiente frente a fork de GitHub (§9), el nombre del repo (`mutiny` o `mutiny-write`) y si empieza privado.
