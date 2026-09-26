@@ -13,6 +13,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
+const { cleanModel, cleanEffort, toolPathOk, cliEnv } = require('./guard.js');
 
 // Launched from a desktop launcher, the app may not see the shell's PATH
 // (mise, nvm, ~/.local/bin), so the usual install spots are checked too.
@@ -42,7 +43,8 @@ function run(file, args, timeout = 15000) {
 
 // the first candidate that answers `--version` like Claude Code does
 async function findClaude(preferred) {
-  const list = preferred ? [preferred, ...candidatePaths()] : candidatePaths();
+  // a typed path is only tried if it names claude — it gets executed
+  const list = toolPathOk(preferred, 'claude') ? [preferred, ...candidatePaths()] : candidatePaths();
   for (const p of list) {
     try {
       if (!fs.statSync(p).isFile()) continue;
@@ -105,10 +107,11 @@ function baseOptions(found, settings, workDir, controller, web, maxTurns) {
     persistSession: false,
     maxTurns,
     abortController: controller,
-    env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: 'mutiny/' + (settings.appVersion || '0') }
+    // only what Claude Code needs (its login, the network) — not the writer's other secrets
+    env: cliEnv(['ANTHROPIC_', 'CLAUDE_'], { CLAUDE_AGENT_SDK_CLIENT_APP: 'mutiny/' + (settings.appVersion || '0') })
   };
-  if (settings.model) options.model = settings.model;
-  if (settings.effort) options.effort = settings.effort;
+  if (cleanModel(settings.model)) options.model = cleanModel(settings.model);
+  if (cleanEffort(settings.effort)) options.effort = cleanEffort(settings.effort);
   return options;
 }
 

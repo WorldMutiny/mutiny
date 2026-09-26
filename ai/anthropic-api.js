@@ -10,6 +10,7 @@
 'use strict';
 
 const { parseJsonLoose, matchesSchema } = require('./tasks.js');
+const { cleanEffort } = require('./guard.js');
 
 const MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
 const DEFAULT_MODEL = 'claude-opus-5';
@@ -37,7 +38,7 @@ function modelParams(model, settings) {
   const p = { model };
   if (model === 'claude-haiku-4-5') return p; // no effort / adaptive thinking there
   p.thinking = { type: 'adaptive' };
-  if (settings.effort) p.output_config = { effort: settings.effort };
+  if (cleanEffort(settings.effort)) p.output_config = { effort: cleanEffort(settings.effort) };
   if (model === 'claude-opus-5') {
     p.betas = ['server-side-fallback-2026-07-01'];
     p.fallbacks = 'default';

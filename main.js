@@ -11,6 +11,14 @@ const os = require('os');
 // selection, and that pass can duplicate characters. Deletes stay literal.
 app.commandLine.appendSwitch('blink-settings', 'smartInsertDeleteEnabled=false');
 
+// On Linux, Chromium only uses the Secret Service keychain on desktops it
+// recognises; elsewhere (Hyprland, Sway…) it silently falls back to plain
+// obfuscation. Ask for the keychain explicitly unless the user chose one.
+if (process.platform === 'linux' && !app.commandLine.hasSwitch('password-store')) {
+  const kde = /kde/i.test(process.env.XDG_CURRENT_DESKTOP || '');
+  app.commandLine.appendSwitch('password-store', kde ? 'kwallet6' : 'gnome-libsecret');
+}
+
 // development/test runs keep their app data apart from the real install
 if (process.env.MUTINY_USER_DATA) app.setPath('userData', process.env.MUTINY_USER_DATA);
 
@@ -36,8 +44,34 @@ function ensureLibrary() {
   }
 }
 
+// Every path the renderer names is checked here: ids are plain tokens (no
+// slashes, dots or '..'), per-book file names come from fixed lists, and the
+// result must sit directly inside the library. A compromised page can't
+// reach a file outside it.
+const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,120}$/;
+const AUX_NAMES = new Set(['notes', 'outline']);
+const JSON_NAMES = new Set(['stickies', 'darlings', 'sources', 'chat']);
+
 function bookDir(bookId) {
-  return path.join(LIBRARY_DIR, bookId);
+  if (!ID_RE.test(String(bookId))) throw new Error('invalid essay id');
+  const dir = path.join(LIBRARY_DIR, bookId);
+  if (path.dirname(dir) !== path.resolve(LIBRARY_DIR)) throw new Error('invalid essay id');
+  return dir;
+}
+
+function chapterFile(bookId, chapterId) {
+  if (!ID_RE.test(String(chapterId))) throw new Error('invalid section id');
+  return path.join(bookDir(bookId), 'chapters', chapterId + '.html');
+}
+
+function auxFile(bookId, name) {
+  if (!AUX_NAMES.has(name)) throw new Error('invalid file name');
+  return path.join(bookDir(bookId), name + '.html');
+}
+
+function jsonFile(bookId, name) {
+  if (!JSON_NAMES.has(name)) throw new Error('invalid file name');
+  return path.join(bookDir(bookId), name + '.json');
 }
 
 // A human-readable map of the library, regenerated on every change:
@@ -186,7 +220,7 @@ ipcMain.handle('book:writeMeta', (_e, bookId, meta) => {
 });
 
 ipcMain.handle('chapter:read', (_e, bookId, chapterId) => {
-  const file = path.join(bookDir(bookId), 'chapters', chapterId + '.html');
+  const file = chapterFile(bookId, chapterId);
   try {
     return fs.readFileSync(file, 'utf8');
   } catch {
@@ -195,21 +229,20 @@ ipcMain.handle('chapter:read', (_e, bookId, chapterId) => {
 });
 
 ipcMain.handle('chapter:write', (_e, bookId, chapterId, html) => {
-  const dir = path.join(bookDir(bookId), 'chapters');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, chapterId + '.html'), html);
+  const file = chapterFile(bookId, chapterId);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, String(html));
   return true;
 });
 
 ipcMain.handle('chapter:delete', (_e, bookId, chapterId) => {
-  const file = path.join(bookDir(bookId), 'chapters', chapterId + '.html');
+  const file = chapterFile(bookId, chapterId);
   if (fs.existsSync(file)) fs.unlinkSync(file);
   return true;
 });
 
 ipcMain.handle('aux:read', (_e, bookId, name) => {
-  // name: 'notes' | 'outline'
-  const file = path.join(bookDir(bookId), name + '.html');
+  const file = auxFile(bookId, name);
   try {
     return fs.readFileSync(file, 'utf8');
   } catch {
@@ -218,27 +251,29 @@ ipcMain.handle('aux:read', (_e, bookId, name) => {
 });
 
 ipcMain.handle('aux:write', (_e, bookId, name, html) => {
-  fs.writeFileSync(path.join(bookDir(bookId), name + '.html'), html);
+  fs.writeFileSync(auxFile(bookId, name), String(html));
   return true;
 });
 
 ipcMain.handle('json:read', (_e, bookId, name, fallback) => {
-  return readJSON(path.join(bookDir(bookId), name + '.json'), fallback);
+  return readJSON(jsonFile(bookId, name), fallback);
 });
 
 ipcMain.handle('json:write', (_e, bookId, name, data) => {
-  writeJSON(path.join(bookDir(bookId), name + '.json'), data);
+  writeJSON(jsonFile(bookId, name), data);
   return true;
 });
 
 ipcMain.handle('book:delete', async (_e, bookId, title) => {
+  const dir = bookDir(bookId); // validated before anything is shown or touched
+  if (!fs.existsSync(path.join(dir, 'book.json'))) return false; // only ever an essay folder
   const win = BrowserWindow.getFocusedWindow();
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning',
     buttons: [mt('dialog.cancel'), mt(process.platform === 'win32' ? 'dialog.recycle' : 'dialog.trash')],
     defaultId: 0,
     cancelId: 0,
-    message: mt('dialog.trashQuestion', { title }),
+    message: mt('dialog.trashQuestion', { title: String(title).slice(0, 200) }),
     detail: mt('dialog.trashDetail')
   });
   if (response === 1) {
@@ -321,37 +356,64 @@ ipcMain.handle('cover:read', (_e, bookId, fname) => {
 // ---------------------------------------------------------------------------
 
 const SECRETS_FILE = () => path.join(app.getPath('userData'), 'secrets.json');
+// only the assistant's API keys live here
+const SECRET_NAME = /^ai-key-(anthropic|compat-[a-z0-9]+)$/;
+
+// Keys are encrypted by the OS keychain (Keychain, DPAPI, Secret Service).
+// Chromium's 'basic_text' fallback on Linux is obfuscation, not encryption,
+// so it counts as no keychain: then nothing is saved (the env var works).
+function keychainReady() {
+  const { safeStorage } = require('electron');
+  if (!safeStorage.isEncryptionAvailable()) return false;
+  if (process.platform === 'linux' && safeStorage.getSelectedStorageBackend &&
+      ['basic_text', 'unknown'].includes(safeStorage.getSelectedStorageBackend())) return false;
+  return true;
+}
+
+function writeSecrets(all) {
+  writeJSON(SECRETS_FILE(), all);
+  try { fs.chmodSync(SECRETS_FILE(), 0o600); } catch { /* best effort */ }
+}
 
 function readSecret(name) {
   try {
-    const { safeStorage } = require('electron');
+    if (!SECRET_NAME.test(String(name))) return null;
     const all = readJSON(SECRETS_FILE(), {});
-    if (!all[name]) return null;
-    if (all[name].enc && safeStorage.isEncryptionAvailable()) {
-      return safeStorage.decryptString(Buffer.from(all[name].value, 'base64'));
+    const entry = all[name];
+    if (!entry) return null;
+    if (!entry.enc) {
+      // an older build could leave a key in plain text: never use it, drop it
+      delete all[name];
+      writeSecrets(all);
+      logError('secret', 'discarded a key stored without encryption: ' + name);
+      return null;
     }
-    return all[name].value;
+    if (!keychainReady()) return null;
+    const { safeStorage } = require('electron');
+    return safeStorage.decryptString(Buffer.from(entry.value, 'base64'));
   } catch (err) {
-    logError('secret', err);
+    logError('secret', err && err.message);
     return null;
   }
 }
 
 ipcMain.handle('secret:set', (_e, name, value) => {
-  const { safeStorage } = require('electron');
+  if (!SECRET_NAME.test(String(name))) return { ok: false, error: 'badName' };
   const all = readJSON(SECRETS_FILE(), {});
   if (!value) {
     delete all[name];
-  } else if (safeStorage.isEncryptionAvailable()) {
-    all[name] = { enc: true, value: safeStorage.encryptString(String(value)).toString('base64') };
-  } else {
-    all[name] = { enc: false, value: String(value) };
+    writeSecrets(all);
+    return { ok: true };
   }
-  writeJSON(SECRETS_FILE(), all);
-  return true;
+  if (!keychainReady()) return { ok: false, error: 'noKeychain' };
+  const { safeStorage } = require('electron');
+  all[name] = { enc: true, value: safeStorage.encryptString(String(value).trim()).toString('base64') };
+  writeSecrets(all);
+  return { ok: true };
 });
 
 ipcMain.handle('secret:has', (_e, name) => !!readSecret(name));
+ipcMain.handle('secret:keychain', () => keychainReady());
 
 // ---------------------------------------------------------------------------
 // Sources: turn a pasted URL / DOI / ISBN into a draft record (see
@@ -359,8 +421,8 @@ ipcMain.handle('secret:has', (_e, name) => !!readSecret(name));
 // ---------------------------------------------------------------------------
 
 ipcMain.handle('sources:lookup', async (_e, input) => {
-  const { net } = require('electron');
-  return require('./sources-lookup.js').lookup(input, (url, opts) => net.fetch(url, opts));
+  // Node's fetch: redirects come back unfollowed, so each hop can be checked
+  return require('./sources-lookup.js').lookup(String(input || '').slice(0, 2000), fetch);
 });
 
 // only web addresses ever leave the app — never file:// or custom schemes
@@ -401,7 +463,8 @@ ipcMain.handle('fullscreen:escape', (e) => {
 // ---------------------------------------------------------------------------
 
 async function renderPDF(html) {
-  const pdfWin = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
+  // the export is static HTML: no script runs while it prints
+  const pdfWin = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } });
   // Letter is a North American habit; most of the world prints A4.
   const letterCountries = ['US', 'CA', 'MX', 'PH'];
   try {
@@ -666,7 +729,7 @@ function logError(source, err) {
 
 process.on('uncaughtException', (err) => logError('main', err));
 process.on('unhandledRejection', (err) => logError('main-promise', err));
-ipcMain.handle('log:error', (_e, msg) => logError('renderer', msg));
+ipcMain.handle('log:error', (_e, msg) => logError('renderer', String(msg).slice(0, 4000)));
 
 // One zip of the whole library per day, keeping the last 14. Cheap insurance.
 async function dailyBackup() {
@@ -705,6 +768,29 @@ async function dailyBackup() {
 // ---------------------------------------------------------------------------
 // Window
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Hardening: the page is Mutiny's own files and nothing else. It never
+// navigates away (a dropped or clicked link must not load a web page that
+// would inherit the preload bridge), opens no windows of its own (links go
+// through link:open, http(s) only), embeds no webviews, and gets only the
+// permissions it uses: local fonts (the font picker) and clipboard writes.
+// ---------------------------------------------------------------------------
+const ALLOWED_PERMISSIONS = new Set(['local-fonts', 'clipboard-sanitized-write']);
+
+app.on('web-contents-created', (_e, contents) => {
+  contents.on('will-navigate', (ev, url) => {
+    if (url !== contents.getURL()) ev.preventDefault();
+  });
+  contents.on('will-redirect', (ev) => ev.preventDefault());
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  contents.on('will-attach-webview', (ev) => ev.preventDefault());
+});
+
+function lockPermissions(session) {
+  session.setPermissionRequestHandler((_wc, permission, callback) => callback(ALLOWED_PERMISSIONS.has(permission)));
+  session.setPermissionCheckHandler((_wc, permission) => ALLOWED_PERMISSIONS.has(permission));
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
@@ -717,12 +803,15 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webviewTag: false,
       // The engine is available, but every editable element starts with
       // spellcheck="false" — NEO never nags. A spellcheck pass is a
       // deliberate act (Edit → Spellcheck Pass), not a klaxon.
       spellcheck: true
     }
   });
+  lockPermissions(win.webContents.session);
   win.loadFile('index.html');
 
   // NEO does its own spellchecking (see spell:* handlers) — the engine's

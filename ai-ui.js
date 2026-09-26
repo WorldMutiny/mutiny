@@ -86,6 +86,7 @@ const COMPAT_URLS = {
 };
 const opt = (v, label, cur) => `<option value="${v}"${(cur || '') === v ? ' selected' : ''}>${label}</option>`;
 const keySecret = (prov, preset) => (prov === 'anthropic' ? 'ai-key-anthropic' : 'ai-key-compat-' + preset);
+const ENV_FOR = { anthropic: 'ANTHROPIC_API_KEY', openai: 'OPENAI_API_KEY', gemini: 'GEMINI_API_KEY', openrouter: 'OPENROUTER_API_KEY', cerebras: 'CEREBRAS_API_KEY' };
 
 async function openAiSettings() {
   const c = { provider: 'claude-code', compatPreset: 'openai', ...aiConf() };
@@ -179,6 +180,8 @@ async function openAiSettings() {
   };
 
   let token = 0;
+  let keyNameNow = 'ai-key-anthropic'; // the name the main process files this key under
+  const FIXED_URL = ['openai', 'gemini', 'openrouter', 'cerebras'];
   const refresh = async () => {
     const my = ++token;
     const p = prov();
@@ -193,6 +196,10 @@ async function openAiSettings() {
     $m('.ai-prov-note').textContent = t('ai.provNote.' + p);
     $m('.ai-usage').textContent = t(p === 'claude-code' || p === 'codex' ? 'ai.usagePlan' : 'ai.usageApi');
     const typedKey = $m('#ai-key').value.trim();
+    // services with a key have a fixed address; only local/custom servers take a URL
+    const fixed = p === 'compat' && FIXED_URL.includes(preset());
+    $m('#ai-url').disabled = fixed;
+    if (fixed) $m('#ai-url').value = COMPAT_URLS[preset()];
     const state = $m('.ai-state');
     state.textContent = t('ai.checking');
     const st = await window.neo.aiStatus(settingsNow());
@@ -204,7 +211,8 @@ async function openAiSettings() {
       else state.textContent = t('ai.state.readyCli', { name, v: st.version, plan: st.plan || '—' });
       if (st.path) $m('#ai-path').placeholder = st.path;
     } else {
-      const hasSaved = await window.neo.hasSecret(keySecret(p, preset()));
+      keyNameNow = st.keyName || keySecret(p, preset());
+      const hasSaved = await window.neo.hasSecret(keyNameNow);
       $m('#ai-key').placeholder = hasSaved ? t('ai.keySaved') : st.keyFromEnv ? t('ai.keyEnv', { env: st.keyFromEnv }) : (p === 'compat' && ['ollama', 'llamacpp'].includes(preset()) ? t('ai.keyNone') : '');
       $m('.ai-key-note').textContent = t(hasSaved ? 'ai.keyNoteSaved' : 'ai.keyNote');
       state.textContent = typedKey || st.loggedIn ? t('ai.state.apiReady', { model: st.model || '—' }) : t('ai.state.needKey');
@@ -226,15 +234,21 @@ async function openAiSettings() {
   // a typed key is saved (encrypted) as soon as it's needed; "remove" forgets it
   const saveKey = async () => {
     const k = $m('#ai-key').value.trim();
-    if (!k || !['anthropic', 'compat'].includes(prov())) return;
-    await window.neo.setSecret(keySecret(prov(), preset()), k === 'remove' ? '' : k);
+    if (!k || !['anthropic', 'compat'].includes(prov())) return true;
+    const res = await window.neo.setSecret(keyNameNow, k === 'remove' ? '' : k);
+    if (res && res.ok === false) {
+      // no system keychain: the key is not written anywhere
+      toast(t(res.error === 'noKeychain' ? 'ai.noKeychain' : 'ai.keyNotSaved', { env: ENV_FOR[prov() === 'anthropic' ? 'anthropic' : preset()] || '' }), 12000);
+      return false;
+    }
     $m('#ai-key').value = '';
+    return true;
   };
   const close = () => bd.remove();
   $m('.m-cancel').onclick = close;
   bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
   $m('.m-ok').onclick = async () => {
-    await saveKey();
+    if (!(await saveKey())) return;
     library.ai = { ...aiConf(), ...settingsNow() };
     await window.neo.writeLibrary(library);
     close();
@@ -390,7 +404,13 @@ async function critique(scope) {
   if (!comments.length) { toast(t('ai.noIssues'), 6000); return; }
   snapshotStructure('critique');
   const touched = new Set();
+  const CATS = ['thesis', 'logic', 'evidence', 'counterargument', 'redundancy', 'clarity'];
+  const SEVS = ['high', 'medium', 'low'];
   for (const c of comments) {
+    // model output is data: only known values reach the page's markup
+    c.category = CATS.includes(c.category) ? c.category : 'clarity';
+    c.severity = SEVS.includes(c.severity) ? c.severity : 'medium';
+    c.text = String(c.text || '').slice(0, 2000);
     const at = els[String(c.paragraph || '').replace(/[\[\]\s]/g, '')];
     const sid = 's-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     if (at) {

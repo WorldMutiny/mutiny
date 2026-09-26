@@ -94,7 +94,14 @@
       "!Claude outputs/**",
       "!scripts/**",
       "!node_modules/@anthropic-ai/claude-agent-sdk-*/**"
-    ]
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "onlyLoadAppFromAsar": true
+    }
   },
   "author": "Maxx (fork of NEO by Hugh Howey)",
   "license": "MIT",

@@ -1537,10 +1537,18 @@ document.addEventListener('selectionchange', () => {
   }
 });
 
+// Parse HTML we didn't write (the clipboard, a drag, stored text on its way
+// out) inside a <template>: its document is inert, so nothing in it runs or
+// loads — an <img onerror> in a paste stays text on a page.
+function inertDiv(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = '<div>' + (html || '') + '</div>';
+  return tpl.content.firstElementChild;
+}
+
 // Reduce pasted HTML to what a manuscript is made of: paragraphs, bold, italic.
 function cleanPasteHtml(html) {
-  const holder = document.createElement('div');
-  holder.innerHTML = html;
+  const holder = inertDiv(html);
   holder.querySelectorAll('script,style,meta,link,img,table').forEach((n) => n.remove());
   let blocks = [...holder.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6')];
   if (!blocks.length) blocks = [holder]; // inline-only clipboard
@@ -1815,7 +1823,7 @@ function renderStickies() {
     const place = chIdx >= 0 ? t('side.section', { n: chIdx + 1 }) : t('side.unplaced');
     if (s.kind === 'critique') {
       el.innerHTML = `
-        <div class="s-ch"><span class="s-kind sev-${escHtml(s.severity || 'medium')}">✦ ${t('crit.cat.' + (s.category || 'clarity'))}</span> · ${place}</div>
+        <div class="s-ch"><span class="s-kind sev-${['high', 'medium', 'low'].includes(s.severity) ? s.severity : 'medium'}">✦ ${escHtml(t('crit.cat.' + (s.category || 'clarity')))}</span> · ${place}</div>
         <div class="s-text"></div>
         <div class="s-actions"><button class="s-go">${t('side.goTo')}</button> <button class="s-note">${t('side.toNotes')}</button> <button class="s-done">${t('side.done')}</button></div>`;
       el.querySelector('.s-text').textContent = s.text;
@@ -2922,6 +2930,7 @@ async function addSourceFrom(q) {
   toast(t('src.looking'), 15000);
   const res = await window.neo.lookupSource(q);
   if (res.error === 'unrecognised') { toast(t('src.unrecognised'), 6000); return false; }
+  if (res.error === 'blocked') { toast(t('src.blocked'), 7000); return false; }
   const draft = res.source || res.partial || {};
   const dup = sources.find((s) => (draft.url && s.url === draft.url) || (draft.doi && s.doi === draft.doi) || (draft.isbn && s.isbn === draft.isbn));
   if (dup) { toast(t('src.duplicate')); return (await editSource(dup)) || dup; }
@@ -3724,7 +3733,9 @@ $('#search-close').onclick = closeSearch;
 /*  IMPORT                                                             */
 /* ================================================================== */
 
-const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// safe in text and in quoted attributes alike
+const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 // Turn parsed manuscripts into books on a shelf — used by the file picker
 // and by dropping files from Finder straight onto a shelf.
@@ -4393,8 +4404,7 @@ function safeName(s) {
 // Stray spans, inline styles, trailing <br>s, and no-break spaces all
 // stop at this door.
 function parasFromHtml(html) {
-  const holder = document.createElement('div');
-  holder.innerHTML = html || '';
+  const holder = inertDiv(html);
   // an unwritten outline line is a ghost paragraph plus the *** break
   // planted for it; neither belongs in an export
   holder.querySelectorAll('p.ghost[data-sec-id]').forEach((g) => {
@@ -4631,8 +4641,7 @@ const escXml = (s) => String(s)
 // Walk a paragraph's DOM and emit [{text, b, i, src}] so exports get real
 // bold/italic and citations; ⚑ marks come out as {mark}, [n] flags as {citeMark}
 function paraRuns(pHtml) {
-  const holder = document.createElement('div');
-  holder.innerHTML = pHtml;
+  const holder = inertDiv(pHtml);
   const runs = [];
   const walk = (node, b, i, src) => {
     for (const child of node.childNodes) {

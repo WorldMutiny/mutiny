@@ -41,15 +41,32 @@ function isbnValid(d) {
 
 // ---------------------------------------------------------------- fetching
 
+const { isPrivateUrl } = require('./ai/guard.js');
+
+// Follows redirects by hand so every hop is checked: a pasted link (or one
+// it redirects to) may not reach this computer or the local network.
 async function fetchLimited(fetchFn, url, accept) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetchFn(url, {
-      signal: ctrl.signal,
-      redirect: 'follow',
-      headers: { 'User-Agent': UA, Accept: accept }
-    });
+    let res;
+    let current = url;
+    for (let hop = 0; ; hop++) {
+      if (hop > 5) throw new Error('too many redirects');
+      if (await isPrivateUrl(current)) throw new Error('blocked: local or private address');
+      res = await fetchFn(current, {
+        signal: ctrl.signal,
+        redirect: 'manual',
+        headers: { 'User-Agent': UA, Accept: accept }
+      });
+      if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
+        current = new URL(res.headers.get('location'), current).href;
+        try { await res.body?.cancel(); } catch { /* nothing to drain */ }
+        continue;
+      }
+      break;
+    }
+    Object.defineProperty(res, 'finalUrl', { value: current });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const reader = res.body.getReader();
     const chunks = [];
@@ -231,7 +248,7 @@ async function lookup(input, fetchFn) {
     }
     const { buf, res } = await fetchLimited(fetchFn, d.value, 'text/html,application/xhtml+xml');
     const type = res.headers.get('content-type') || '';
-    const finalUrl = res.url || d.value;
+    const finalUrl = res.finalUrl || res.url || d.value;
     if (!/html|xml/i.test(type)) {
       // a PDF or other file: all we know is where it lives
       return { source: { kind: 'web', url: finalUrl, title: '', author: '', site: new URL(finalUrl).hostname.replace(/^www\./, ''), published: '' } };
@@ -239,6 +256,7 @@ async function lookup(input, fetchFn) {
     return { source: fromHtml(decode(buf, type), finalUrl) };
   } catch (err) {
     // an unreachable page still leaves a usable draft: its address
+    if (/blocked/.test(String(err.message))) return { error: 'blocked' };
     const partial = d.kind === 'url' ? { kind: 'web', url: d.value, site: new URL(d.value).hostname.replace(/^www\./, '') } : null;
     return { error: err.name === 'AbortError' ? 'timeout' : 'network', detail: String(err.message || err), partial };
   }

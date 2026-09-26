@@ -13,6 +13,7 @@ const os = require('os');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
 const { chatAsPrompt, parseJsonLoose } = require('./tasks.js');
+const { cleanModel, cleanEffort, toolPathOk, cliEnv } = require('./guard.js');
 
 function candidatePaths() {
   const home = os.homedir();
@@ -36,7 +37,8 @@ function run(file, args, timeout = 15000) {
 }
 
 async function findCodex(preferred) {
-  const list = preferred ? [preferred, ...candidatePaths()] : candidatePaths();
+  // a typed path is only tried if it names codex — it gets executed
+  const list = toolPathOk(preferred, 'codex') ? [preferred, ...candidatePaths()] : candidatePaths();
   for (const p of list) {
     try { if (!fs.statSync(p).isFile()) continue; } catch { continue; }
     const out = await run(p, ['--version']);
@@ -64,7 +66,8 @@ const LOCKDOWN = ['shell_tool', 'unified_exec', 'apps', 'browser_use', 'computer
 // Spawn one `codex exec`, feed the prompt on stdin, read JSONL events.
 function exec(found, args, prompt, { signal, onEvent }) {
   return new Promise((resolve) => {
-    const child = spawn(found.path, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    // only what Codex needs (its login, the network) — not the writer's other secrets
+    const child = spawn(found.path, args, { stdio: ['pipe', 'pipe', 'pipe'], env: cliEnv(['CODEX_', 'OPENAI_']) });
     let buf = '';
     let err = '';
     let done = false;
@@ -95,8 +98,8 @@ function baseArgs(settings, workDir, web) {
   const args = ['exec', '--json', '--ephemeral', '--ignore-user-config', '--ignore-rules', '--skip-git-repo-check',
     '-s', 'read-only', '-C', workDir, '-c', 'approval_policy="never"', ...LOCKDOWN];
   args.push('-c', web ? 'web_search="live"' : 'web_search="disabled"');
-  if (settings.model) args.push('-m', settings.model);
-  if (settings.effort) args.push('-c', `model_reasoning_effort="${settings.effort}"`);
+  if (cleanModel(settings.model)) args.push('-m', cleanModel(settings.model));
+  if (cleanEffort(settings.effort)) args.push('-c', `model_reasoning_effort="${cleanEffort(settings.effort)}"`);
   return args;
 }
 

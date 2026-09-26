@@ -11,6 +11,7 @@
 'use strict';
 
 const { parseJsonLoose, matchesSchema } = require('./tasks.js');
+const { cleanModel, cleanEffort, isLocalHost } = require('./guard.js');
 
 const PRESETS = {
   openai: { url: 'https://api.openai.com/v1', model: 'gpt-5-mini', key: true, env: 'OPENAI_API_KEY' },
@@ -22,20 +23,31 @@ const PRESETS = {
   custom: { url: '', model: '', key: false }
 };
 
+// Services with a key have a fixed address: the URL can't be pointed
+// elsewhere, so a saved key only ever travels to its own service. Local and
+// custom servers take any URL, and their key is bound to that server's host.
+const FIXED = (preset) => !!(PRESETS[preset] && PRESETS[preset].key);
+
 function conf(settings) {
   const preset = PRESETS[settings.compatPreset] ? settings.compatPreset : 'custom';
-  return {
-    preset,
-    url: String(settings.compatUrl || PRESETS[preset].url || '').replace(/\/+$/, ''),
-    model: settings.compatModel || PRESETS[preset].model || ''
-  };
+  const url = FIXED(preset) ? PRESETS[preset].url : String(settings.compatUrl || PRESETS[preset].url || '');
+  let clean = '';
+  try {
+    const u = new URL(url);
+    if (u.protocol === 'https:' || u.protocol === 'http:') clean = u.href.replace(/\/+$/, '');
+  } catch { /* not a URL */ }
+  return { preset, url: clean, model: cleanModel(settings.compatModel) || PRESETS[preset].model || '' };
 }
 
-const keyName = (preset) => 'ai-key-compat-' + preset;
-// a key saved in Mutiny wins; otherwise the provider's usual environment variable
-function keyFor(preset, readSecret) {
-  const env = PRESETS[preset] && PRESETS[preset].env;
-  return readSecret(keyName(preset)) || (env && process.env[env]) || null;
+const hostTag = (url) => { try { return new URL(url).host.toLowerCase().replace(/[^a-z0-9]/g, ''); } catch { return ''; } };
+const keyName = (preset, url) => 'ai-key-compat-' + (FIXED(preset) ? preset : preset + hostTag(url));
+
+// a key saved in Mutiny wins; otherwise the service's usual environment
+// variable (fixed services only). Never over plain http to another machine.
+function keyFor(c, readSecret) {
+  if (c.url.startsWith('http:') && !isLocalHost(c.url)) return null;
+  const env = FIXED(c.preset) && PRESETS[c.preset].env;
+  return readSecret(keyName(c.preset, c.url)) || (env && process.env[env]) || null;
 }
 
 function headers(key) {
@@ -48,7 +60,8 @@ async function post(c, key, body, signal) {
   if (!c.url) return { error: 'failed', detail: 'no base URL' };
   let res;
   try {
-    res = await fetch(c.url + '/chat/completions', { method: 'POST', headers: headers(key), body: JSON.stringify(body), signal });
+    // no redirects: a key must not follow a 30x to some other host
+    res = await fetch(c.url + '/chat/completions', { method: 'POST', headers: headers(key), body: JSON.stringify(body), signal, redirect: 'error' });
   } catch (err) {
     if (signal && signal.aborted) return { error: 'cancelled' };
     return { error: 'unreachable', detail: String((err && err.cause && err.cause.code) || err.message || err) };
@@ -70,8 +83,9 @@ async function status(settings, { readSecret }) {
   const c = conf(settings || {});
   return {
     installed: !!c.url,
-    loggedIn: !PRESETS[c.preset].key || !!keyFor(c.preset, readSecret),
-    keyFromEnv: !readSecret(keyName(c.preset)) && !!keyFor(c.preset, readSecret) ? PRESETS[c.preset].env : null,
+    loggedIn: !PRESETS[c.preset].key || !!keyFor(c, readSecret),
+    keyFromEnv: !readSecret(keyName(c.preset, c.url)) && !!keyFor(c, readSecret) ? PRESETS[c.preset].env : null,
+    keyName: keyName(c.preset, c.url),
     plan: 'API',
     model: c.model,
     url: c.url
@@ -83,7 +97,7 @@ async function listModels(settings, { readSecret }) {
   const c = conf(settings || {});
   if (!c.url) return [];
   try {
-    const res = await fetch(c.url + '/models', { headers: headers(keyFor(c.preset, readSecret)), signal: AbortSignal.timeout(10000) });
+    const res = await fetch(c.url + '/models', { headers: headers(keyFor(c, readSecret)), signal: AbortSignal.timeout(10000), redirect: 'error' });
     if (!res.ok) return [];
     const d = await res.json();
     return (d.data || d.models || []).map((m) => String(m.id || m.name || '').replace(/^models\//, '')).filter(Boolean).sort();
@@ -94,7 +108,7 @@ async function runTask(task, settings, { signal, onProgress, readSecret }) {
   if (task.web) return { ok: false, error: 'noWeb' };
   const c = conf(settings);
   if (!c.model) return { ok: false, error: 'badModel', detail: 'no model set' };
-  const key = keyFor(c.preset, readSecret);
+  const key = keyFor(c, readSecret);
   const messages = [
     { role: 'system', content: `${task.system}\n\nReply with only a JSON object matching this schema — no prose, no code fences:\n${JSON.stringify(task.schema)}` },
     { role: 'user', content: task.prompt }
@@ -109,7 +123,7 @@ async function runTask(task, settings, { signal, onProgress, readSecret }) {
     if (onProgress) onProgress({ stage: 'think' });
     const body = { model: c.model, messages, stream: false };
     if (fmt) body.response_format = fmt;
-    if (settings.effort) body.reasoning_effort = settings.effort;
+    if (cleanEffort(settings.effort)) body.reasoning_effort = cleanEffort(settings.effort);
     const r = await post(c, key, body, signal);
     if (r.error) return { ok: false, error: r.error, detail: r.detail };
     if (!r.res.ok) {
@@ -139,8 +153,8 @@ async function chat(req, settings, { signal, onDelta, readSecret }) {
     stream: true,
     messages: [{ role: 'system', content: req.system }, ...req.messages]
   };
-  if (settings.effort) body.reasoning_effort = settings.effort;
-  const r = await post(c, keyFor(c.preset, readSecret), body, signal);
+  if (cleanEffort(settings.effort)) body.reasoning_effort = cleanEffort(settings.effort);
+  const r = await post(c, keyFor(c, readSecret), body, signal);
   if (r.error) return { ok: false, error: r.error, detail: r.detail };
   if (!r.res.ok) return errorFrom(r.res);
   let text = '';
