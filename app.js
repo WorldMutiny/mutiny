@@ -734,9 +734,10 @@ async function openBook(bookId) {
   reconcileMarks();        // re-adopt any note marks orphaned by cut/paste
   updateCounters();
 
-  // Plotters land in the outline for a brand-new book
+  // Outline-first writers land on a skeleton for a brand-new essay
   const isNew = book.chapterOrder.length === 0;
   if (isNew && library.writingStyle === 'plotter') {
+    applyEssayTemplate();
     switchTab('outline');
   } else {
     switchTab('manuscript');
@@ -1811,6 +1812,7 @@ function renderNav() {
     note.contentEditable = 'true';
     note.spellcheck = false;
     note.textContent = book.chapterNotes[chId] || '';
+    note.dataset.ph = (book.outlinePrompts || {})[chId] || 'The point of this section…';
     note.addEventListener('click', (e) => e.stopPropagation());
     note.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); note.blur(); }
@@ -2240,6 +2242,36 @@ function switchTab(name) {
 
 const secLetter = (i) => String.fromCharCode(65 + (i % 26));
 
+// The structured-writing skeleton (after Jordan Peterson's essay method):
+// an essay is outlined as ten-odd sentences before it is written. Each
+// line starts empty with a guiding question as its placeholder, so nothing
+// reaches the manuscript until the writer puts a sentence of their own there.
+const ESSAY_TEMPLATE = [
+  { point: 'Your thesis — what are you claiming, in one sentence?',
+    paras: ['Why does this matter now?', 'What does the reader probably believe today?'] },
+  { point: 'Your strongest reason',
+    paras: ['The evidence for it', 'A concrete example'] },
+  { point: 'Your second reason',
+    paras: ['The evidence for it', 'A concrete example'] },
+  { point: 'The best objection — and your answer to it',
+    paras: ['The objection, stated fairly', 'Why it doesn’t change your conclusion'] },
+  { point: 'Conclusion — what changes if you are right?',
+    paras: ['What the reader should do or think next'] }
+];
+
+function applyEssayTemplate() {
+  book.chapterNotes = book.chapterNotes || {};
+  book.sectionNotes = book.sectionNotes || {};
+  book.outlinePrompts = {};
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  ESSAY_TEMPLATE.forEach((sec, i) => {
+    const chId = createChapterAt(i);
+    book.outlinePrompts[chId] = sec.point;
+    book.sectionNotes[chId] = sec.paras.map((ph) => ({ id: 'sec-' + uid(), text: '', ph }));
+  });
+  saveMeta();
+}
+
 function renderOutline(focusTarget) {
   book.sectionNotes = book.sectionNotes || {};
   book.chapterNotes = book.chapterNotes || {};
@@ -2248,9 +2280,9 @@ function renderOutline(focusTarget) {
 
   book.chapterOrder.forEach((chId, i) => {
     wrap.appendChild(outlineLine('chapter', chId, null, i, String(i + 1),
-      book.chapterNotes[chId] || ''));
+      book.chapterNotes[chId] || '', (book.outlinePrompts || {})[chId]));
     (book.sectionNotes[chId] || []).forEach((sec, j) => {
-      wrap.appendChild(outlineLine('section', chId, sec.id, j, secLetter(j), sec.text));
+      wrap.appendChild(outlineLine('section', chId, sec.id, j, secLetter(j), sec.text, sec.ph));
     });
   });
 
@@ -2277,7 +2309,7 @@ function renderOutline(focusTarget) {
   }
 }
 
-function outlineLine(kind, chId, secId, index, label, text) {
+function outlineLine(kind, chId, secId, index, label, text, prompt) {
   const line = document.createElement('div');
   line.className = 'ol-line ol-' + kind;
   line.dataset.chId = chId;
@@ -2290,6 +2322,9 @@ function outlineLine(kind, chId, secId, index, label, text) {
   txt.contentEditable = 'true';
   txt.spellcheck = false;
   txt.textContent = text;
+  txt.dataset.ph = prompt || (kind === 'chapter'
+    ? 'The point of this section, in one sentence…'
+    : 'A sentence that will become a paragraph…');
 
   const save = () => {
     const val = txt.textContent.trim();
