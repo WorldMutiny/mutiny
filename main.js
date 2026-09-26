@@ -27,7 +27,7 @@ function ensureLibrary() {
       penNames: [],
       firstRunDone: false,
       pageTheme: 'night',
-      shelves: [{ id: 'shelf-1', name: 'Works in Progress', bookIds: [] }]
+      shelves: [{ id: 'shelf-1', name: '', nameKey: 'shelf.inProgress', bookIds: [] }]
     };
     fs.writeFileSync(LIBRARY_FILE, JSON.stringify(seed, null, 2));
   }
@@ -45,7 +45,7 @@ function writeCatalog() {
     const lib = readJSON(LIBRARY_FILE, { shelves: [] });
     const onShelf = {};
     for (const s of lib.shelves || []) {
-      for (const id of s.bookIds) onShelf[id] = s.name;
+      for (const id of s.bookIds) onShelf[id] = s.name || mt(s.nameKey || 'shelf.new');
     }
     const lines = [];
     for (const d of fs.readdirSync(LIBRARY_DIR)) {
@@ -78,6 +78,51 @@ function writeJSON(file, data) {
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
   fs.renameSync(tmp, file); // atomic-ish: never leave a half-written file
 }
+
+// ---------------------------------------------------------------------------
+// Interface language: locales/<lang>.json, English as the fallback. The
+// library remembers the choice; before there is one, the OS locale decides.
+// ---------------------------------------------------------------------------
+const LANGS = ['en', 'es'];
+const localeCache = {};
+
+function loadLocale(lang) {
+  if (!localeCache[lang]) {
+    localeCache[lang] = readJSON(path.join(__dirname, 'locales', lang + '.json'), {});
+  }
+  return localeCache[lang];
+}
+
+function uiLanguage() {
+  const chosen = readJSON(LIBRARY_FILE, {}).language;
+  if (LANGS.includes(chosen)) return chosen;
+  let sys = 'en';
+  try { sys = app.getLocale() || 'en'; } catch { /* before ready */ }
+  return sys.toLowerCase().startsWith('es') ? 'es' : 'en';
+}
+
+// main-process strings (menus, dialogs)
+let MAIN_LANG = 'en';
+function mt(key, vars) {
+  let s = loadLocale(MAIN_LANG)[key];
+  if (s == null) s = loadLocale('en')[key];
+  if (s == null) return key;
+  if (vars) s = s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m));
+  return s;
+}
+
+// the renderer asks with no argument at startup, and with a language when
+// the writer switches — which also rebuilds the menus
+ipcMain.handle('i18n:load', (_e, lang) => {
+  const next = LANGS.includes(lang) ? lang : uiLanguage();
+  if (next !== MAIN_LANG) {
+    MAIN_LANG = next;
+    try { buildMenu(); } catch (err) { logError('menu', err); }
+  }
+  const all = {};
+  for (const l of LANGS) all[l] = loadLocale(l);
+  return { lang: next, strings: all[next], fallback: all.en, all };
+});
 
 // ---------------------------------------------------------------------------
 // IPC — the renderer's whole view of the disk
@@ -116,7 +161,7 @@ ipcMain.handle('book:create', (_e, meta) => {
     created: new Date().toISOString(),
     modified: new Date().toISOString(),
     chapterOrder: [],
-    tabNames: { notes: 'Notes', outline: 'Outline' }
+    tabNames: {} // renamed tabs only; defaults come from the interface language
   };
   writeJSON(path.join(dir, 'book.json'), book);
   fs.writeFileSync(path.join(dir, 'notes.html'), '');
@@ -187,11 +232,11 @@ ipcMain.handle('book:delete', async (_e, bookId, title) => {
   const win = BrowserWindow.getFocusedWindow();
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning',
-    buttons: ['Cancel', process.platform === 'win32' ? 'Move to Recycle Bin' : 'Move to Trash'],
+    buttons: [mt('dialog.cancel'), mt(process.platform === 'win32' ? 'dialog.recycle' : 'dialog.trash')],
     defaultId: 0,
     cancelId: 0,
-    message: `Move “${title}” to the ${process.platform === 'win32' ? 'Recycle Bin' : 'Trash'}?`,
-    detail: 'The book folder goes to your system trash, so you can recover it.'
+    message: mt('dialog.trashQuestion', { title }),
+    detail: mt('dialog.trashDetail')
   });
   if (response === 1) {
     const { shell } = require('electron');
@@ -204,8 +249,8 @@ ipcMain.handle('book:delete', async (_e, bookId, title) => {
       logError('trash', err);
       shell.showItemInFolder(bookDir(bookId));
       dialog.showMessageBox(win, {
-        message: 'Mutiny couldn’t move that folder to the Trash.',
-        detail: 'The book is untouched. Its folder is highlighted so you can deal with it yourself.'
+        message: mt('dialog.trashFailed'),
+        detail: mt('dialog.trashFailedDetail')
       });
       return false;
     }
@@ -225,9 +270,9 @@ ipcMain.handle('library:path', () => LIBRARY_DIR);
 ipcMain.handle('cover:pick', async () => {
   const win = BrowserWindow.getFocusedWindow();
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    title: 'Choose cover art',
+    title: mt('dialog.pickCover'),
     properties: ['openFile'],
-    filters: [{ name: 'Images', extensions: COVER_EXTS }]
+    filters: [{ name: mt('dialog.images'), extensions: COVER_EXTS }]
   });
   return canceled || !filePaths.length ? null : filePaths[0];
 });
@@ -564,9 +609,9 @@ ipcMain.handle('import:files', async (_e, paths) => {
 ipcMain.handle('import:pick', async () => {
   const win = BrowserWindow.getFocusedWindow();
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    title: 'Bring your manuscripts home',
+    title: mt('dialog.importTitle'),
     properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'Manuscripts', extensions: ['docx', 'txt', 'md'] }]
+    filters: [{ name: mt('dialog.documents'), extensions: ['docx', 'txt', 'md'] }]
   });
   if (canceled || !filePaths.length) return [];
   const out = [];
@@ -729,6 +774,8 @@ function sendToWindow(msg) {
 
 function buildMenu() {
   const isMac = process.platform === 'darwin';
+  // "&" marks a mnemonic outside macOS — a literal one is written "&&"
+  const T = (key) => (isMac ? mt(key) : mt(key).replace(/&/g, '&&'));
   // bundled typefaces — keep in step with BODY_FONTS in app.js
   const bodyFonts = ['Literata', 'Source Serif', 'Lora', 'EB Garamond'];
   const template = [
@@ -736,96 +783,96 @@ function buildMenu() {
     // which is exactly what kept NEO from ever opening a window there
     ...(isMac ? [{ role: 'appMenu' }] : []),
     {
-      label: 'File',
+      label: T('menu.file'),
       submenu: [
         {
-          label: 'Export',
+          label: T('menu.export'),
           submenu: [
-            { label: 'Plain Text (.txt)', click: () => sendToWindow({ type: 'export', format: 'txt' }) },
-            { label: 'Markdown (.md)', click: () => sendToWindow({ type: 'export', format: 'md' }) },
-            { label: 'Web Page (.html)', click: () => sendToWindow({ type: 'export', format: 'html' }) },
-            { label: 'PDF (.pdf)', click: () => sendToWindow({ type: 'export', format: 'pdf' }) },
-            { label: 'Word (.docx)', click: () => sendToWindow({ type: 'export', format: 'docx' }) }
+            { label: T('menu.export.txt'), click: () => sendToWindow({ type: 'export', format: 'txt' }) },
+            { label: T('menu.export.md'), click: () => sendToWindow({ type: 'export', format: 'md' }) },
+            { label: T('menu.export.html'), click: () => sendToWindow({ type: 'export', format: 'html' }) },
+            { label: T('menu.export.pdf'), click: () => sendToWindow({ type: 'export', format: 'pdf' }) },
+            { label: T('menu.export.docx'), click: () => sendToWindow({ type: 'export', format: 'docx' }) }
           ]
         },
         { type: 'separator' },
         {
-          label: 'Email Draft to Myself',
+          label: T('menu.emailDraft'),
           accelerator: 'CmdOrCtrl+E',
           click: () => sendToWindow({ type: 'emailDraft' })
         },
-        { label: 'Email Settings…', click: () => sendToWindow({ type: 'emailSettings' }) },
+        { label: T('menu.emailSettings'), click: () => sendToWindow({ type: 'emailSettings' }) },
         {
-          label: isMac ? 'Goals & Settings…' : 'Goals && Settings…',
+          label: T('menu.goals'),
           accelerator: 'CmdOrCtrl+,',
           click: () => sendToWindow({ type: 'stats' })
         },
         { type: 'separator' },
         {
-          label: 'Import Manuscripts…',
+          label: T('menu.importFiles'),
           accelerator: 'CmdOrCtrl+Shift+I',
           click: () => sendToWindow({ type: 'import' })
         },
         { type: 'separator' },
-        ...(isMac ? [{ role: 'close' }] : [{ role: 'quit' }])
+        ...(isMac ? [{ role: 'close', label: T('menu.close') }] : [{ role: 'quit', label: T('menu.quit') }])
       ]
     },
     {
-      label: 'Edit',
+      label: T('menu.edit'),
       submenu: [
-        { role: 'undo' }, { role: 'redo' },
+        { role: 'undo', label: T('menu.undo') }, { role: 'redo', label: T('menu.redo') },
         { type: 'separator' },
-        { role: 'cut' }, { role: 'copy' }, { role: 'paste' },
-        { role: 'pasteAndMatchStyle' }, { role: 'selectAll' },
+        { role: 'cut', label: T('menu.cut') }, { role: 'copy', label: T('menu.copy') }, { role: 'paste', label: T('menu.paste') },
+        { role: 'pasteAndMatchStyle', label: T('menu.pastePlain') }, { role: 'selectAll', label: T('menu.selectAll') },
         { type: 'separator' },
         {
-          label: isMac ? 'Find & Replace' : 'Find && Replace',
+          label: T('menu.find'),
           accelerator: 'CmdOrCtrl+F',
           click: () => sendToWindow({ type: 'find' })
         },
         {
-          label: 'Spellcheck Pass',
+          label: T('menu.spellcheck'),
           accelerator: 'CmdOrCtrl+;',
           click: () => sendToWindow({ type: 'spellcheck' })
         }
       ]
     },
     {
-      label: 'Format',
+      label: T('menu.format'),
       submenu: [
         {
-          label: 'Body Font',
+          label: T('menu.bodyFont'),
           submenu: bodyFonts.map((f) => ({
             label: f,
             click: () => sendToWindow({ type: 'bodyFont', value: f })
           }))
         },
         {
-          label: 'Align Paragraph',
+          label: T('menu.align'),
           submenu: [
-            { label: 'Left', click: () => sendToWindow({ type: 'align', value: 'left' }) },
-            { label: 'Center', click: () => sendToWindow({ type: 'align', value: 'center' }) },
-            { label: 'Right', click: () => sendToWindow({ type: 'align', value: 'right' }) },
-            { label: 'Justify', click: () => sendToWindow({ type: 'align', value: 'justify' }) }
+            { label: T('menu.align.left'), click: () => sendToWindow({ type: 'align', value: 'left' }) },
+            { label: T('menu.align.center'), click: () => sendToWindow({ type: 'align', value: 'center' }) },
+            { label: T('menu.align.right'), click: () => sendToWindow({ type: 'align', value: 'right' }) },
+            { label: T('menu.align.justify'), click: () => sendToWindow({ type: 'align', value: 'justify' }) }
           ]
         },
         { type: 'separator' },
-        { label: 'Larger Text', accelerator: 'CmdOrCtrl+=', click: () => sendToWindow({ type: 'fontSize', value: 1 }) },
-        { label: 'Smaller Text', accelerator: 'CmdOrCtrl+-', click: () => sendToWindow({ type: 'fontSize', value: -1 }) },
-        { label: 'Reset Text Size', accelerator: 'CmdOrCtrl+0', click: () => sendToWindow({ type: 'fontSize', value: 0 }) },
+        { label: T('menu.textLarger'), accelerator: 'CmdOrCtrl+=', click: () => sendToWindow({ type: 'fontSize', value: 1 }) },
+        { label: T('menu.textSmaller'), accelerator: 'CmdOrCtrl+-', click: () => sendToWindow({ type: 'fontSize', value: -1 }) },
+        { label: T('menu.textReset'), accelerator: 'CmdOrCtrl+0', click: () => sendToWindow({ type: 'fontSize', value: 0 }) },
         { type: 'separator' },
         {
-          label: 'Typewriter Scrolling',
+          label: T('menu.typewriter'),
           accelerator: 'CmdOrCtrl+Shift+T',
           click: () => sendToWindow({ type: 'typewriter' })
         }
       ]
     },
     {
-      label: 'View',
+      label: T('menu.view'),
       submenu: [
         {
-          label: 'Full Screen',
+          label: T('menu.fullScreen'),
           accelerator: 'CmdOrCtrl+Shift+F',
           click: () => {
             const w = BrowserWindow.getFocusedWindow();
@@ -834,34 +881,42 @@ function buildMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Page',
+          label: T('menu.page'),
           submenu: [
-            { label: 'Night', click: () => sendToWindow({ type: 'pageTheme', value: 'night' }) },
-            { label: 'Paper', click: () => sendToWindow({ type: 'pageTheme', value: 'paper' }) }
+            { label: T('menu.page.night'), click: () => sendToWindow({ type: 'pageTheme', value: 'night' }) },
+            { label: T('menu.page.paper'), click: () => sendToWindow({ type: 'pageTheme', value: 'paper' }) }
           ]
         },
         {
-          label: 'Brighter Interface',
+          label: T('menu.brighter'),
           click: () => sendToWindow({ type: 'uiBright' })
         }
       ]
     },
-    { role: 'windowMenu' },
     {
-      label: 'Help',
+      label: T('menu.window'),
+      role: 'window',
+      submenu: [
+        { role: 'minimize', label: T('menu.minimize') },
+        { role: 'zoom', label: T('menu.zoom') },
+        ...(isMac ? [{ type: 'separator' }, { role: 'front', label: T('menu.front') }] : [{ role: 'close', label: T('menu.close') }])
+      ]
+    },
+    {
+      label: T('menu.help'),
       submenu: [
         {
-          label: 'Mutiny Shortcuts',
+          label: T('menu.shortcuts'),
           accelerator: 'CmdOrCtrl+/',
           click: () => sendToWindow({ type: 'help' })
         },
         { type: 'separator' },
         {
-          label: 'About Mutiny',
+          label: T('menu.about'),
           click: () => sendToWindow({ type: 'about' })
         },
         {
-          label: 'Check for Update…',
+          label: T('menu.checkUpdate'),
           click: () => sendToWindow({ type: 'checkUpdate' })
         }
       ]
@@ -993,6 +1048,7 @@ app.whenReady().then(() => {
     try { ensureLibrary(); } catch (err) { logError('library', err); }
     createWindow();
     try { initSpell(); } catch (err) { logError('spell', err); }
+    MAIN_LANG = uiLanguage();
     try { buildMenu(); } catch (err) { logError('menu', err); }
     try { dailyBackup(); } catch (err) { logError('backup', err); }
     try { checkForUpdates(); } catch (err) { logError('updater', err); }
@@ -1000,8 +1056,8 @@ app.whenReady().then(() => {
     // catastrophic: tell the human instead of dying in silence
     logError('startup', err);
     try {
-      dialog.showErrorBox('Mutiny failed to start',
-        'Please report this at github.com/worldmutiny/mutiny/issues:\n\n' + String((err && err.stack) || err));
+      dialog.showErrorBox(mt('dialog.startFailed'),
+        mt('dialog.startFailedDetail') + '\n\n' + String((err && err.stack) || err));
     } catch { /* nothing left to try */ }
   }
   app.on('activate', () => {
