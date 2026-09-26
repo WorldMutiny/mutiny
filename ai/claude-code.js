@@ -90,55 +90,79 @@ async function loadSdk() {
   return sdk;
 }
 
+const WEB_TOOLS = ['WebSearch', 'WebFetch'];
+
+// Everything every run shares: the lockdown, the model, and — so nothing of
+// the essay is left behind in ~/.claude/projects — no session on disk.
+function baseOptions(found, settings, workDir, controller, web, maxTurns) {
+  const options = {
+    pathToClaudeCodeExecutable: found.path,
+    cwd: workDir,
+    tools: web ? WEB_TOOLS : [],
+    allowedTools: web ? WEB_TOOLS : [],
+    permissionMode: 'dontAsk',
+    settingSources: [],
+    persistSession: false,
+    maxTurns,
+    abortController: controller,
+    env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: 'mutiny/' + (settings.appVersion || '0') }
+  };
+  if (settings.model) options.model = settings.model;
+  if (settings.effort) options.effort = settings.effort;
+  return options;
+}
+
+function linkAbort(signal) {
+  const controller = new AbortController();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+  return controller;
+}
+
+// Iterate a query until it ends or is cancelled; a cancel answers at once
+// while Claude Code winds down in the background.
+async function drain(stream, controller, onMessage) {
+  const consume = (async () => {
+    for await (const message of stream) {
+      if (controller.signal.aborted) break;
+      onMessage(message);
+    }
+  })();
+  const cancelled = new Promise((resolve) => {
+    if (controller.signal.aborted) resolve('cancelled');
+    controller.signal.addEventListener('abort', () => resolve('cancelled'), { once: true });
+  });
+  const how = await Promise.race([consume.then(() => 'done'), cancelled]);
+  if (how === 'cancelled') consume.catch(() => { /* surfaces once the process exits */ });
+  return how;
+}
+
 /**
  * Run one task. Resolves { ok: true, data, costUsd } or { ok: false, error }.
- * task: { system, prompt, schema, tools: string[], maxTurns }
+ * task: { system, prompt, schema, web, maxTurns }
  * settings: { claudePath?, model?, effort? }
  */
 async function runTask(task, settings, { signal, onProgress, workDir }) {
   const found = await findClaude(settings.claudePath);
   if (!found) return { ok: false, error: 'notInstalled' };
   const { query } = await loadSdk();
-  const controller = new AbortController();
-  if (signal) {
-    if (signal.aborted) controller.abort();
-    else signal.addEventListener('abort', () => controller.abort(), { once: true });
-  }
+  const controller = linkAbort(signal);
   fs.mkdirSync(workDir, { recursive: true });
   const options = {
-    pathToClaudeCodeExecutable: found.path,
-    cwd: workDir,
-    tools: task.tools,
-    allowedTools: task.tools,
-    permissionMode: 'dontAsk',
-    settingSources: [],
+    ...baseOptions(found, settings, workDir, controller, task.web, task.maxTurns || 12),
     systemPrompt: task.system,
-    maxTurns: task.maxTurns || 12,
-    abortController: controller,
-    outputFormat: { type: 'json_schema', schema: task.schema },
-    env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: 'mutiny/' + (settings.appVersion || '0') }
+    outputFormat: { type: 'json_schema', schema: task.schema }
   };
-  if (settings.model) options.model = settings.model;
-  if (settings.effort) options.effort = settings.effort;
   let result = null;
-  const consume = (async () => {
-    for await (const message of query({ prompt: task.prompt, options })) {
-      if (controller.signal.aborted) break;
+  try {
+    const how = await drain(query({ prompt: task.prompt, options }), controller, (message) => {
       const p = progressFrom(message);
       if (p && onProgress) onProgress(p);
       if (message.type === 'result') result = message;
-    }
-  })();
-  // a cancel answers the writer at once; Claude Code winds down in the background
-  const cancelled = new Promise((resolve) => {
-    if (controller.signal.aborted) resolve('cancelled');
-    controller.signal.addEventListener('abort', () => resolve('cancelled'), { once: true });
-  });
-  try {
-    if ((await Promise.race([consume.then(() => 'done'), cancelled])) === 'cancelled') {
-      consume.catch(() => { /* the abort surfaces here once the process exits */ });
-      return { ok: false, error: 'cancelled' };
-    }
+    });
+    if (how === 'cancelled') return { ok: false, error: 'cancelled' };
   } catch (err) {
     if (controller.signal.aborted) return { ok: false, error: 'cancelled' };
     return { ok: false, error: 'failed', detail: String((err && err.message) || err) };
@@ -149,7 +173,52 @@ async function runTask(task, settings, { signal, onProgress, workDir }) {
     return { ok: false, error: result.subtype === 'error_max_turns' ? 'tooLong' : 'failed', detail: result.subtype };
   }
   if (result.structured_output == null) return { ok: false, error: 'failed', detail: 'no structured output' };
-  return { ok: true, data: result.structured_output, costUsd: result.total_cost_usd };
+  return { ok: true, data: result.structured_output, costUsd: result.total_cost_usd, plan: true };
 }
 
-module.exports = { status, runTask, findClaude };
+// Chat: free text, streamed as it's written. req from tasks.chat().
+async function chat(req, settings, { signal, onProgress, onDelta, workDir }) {
+  const found = await findClaude(settings.claudePath);
+  if (!found) return { ok: false, error: 'notInstalled' };
+  const { query } = await loadSdk();
+  const { chatAsPrompt } = require('./tasks.js');
+  const controller = linkAbort(signal);
+  fs.mkdirSync(workDir, { recursive: true });
+  const options = {
+    ...baseOptions(found, settings, workDir, controller, req.web, req.maxTurns || 4),
+    systemPrompt: req.system,
+    includePartialMessages: true
+  };
+  let result = null;
+  let text = '';
+  try {
+    const how = await drain(query({ prompt: chatAsPrompt(req), options }), controller, (message) => {
+      if (message.type === 'stream_event') {
+        const ev = message.event || {};
+        if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') {
+          text += ev.delta.text;
+          if (onDelta) onDelta(ev.delta.text);
+        } else if (ev.type === 'message_start' && text) {
+          // a new model turn after a tool call starts a fresh paragraph
+          text += '\n\n';
+          if (onDelta) onDelta('\n\n');
+        }
+        return;
+      }
+      const p = progressFrom(message);
+      if (p && p.stage !== 'think' && onProgress) onProgress(p);
+      if (message.type === 'result') result = message;
+    });
+    if (how === 'cancelled') return { ok: false, error: 'cancelled', text };
+  } catch (err) {
+    if (controller.signal.aborted) return { ok: false, error: 'cancelled', text };
+    return { ok: false, error: 'failed', detail: String((err && err.message) || err) };
+  }
+  if (!result || result.subtype !== 'success' || result.is_error) {
+    return { ok: false, error: 'failed', detail: result ? (result.result || result.subtype) : 'no result', text };
+  }
+  // the final result is the authoritative text (streaming may interleave turns)
+  return { ok: true, text: (result.result || text).trim(), costUsd: result.total_cost_usd, plan: true };
+}
+
+module.exports = { id: 'claude-code', web: true, status, runTask, chat, findClaude };

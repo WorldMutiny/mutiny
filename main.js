@@ -373,7 +373,7 @@ ipcMain.handle('link:open', (_e, url) => {
 });
 
 // AI assistant (ai/): research, critique, rewrite — see ai/index.js
-require('./ai/index.js').register(logError);
+require('./ai/index.js').register(logError, readSecret);
 
 // ---------------------------------------------------------------------------
 // Fullscreen

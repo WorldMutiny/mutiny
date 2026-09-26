@@ -46,6 +46,9 @@ contextBridge.exposeInMainWorld('neo', {
   aiRun: (jobId, task, input, settings) => ipcRenderer.invoke('ai:run', jobId, task, input, settings),
   aiCancel: (jobId) => ipcRenderer.invoke('ai:cancel', jobId),
   onAiProgress: (cb) => ipcRenderer.on('ai:progress', (_e, msg) => cb(msg)),
+  aiChat: (jobId, input, settings) => ipcRenderer.invoke('ai:chat', jobId, input, settings),
+  onAiDelta: (cb) => ipcRenderer.on('ai:delta', (_e, msg) => cb(msg)),
+  aiModels: (settings) => ipcRenderer.invoke('ai:models', settings),
   openRelease: () => ipcRenderer.invoke('update:openRelease'),
 
   onMenu: (cb) => ipcRenderer.on('menu', (_e, msg) => cb(msg))
