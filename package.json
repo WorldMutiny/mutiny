@@ -90,7 +90,9 @@
       "!dist/**",
       "!Backups/**",
       "!*.md",
-      "!.github/**"
+      "!.github/**",
+      "!Claude outputs/**",
+      "!scripts/**"
     ]
   },
   "author": "Maxx (fork of NEO by Hugh Howey)",

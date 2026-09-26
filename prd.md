@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** borrador v0.2 · 2026-09-25
+**Estado:** v0.3 — fases 0 y 1 completas · 2026-09-25
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -178,20 +178,20 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 
 ## 7. Fases y criterios de aceptación
 
-### Fase 0 — Fork habilitado
-- [ ] `appId` propio, `productName: Mutiny`, biblioteca en `~/Documents/Mutiny Library`: **coexiste con NEO** sin tocar su biblioteca.
-- [ ] `electron-updater` desactivado o apuntando al repo propio. **Crítico: si no, se "actualizaría" a NEO.**
-- [ ] README con créditos a NEO / Hugh Howey. Se conserva el LICENSE MIT (copyright original + nuevo).
-- [ ] `npm start` funciona en Linux. `npm run package:linux` genera un AppImage que se instala como NEO (`~/.local/opt/mutiny` + `.desktop` en el launcher de Omarchy).
+### Fase 0 — Fork habilitado ✅
+- [x] `appId` propio, `productName: Mutiny`, biblioteca en `~/Documents/Mutiny Library`: **coexiste con NEO** sin tocar su biblioteca.
+- [x] `electron-updater` desactivado o apuntando al repo propio. **Crítico: si no, se "actualizaría" a NEO.**
+- [x] README con créditos a NEO / Hugh Howey. Se conserva el LICENSE MIT (copyright original + nuevo).
+- [x] `npm start` funciona en Linux. `npm run package:linux` genera un AppImage que se instala como NEO (`~/.local/opt/mutiny` + `.desktop` en el launcher de Omarchy).
 
-### Fase 1 — De novela a ensayo
-- [ ] i18n (§6.9): extraer las cadenas existentes a `en.json` y traducir `es.json`.
-- [ ] Renombrados de §4 en la UI; sin capitulares ni numeración de secciones.
-- [ ] Onboarding para ensayistas (§6.8, pasos 1–4; el paso 5 llega en la fase 3a).
-- [ ] Outline con plantilla Peterson (tesis + frases-esqueleto → párrafos fantasma).
-- [ ] Corrector `es` + `en`.
-- [ ] Estadísticas y metas conservadas, con textos de ensayo.
-- [ ] Quitar la pintura de portadas con OpenAI y el EPUB.
+### Fase 1 — De novela a ensayo ✅
+- [x] i18n (§6.9): extraer las cadenas existentes a `en.json` y traducir `es.json`.
+- [x] Renombrados de §4 en la UI; sin capitulares ni numeración de secciones.
+- [x] Onboarding para ensayistas (§6.8, pasos 1–4; el paso 5 llega en la fase 3a).
+- [x] Outline con plantilla Peterson (tesis + frases-esqueleto → párrafos fantasma).
+- [x] Corrector `es` + `en`.
+- [x] Estadísticas y metas conservadas, con textos de ensayo.
+- [x] Quitar la pintura de portadas con OpenAI y el EPUB.
 - **Aceptación:** escribir un ensayo de 1 500 palabras de principio a fin y exportarlo a PDF/DOCX sin que aparezcan términos de novela.
 
 ### Fase 2 — Fuentes
@@ -217,6 +217,18 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [ ] Builds de Mac (dmg) y Windows (exe) con GitHub Actions. NEO ya tiene la configuración de electron-builder para las tres plataformas.
 - [ ] Notarización de Mac: requiere una cuenta de Apple Developer (99 USD/año). Sin ella, el usuario tiene que autorizar la app a mano en macOS.
 - [ ] Auto-updater apuntando a los releases del repo propio.
+
+### Notas de implementación — fase 1 (2026-09-25)
+
+Decisiones tomadas en el camino que no estaban en el plan:
+
+- **Vocabulario:** ensayo · sección · Borrador (pestaña del texto) · Esquema · Notas · **Para después** (antes "Darlings"). Enter ×2 = separador `***`, Enter ×3 = sección nueva.
+- **Página continua:** el título encabeza la página y las secciones fluyen debajo con su título (o un `§` discreto). Nada de hojas separadas.
+- **Tipografías incluidas:** Literata (por defecto), Source Serif 4, Lora y EB Garamond (OFL). Las de NEO eran de Mac y en Linux caían a otra fuente.
+- **Plantilla Peterson:** 5 secciones y 9 frases guía como *placeholder*. El fantasma solo aparece en el borrador cuando escribes tu propia frase en el esquema.
+- **Idiomas:** la interfaz se elige en el onboarding o en Metas y ajustes. Cada ensayo tiene su propio idioma (corrector y exportaciones). Los valores guardados en inglés por NEO ("Untitled", "Anonymous"…) se muestran traducidos.
+- **Import de Markdown:** `#` es el título del ensayo y `##` crea secciones con nombre.
+- **Bugs heredados de NEO corregidos:** temporizadores de guardado que se disparaban tras cerrar un libro (error visible y posible escritura en el libro equivocado), y HTML exportado sin escapar el título.
 
 ## 8. Riesgos
 
