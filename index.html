@@ -107,10 +107,30 @@
     <div id="side-hotzone"></div>
     <aside id="side-pane">
       <div id="side-head">
-        <span data-i18n="side.title"></span>
+        <span class="side-tabs">
+          <button class="side-tab on" data-view="notes" data-i18n="side.title"></button>
+          <button class="side-tab" data-view="chat" data-i18n="chat.tab"></button>
+        </span>
         <button id="side-pin" data-i18n-title="side.pinTitle">&#9737;</button>
       </div>
       <div id="sticky-list"></div>
+      <div id="chat-view" hidden>
+        <div class="chat-log"></div>
+        <div class="chat-compose">
+          <div class="chat-sel" hidden><span class="chat-sel-text"></span><button class="chat-sel-x">✕</button></div>
+          <textarea class="chat-input" rows="3" spellcheck="false" data-i18n-placeholder="chat.placeholder"></textarea>
+          <div class="chat-opts">
+            <select class="chat-scope">
+              <option value="essay" data-i18n="chat.scopeEssay"></option>
+              <option value="section" data-i18n="chat.scopeSection"></option>
+            </select>
+            <label class="chat-web-wrap"><input type="checkbox" class="chat-web"/> <span data-i18n="chat.web"></span></label>
+            <span class="chat-spacer"></span>
+            <button class="chat-clear btn-quiet" data-i18n="chat.clear"></button>
+            <button class="chat-send btn-gold" data-i18n="chat.send"></button>
+          </div>
+        </div>
+      </div>
     </aside>
 
     <!-- The manuscript -->

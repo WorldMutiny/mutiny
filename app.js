@@ -785,6 +785,7 @@ async function openBook(bookId) {
   }
   stickies = await window.neo.readJSON(bookId, 'stickies', []);
   sources = await window.neo.readJSON(bookId, 'sources', []);
+  if (typeof loadChat === 'function') await loadChat(bookId);
   darlings = await window.neo.readJSON(bookId, 'darlings', []);
 
   $('#bookshelf-view').hidden = true;
@@ -4330,6 +4331,7 @@ function showHelp() {
         ${row(KCITE, t('help.cite'))}
         ${row(K('⌘⇧M', 'Ctrl+Shift+M'), t('help.rewrite'))}
         ${row(K('⌘⇧C', 'Ctrl+Shift+C'), t('help.critique'))}
+        ${row(K('⌘⇧A', 'Ctrl+Shift+A'), t('help.chat'))}
         ${row(KZ, t('help.undo'))}
         ${row(t('help.dashesKey'), t('help.dashes'))}
         ${row(K('⌘B · ⌘I', 'Ctrl+B · Ctrl+I'), t('help.bold'))}

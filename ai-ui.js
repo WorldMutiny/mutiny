@@ -9,6 +9,10 @@
 let aiJob = null; // { id, label }
 const aiConf = () => (library && library.ai) || {};
 const aiEnabled = () => !!aiConf().enabled;
+// what the main process needs to pick and configure a provider
+const aiSettings = () => { const { enabled, ...rest } = aiConf(); return rest; };
+// OpenAI-compatible servers have no web access: research and web chat are off there
+const aiHasWeb = () => (aiConf().provider || 'claude-code') !== 'compat';
 
 // ---------------------------------------------------------------- progress chip
 
@@ -48,7 +52,7 @@ async function aiRun(task, input, label) {
   let res;
   try {
     const c = aiConf();
-    res = await window.neo.aiRun(id, task, input, { model: c.model || '', effort: c.effort || '', claudePath: c.claudePath || '' });
+    res = await window.neo.aiRun(id, task, input, aiSettings());
   } catch (err) {
     res = { ok: false, error: 'failed', detail: String(err) };
   } finally {
@@ -59,42 +63,85 @@ async function aiRun(task, input, label) {
   if (res.ok) return res.data;
   if (res.error === 'cancelled') { toast(t('ai.cancelled')); return null; }
   const login = /not logged in|\/login/i.test(res.detail || '');
-  toast(t(login ? 'ai.err.login' : 'ai.err.' + (['notInstalled', 'busy', 'tooLong'].includes(res.error) ? res.error : 'failed')), 8000);
+  toast(aiErrorText(res), 9000);
   if (res.detail) window.neo.logError('ai: ' + res.error + ' — ' + res.detail);
   return null;
 }
 
+function aiErrorText(res) {
+  const login = /not logged in|\/login/i.test(res.detail || '');
+  if (login) return t((aiConf().provider || 'claude-code') === 'codex' ? 'ai.err.loginCodex' : 'ai.err.login');
+  const known = ['notInstalled', 'busy', 'tooLong', 'badKey', 'noCredit', 'rateLimited', 'badModel', 'unreachable', 'noWeb', 'refused'];
+  return t('ai.err.' + (known.includes(res.error) ? res.error : 'failed'));
+}
+
 // ---------------------------------------------------------------- settings
 
+const AI_PROVIDERS = ['claude-code', 'codex', 'anthropic', 'compat'];
+const COMPAT_PRESETS = ['openai', 'gemini', 'openrouter', 'cerebras', 'ollama', 'llamacpp', 'custom'];
+const COMPAT_URLS = {
+  openai: 'https://api.openai.com/v1', gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
+  openrouter: 'https://openrouter.ai/api/v1', cerebras: 'https://api.cerebras.ai/v1',
+  ollama: 'http://127.0.0.1:11434/v1', llamacpp: 'http://127.0.0.1:8080/v1', custom: ''
+};
+const opt = (v, label, cur) => `<option value="${v}"${(cur || '') === v ? ' selected' : ''}>${label}</option>`;
+const keySecret = (prov, preset) => (prov === 'anthropic' ? 'ai-key-anthropic' : 'ai-key-compat-' + preset);
+
 async function openAiSettings() {
-  const c = { ...aiConf() };
+  const c = { provider: 'claude-code', compatPreset: 'openai', ...aiConf() };
   const bd = document.createElement('div');
   bd.className = 'modal-backdrop';
   bd.innerHTML = `
-    <div class="modal" style="width:540px">
+    <div class="modal ai-settings" style="width:580px">
       <h2 style="font-size:17px">${t('ai.settings')}</h2>
-      <p>${t('ai.intro')}</p>
-      <div class="ai-state soft">${t('ai.checking')}</div>
-      <label class="st-check" style="margin:14px 0"><input id="ai-on" type="checkbox"${c.enabled ? ' checked' : ''}/> ${t('ai.enable')}</label>
-      <div class="stats-row">
-        <label>${t('ai.model')}
-          <select id="ai-model">
-            ${[['', t('ai.model.default')], ['opus', 'Opus'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku']]
-              .map(([v, l]) => `<option value="${v}"${(c.model || '') === v ? ' selected' : ''}>${l}</option>`).join('')}
-          </select>
-        </label>
-        <label>${t('ai.effort')}
-          <select id="ai-effort">
-            ${[['', t('ai.model.default')], ['low', t('ai.effort.low')], ['medium', t('ai.effort.medium')], ['high', t('ai.effort.high')]]
-              .map(([v, l]) => `<option value="${v}"${(c.effort || '') === v ? ' selected' : ''}>${l}</option>`).join('')}
-          </select>
+      <p>${t('ai.intro2')}</p>
+      <label class="st-check" style="margin:4px 0 14px"><input id="ai-on" type="checkbox"${c.enabled ? ' checked' : ''}/> ${t('ai.enable')}</label>
+      <label>${t('ai.provider')}
+        <select id="ai-provider">${AI_PROVIDERS.map((p) => opt(p, t('ai.prov.' + p), c.provider)).join('')}</select>
+      </label>
+      <p class="soft ai-prov-note" style="font-size:12px;margin:-8px 0 12px"></p>
+
+      <div class="ai-sec" data-for="claude-code codex">
+        <div class="stats-row">
+          <label>${t('ai.model')} <input id="ai-cli-model" type="text" spellcheck="false" list="ai-cli-models" placeholder="${t('ai.model.default')}"/></label>
+          <label>${t('ai.effort')}
+            <select id="ai-effort">${[['', t('ai.model.default')], ['low', t('ai.effort.low')], ['medium', t('ai.effort.medium')], ['high', t('ai.effort.high')]].map(([v, l]) => opt(v, l, c.effort)).join('')}</select>
+          </label>
+        </div>
+        <datalist id="ai-cli-models"></datalist>
+        <details class="st-advanced">
+          <summary class="soft">${t('ai.advanced')}</summary>
+          <label>${t('ai.path')} <input id="ai-path" type="text" spellcheck="false" style="width:100%"/></label>
+        </details>
+      </div>
+
+      <div class="ai-sec" data-for="anthropic">
+        <label>${t('ai.apiModel')}
+          <select id="ai-api-model">${[['claude-opus-5', 'Claude Opus 5'], ['claude-sonnet-5', 'Claude Sonnet 5'], ['claude-haiku-4-5', 'Claude Haiku 4.5']].map(([v, l]) => opt(v, l, c.apiModel || 'claude-opus-5')).join('')}</select>
         </label>
       </div>
-      <details class="st-advanced">
-        <summary class="soft">${t('ai.advanced')}</summary>
-        <label>${t('ai.path')} <input id="ai-path" type="text" spellcheck="false" style="width:100%" value="${escHtml(c.claudePath || '').replace(/"/g, '&quot;')}"/></label>
-      </details>
-      <p class="soft" style="font-size:12px;margin-top:10px">${t('ai.usageNote')}</p>
+
+      <div class="ai-sec" data-for="compat">
+        <div class="stats-row">
+          <label>${t('ai.preset')}
+            <select id="ai-preset">${COMPAT_PRESETS.map((p) => opt(p, t('ai.preset.' + p), c.compatPreset)).join('')}</select>
+          </label>
+          <label style="flex:1">${t('ai.url')} <input id="ai-url" type="text" spellcheck="false" style="width:100%"/></label>
+        </div>
+        <div class="stats-row">
+          <label style="flex:1">${t('ai.model')} <input id="ai-compat-model" type="text" spellcheck="false" list="ai-compat-models" style="width:100%"/></label>
+          <button class="btn-quiet ai-list-models" style="margin-top:14px">${t('ai.listModels')}</button>
+        </div>
+        <datalist id="ai-compat-models"></datalist>
+      </div>
+
+      <div class="ai-sec" data-for="anthropic compat">
+        <label>${t('ai.key')} <input id="ai-key" type="password" autocomplete="off" spellcheck="false" style="width:100%"/></label>
+        <p class="soft ai-key-note" style="font-size:12px;margin:-8px 0 10px"></p>
+      </div>
+
+      <div class="ai-state soft">${t('ai.checking')}</div>
+      <p class="soft ai-usage" style="font-size:12px;margin-top:10px"></p>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
         <button class="ai-test btn-quiet">${t('ai.test')}</button>
         <span>
@@ -104,39 +151,104 @@ async function openAiSettings() {
       </div>
     </div>`;
   document.body.appendChild(bd);
-  const state = bd.querySelector('.ai-state');
-  const settingsNow = () => ({
-    enabled: bd.querySelector('#ai-on').checked,
-    model: bd.querySelector('#ai-model').value,
-    effort: bd.querySelector('#ai-effort').value,
-    claudePath: bd.querySelector('#ai-path').value.trim()
-  });
+  const $m = (sel) => bd.querySelector(sel);
+  const prov = () => $m('#ai-provider').value;
+  const preset = () => $m('#ai-preset').value;
+  // each provider keeps its own model and path while the writer flips between them
+  const perProv = { 'claude-code': { model: c.claudeModel ?? c.model ?? '', path: c.claudePath || '' }, codex: { model: c.codexModel || '', path: c.codexPath || '' } };
+  let shownProv = null;
+  const stash = () => {
+    if (perProv[shownProv]) perProv[shownProv] = { model: $m('#ai-cli-model').value.trim(), path: $m('#ai-path').value.trim() };
+  };
+  $m('#ai-url').value = c.compatUrl || COMPAT_URLS[c.compatPreset] || '';
+  $m('#ai-compat-model').value = c.compatModel || '';
+
+  const settingsNow = () => {
+    stash();
+    return {
+      enabled: $m('#ai-on').checked,
+      provider: prov(),
+      effort: $m('#ai-effort').value,
+      claudeModel: perProv['claude-code'].model, claudePath: perProv['claude-code'].path,
+      codexModel: perProv.codex.model, codexPath: perProv.codex.path,
+      // the running provider reads 'model' — keep it pointing at the chosen one's
+      model: (perProv[prov()] || {}).model || '',
+      apiModel: $m('#ai-api-model').value,
+      compatPreset: preset(), compatUrl: $m('#ai-url').value.trim(), compatModel: $m('#ai-compat-model').value.trim()
+    };
+  };
+
+  let token = 0;
   const refresh = async () => {
+    const my = ++token;
+    const p = prov();
+    bd.querySelectorAll('.ai-sec').forEach((el) => { el.hidden = !el.dataset.for.split(' ').includes(p); });
+    if (perProv[p] && shownProv !== p) {
+      stash();
+      $m('#ai-cli-model').value = perProv[p].model;
+      $m('#ai-path').value = perProv[p].path;
+      $m('#ai-cli-models').innerHTML = (p === 'claude-code' ? ['opus', 'sonnet', 'haiku'] : []).map((m) => `<option value="${m}">`).join('');
+    }
+    shownProv = p;
+    $m('.ai-prov-note').textContent = t('ai.provNote.' + p);
+    $m('.ai-usage').textContent = t(p === 'claude-code' || p === 'codex' ? 'ai.usagePlan' : 'ai.usageApi');
+    const typedKey = $m('#ai-key').value.trim();
+    const state = $m('.ai-state');
     state.textContent = t('ai.checking');
-    const st = await window.neo.aiStatus({ claudePath: bd.querySelector('#ai-path').value.trim() });
-    if (!bd.isConnected) return;
-    if (!st.installed) state.textContent = t('ai.state.missing');
-    else if (!st.loggedIn) state.textContent = t('ai.state.loggedOut', { v: st.version });
-    else state.textContent = t('ai.state.ready', { v: st.version, plan: st.plan || '—' });
-    if (st.path && !bd.querySelector('#ai-path').value) bd.querySelector('#ai-path').placeholder = st.path;
+    const st = await window.neo.aiStatus(settingsNow());
+    if (my !== token || !bd.isConnected) return;
+    if (p === 'claude-code' || p === 'codex') {
+      const name = t('ai.prov.' + p);
+      if (!st.installed) state.textContent = t('ai.state.missingCli', { name, cmd: p === 'codex' ? 'codex' : 'claude' });
+      else if (!st.loggedIn) state.textContent = t('ai.state.loggedOutCli', { name, v: st.version, cmd: p === 'codex' ? 'codex login' : 'claude' });
+      else state.textContent = t('ai.state.readyCli', { name, v: st.version, plan: st.plan || '—' });
+      if (st.path) $m('#ai-path').placeholder = st.path;
+    } else {
+      const hasSaved = await window.neo.hasSecret(keySecret(p, preset()));
+      $m('#ai-key').placeholder = hasSaved ? t('ai.keySaved') : st.keyFromEnv ? t('ai.keyEnv', { env: st.keyFromEnv }) : (p === 'compat' && ['ollama', 'llamacpp'].includes(preset()) ? t('ai.keyNone') : '');
+      $m('.ai-key-note').textContent = t(hasSaved ? 'ai.keyNoteSaved' : 'ai.keyNote');
+      state.textContent = typedKey || st.loggedIn ? t('ai.state.apiReady', { model: st.model || '—' }) : t('ai.state.needKey');
+      if (p === 'compat' && !st.web) state.textContent += ' ' + t('ai.noWebNote');
+    }
   };
   refresh();
-  bd.querySelector('#ai-path').addEventListener('change', refresh);
+  $m('#ai-provider').onchange = refresh;
+  $m('#ai-preset').onchange = () => { $m('#ai-url').value = COMPAT_URLS[preset()] || ''; $m('#ai-compat-model').value = ''; $m('#ai-key').value = ''; refresh(); };
+  $m('#ai-path').addEventListener('change', refresh);
+  $m('#ai-url').addEventListener('change', refresh);
+  $m('.ai-list-models').onclick = async () => {
+    await saveKey();
+    const models = await window.neo.aiModels(settingsNow());
+    $m('#ai-compat-models').innerHTML = models.map((m) => `<option value="${escHtml(m)}">`).join('');
+    toast(models.length ? tn('ai.modelsFound', models.length) : t('ai.modelsNone'), 5000);
+    if (models.length && !$m('#ai-compat-model').value) $m('#ai-compat-model').value = models[0];
+  };
+  // a typed key is saved (encrypted) as soon as it's needed; "remove" forgets it
+  const saveKey = async () => {
+    const k = $m('#ai-key').value.trim();
+    if (!k || !['anthropic', 'compat'].includes(prov())) return;
+    await window.neo.setSecret(keySecret(prov(), preset()), k === 'remove' ? '' : k);
+    $m('#ai-key').value = '';
+  };
   const close = () => bd.remove();
-  bd.querySelector('.m-cancel').onclick = close;
+  $m('.m-cancel').onclick = close;
   bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
-  bd.querySelector('.m-ok').onclick = async () => {
+  $m('.m-ok').onclick = async () => {
+    await saveKey();
     library.ai = { ...aiConf(), ...settingsNow() };
     await window.neo.writeLibrary(library);
     close();
     if (book) renderStickies();
+    if (typeof renderChat === 'function') renderChat();
   };
-  bd.querySelector('.ai-test').onclick = async () => {
+  $m('.ai-test').onclick = async () => {
+    await saveKey();
     const saved = library.ai;
     library.ai = { ...aiConf(), ...settingsNow(), enabled: true }; // test what's on screen
     const data = await aiRun('ping', { lang: I18N.lang }, t('ai.testing'));
     library.ai = saved;
-    if (data && bd.isConnected) state.textContent = t('ai.testOk', { reply: data.greeting });
+    await refresh();
+    if (data && bd.isConnected) $m('.ai-state').textContent = t('ai.testOk', { reply: data.greeting });
   };
 }
 
@@ -145,7 +257,7 @@ async function openAiSettings() {
 // the answer and sources under a note, or the button that asks for them
 function renderResearch(s, el) {
   const ask = el.querySelector('.s-ask');
-  if (ask && aiEnabled()) {
+  if (ask && aiEnabled() && aiHasWeb()) {
     ask.hidden = false;
     ask.textContent = t(s.research ? 'ai.researchAgain' : 'ai.research');
     ask.onclick = () => researchSticky(s);
@@ -393,6 +505,210 @@ async function applyRewrite(range, p, text) {
   toast(t('ai.rewritten', { undo: KZ }), 6000);
 }
 
+// ---------------------------------------------------------------- chat
+
+// chat.json: [{ role: 'user'|'assistant', text, at, costUsd?, web?, stopped? }]
+let chatLog = [];
+let chatSelection = '';
+let sideView = 'notes';
+
+async function loadChat(bookId) {
+  chatLog = await window.neo.readJSON(bookId, 'chat', []);
+  chatSelection = '';
+  renderChat();
+}
+const saveChat = () => { if (book) window.neo.writeJSON(book.id, 'chat', chatLog); };
+
+function setSideView(view) {
+  sideView = view;
+  $$('.side-tab').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
+  $('#sticky-list').hidden = view !== 'notes';
+  $('#chat-view').hidden = view !== 'chat';
+  $('#side-pane').classList.toggle('chat-mode', view === 'chat');
+  if (view === 'chat') renderChat();
+}
+$$('.side-tab').forEach((b) => { b.onclick = () => setSideView(b.dataset.view); });
+
+// open the chat, carrying the current selection along as the subject
+function openChat() {
+  if (!book) { toast(t('toast.openEssay')); return; }
+  const sel = window.getSelection();
+  const el = sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
+  const inDraft = el && (el.nodeType === Node.TEXT_NODE ? el.parentElement : el).closest &&
+    (el.nodeType === Node.TEXT_NODE ? el.parentElement : el).closest('.chapter-body');
+  if (inDraft && !sel.isCollapsed) chatSelection = sel.toString().trim().slice(0, 3000);
+  $('#side-pane').classList.add('open');
+  setSideView('chat');
+  $('.chat-input').focus();
+}
+
+// A few Markdown habits models have, rendered safely: **bold**, *italic*,
+// `code`, bullet lines and paragraphs. Everything else stays plain text.
+function miniMarkdown(text) {
+  const inline = (s) => escHtml(s)
+    // [label](https://…) and bare https://… become links that open in the browser
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, url) => `<a class="ext" data-url="${url.replace(/"/g, '&quot;')}">${label}</a>`)
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (m, pre, url) => `${pre}<a class="ext" data-url="${url.replace(/"/g, '&quot;')}">${url}</a>`)
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<i>$2</i>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+  return String(text || '').split(/\n{2,}/).map((block) => {
+    const lines = block.split('\n');
+    if (lines.every((l) => /^\s*([-*•]|\d+[.)])\s+/.test(l))) {
+      return '<ul>' + lines.map((l) => '<li>' + inline(l.replace(/^\s*([-*•]|\d+[.)])\s+/, '')) + '</li>').join('') + '</ul>';
+    }
+    return '<p>' + lines.map(inline).join('<br>') + '</p>';
+  }).join('');
+}
+
+function renderChat() {
+  const view = $('#chat-view');
+  if (!view || view.hidden) return;
+  const log = view.querySelector('.chat-log');
+  log.innerHTML = '';
+  if (!aiEnabled()) {
+    log.innerHTML = `<div class="stickies-empty">${t('chat.off')}</div>`;
+  } else if (!chatLog.length) {
+    log.innerHTML = `<div class="stickies-empty">${t('chat.empty')}</div>`;
+  }
+  for (const m of chatLog) log.appendChild(chatBubble(m));
+  log.scrollTop = log.scrollHeight;
+  const selBox = view.querySelector('.chat-sel');
+  selBox.hidden = !chatSelection;
+  view.querySelector('.chat-sel-text').textContent = chatSelection ? t('chat.about', { text: chatSelection.slice(0, 120) + (chatSelection.length > 120 ? '…' : '') }) : '';
+  const webWrap = view.querySelector('.chat-web-wrap');
+  webWrap.hidden = !aiHasWeb();
+}
+
+function chatBubble(m) {
+  const el = document.createElement('div');
+  el.className = 'chat-msg ' + (m.role === 'assistant' ? 'from-ai' : 'from-me');
+  const body = document.createElement('div');
+  body.className = 'chat-body';
+  if (m.role === 'assistant') {
+    body.innerHTML = miniMarkdown(m.text);
+    body.querySelectorAll('a.ext').forEach((a) => { a.onclick = (e) => { e.preventDefault(); window.neo.openLink(a.dataset.url); }; });
+  } else body.textContent = m.text;
+  el.appendChild(body);
+  if (m.role === 'assistant' && m.text) {
+    const bar = document.createElement('div');
+    bar.className = 'chat-actions';
+    const cost = m.costUsd != null && !m.plan ? `<span class="soft">≈ $${m.costUsd < 0.01 ? m.costUsd.toFixed(4) : m.costUsd.toFixed(3)}</span>` : '';
+    bar.innerHTML = `${m.stopped ? `<span class="soft">${t('chat.stopped')}</span>` : ''}${cost}<button class="c-note">${t('side.toNotes')}</button><button class="c-copy">${t('chat.copy')}</button>`;
+    bar.querySelector('.c-note').onclick = async () => {
+      flushAux();
+      const html = await window.neo.readAux(book.id, 'notes');
+      await window.neo.writeAux(book.id, 'notes', (html || '') + `<p><b>${escHtml(t('chat.noteHead'))}</b></p>` + miniMarkdown(m.text));
+      toast(t('side.movedToNotes'));
+    };
+    bar.querySelector('.c-copy').onclick = () => { navigator.clipboard.writeText(m.text); toast(t('chat.copied')); };
+    el.appendChild(bar);
+  }
+  return el;
+}
+
+// the essay as the assistant sees it: current text, outline, notes, sources
+async function chatContext(scope) {
+  const chIds = scope === 'section' ? [currentChapterId || book.chapterOrder[0]].filter(Boolean) : book.chapterOrder;
+  const essay = chIds.map((chId) => {
+    const holder = cleanChapterEl(chId);
+    holder.querySelectorAll('.cite-mark').forEach((n) => n.remove());
+    return { section: ((book.chapterTitles || {})[chId] || '').trim(), text: holder.innerText.trim() };
+  }).filter((x) => x.text);
+  const outline = book.chapterOrder.map((chId, i) => {
+    const lines = [];
+    const main = (book.chapterNotes || {})[chId];
+    if (main) lines.push(`${i + 1}. ${main}`);
+    for (const sec of (book.sectionNotes || {})[chId] || []) if (sec.text) lines.push(`   - ${sec.text}`);
+    return lines.join('\n');
+  }).filter(Boolean).join('\n');
+  flushAux();
+  const holder = document.createElement('div');
+  holder.innerHTML = (await window.neo.readAux(book.id, 'notes')) || '';
+  return {
+    title: displayTitle(book),
+    lang: spellLang(),
+    essay,
+    outline,
+    notes: holder.innerText.trim(),
+    sources: sources.filter((s) => s.status !== 'candidate').map((s) => [s.title || s.url, s.site].filter(Boolean).join(' — ')),
+    selection: chatSelection
+  };
+}
+
+let chatLive = null; // the assistant message being streamed into
+window.neo.onAiDelta((m) => {
+  if (!aiJob || m.jobId !== aiJob.id || !chatLive) return;
+  chatLive.msg.text += m.text;
+  chatLive.el.querySelector('.chat-body').textContent = chatLive.msg.text;
+  const log = $('#chat-view .chat-log');
+  log.scrollTop = log.scrollHeight;
+});
+
+async function sendChat() {
+  if (!book) return;
+  const input = $('.chat-input');
+  const q = input.value.trim();
+  if (!q) return;
+  if (!aiEnabled()) { openAiSettings(); return; }
+  if (aiJob) { toast(t('ai.busy')); return; }
+  const web = aiHasWeb() && $('.chat-web').checked;
+  const scope = $('.chat-scope').value;
+  chatLog.push({ role: 'user', text: q, at: new Date().toISOString(), web });
+  input.value = '';
+  const ctx = await chatContext(scope);
+  const history = chatLog.map((m) => ({ role: m.role, text: m.text }));
+  const msg = { role: 'assistant', text: '', at: new Date().toISOString() };
+  chatLog.push(msg);
+  renderChat();
+  chatLive = { msg, el: $('#chat-view .chat-log').lastElementChild };
+  chatLive.el.classList.add('live');
+  const id = 'chat-' + Date.now().toString(36);
+  aiJob = { id, label: t('chat.thinking') };
+  aiChip(t(web ? 'chat.searching' : 'chat.thinking'));
+  let res;
+  try {
+    res = await window.neo.aiChat(id, { ctx, history, web }, aiSettings());
+  } catch (err) {
+    res = { ok: false, error: 'failed', detail: String(err) };
+  } finally {
+    aiJob = null;
+    aiChip(null);
+    chatLive = null;
+  }
+  if (res.ok) {
+    msg.text = res.text;
+    if (res.costUsd != null) msg.costUsd = res.costUsd;
+    if (res.plan) msg.plan = true;
+  } else if (res.error === 'cancelled') {
+    msg.text = res.text || msg.text;
+    msg.stopped = true;
+  } else {
+    chatLog.pop(); // no answer: leave the question for a retry
+    toast(aiErrorText(res), 9000);
+    if (res.detail) window.neo.logError('ai chat: ' + res.error + ' — ' + res.detail);
+  }
+  if (!msg.text) chatLog = chatLog.filter((m) => m !== msg);
+  chatSelection = '';
+  saveChat();
+  renderChat();
+}
+
+$('.chat-send').onclick = sendChat;
+$('.chat-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
+  if (e.key !== 'Escape') e.stopPropagation(); // editor shortcuts stay out of the chat box; Esc still stops the assistant
+});
+$('.chat-sel-x').onclick = () => { chatSelection = ''; renderChat(); };
+$('.chat-clear').onclick = async () => {
+  if (!chatLog.length) return;
+  const ok = await optionModal(t('chat.clearQ'), t('chat.clearNote'), [{ label: t('chat.clear'), danger: true, value: 'y' }]);
+  if (ok !== 'y') return;
+  chatLog = [];
+  saveChat();
+  renderChat();
+};
+
 // ---------------------------------------------------------------- entry points
 
 document.addEventListener('keydown', (e) => {
@@ -401,6 +717,7 @@ document.addEventListener('keydown', (e) => {
   const cmd = e.metaKey || e.ctrlKey;
   if (cmd && e.shiftKey && e.code === 'KeyM') { e.preventDefault(); rewriteSelection(); }
   if (cmd && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); critique('section'); } // the section the caret is in
+  if (cmd && e.shiftKey && e.code === 'KeyA') { e.preventDefault(); openChat(); }
 });
 
 window.neo.onMenu((msg) => {
@@ -409,4 +726,5 @@ window.neo.onMenu((msg) => {
   else if (msg.action === 'critique-section') critique('section');
   else if (msg.action === 'critique-essay') critique('essay');
   else if (msg.action === 'rewrite') rewriteSelection();
+  else if (msg.action === 'chat') openChat();
 });

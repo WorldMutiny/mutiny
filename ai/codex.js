@@ -169,8 +169,9 @@ async function chat(req, settings, { signal, onProgress, onDelta, workDir }) {
         if (ev.type === 'turn.completed') usage = ev.usage;
       }
     });
-  const text = parts.join('\n\n').trim();
-  if (res.cancelled || !text) return failure(res, text);
+  // earlier messages are Codex narrating its steps ("Let me check…"); the last one is the answer
+  const text = (parts[parts.length - 1] || '').trim();
+  if (res.cancelled || !text) return failure(res, parts.join('\n\n').trim());
   return { ok: true, text, usage, plan: true };
 }
 

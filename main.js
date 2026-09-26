@@ -903,6 +903,7 @@ function buildMenu() {
         { label: T('menu.aiRewrite'), click: () => sendToWindow({ type: 'ai', action: 'rewrite' }) },
         { label: T('menu.aiCritiqueSection'), click: () => sendToWindow({ type: 'ai', action: 'critique-section' }) },
         { label: T('menu.aiCritiqueEssay'), click: () => sendToWindow({ type: 'ai', action: 'critique-essay' }) },
+        { label: T('menu.aiChat'), click: () => sendToWindow({ type: 'ai', action: 'chat' }) },
         { type: 'separator' },
         { label: T('menu.aiSettings'), click: () => sendToWindow({ type: 'ai', action: 'settings' }) }
       ]
