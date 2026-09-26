@@ -144,7 +144,7 @@ async function loadLibrary() {
 function showFirstRun() {
   const fr = $('#firstrun');
   fr.hidden = false;
-  let picked = { body: 'Georgia', dropcap: 'literary' };
+  let picked = { body: DEFAULT_BODY_FONT };
 
   // Step 1: who are you, and how do you write?
   $$('.fr-choice').forEach((btn) => {
@@ -162,7 +162,6 @@ function showFirstRun() {
   // Step 2: fonts, with a WYSIWYG sample
   function preview() {
     document.documentElement.style.setProperty('--body-font', BODY_FONTS[picked.body]);
-    document.documentElement.style.setProperty('--dropcap-font', DROPCAP_FONTS[picked.dropcap]);
   }
   function buildFontStep() {
     const bodyRow = $('#fr-bodyfonts');
@@ -181,27 +180,11 @@ function showFirstRun() {
       };
       bodyRow.appendChild(b);
     }
-    const capRow = $('#fr-dropcaps');
-    capRow.innerHTML = '';
-    const caps = { literary: 'Literary', fantasy: 'Fantasy', scifi: 'Sci-Fi' };
-    for (const key of Object.keys(caps)) {
-      const b = document.createElement('button');
-      b.className = 'fr-font' + (picked.dropcap === key ? ' sel' : '');
-      b.innerHTML = `<span class="fr-cap" style="font-family:${DROPCAP_FONTS[key].replace(/"/g, '&quot;')}">A</span>${caps[key]}`;
-      b.onmouseenter = () => { document.documentElement.style.setProperty('--dropcap-font', DROPCAP_FONTS[key]); };
-      b.onmouseleave = preview;
-      b.onclick = () => {
-        picked.dropcap = key;
-        buildFontStep();
-        preview();
-      };
-      capRow.appendChild(b);
-    }
     preview();
   }
 
   $('#fr-done').onclick = async () => {
-    library.fonts = { body: picked.body, dropcap: picked.dropcap };
+    library.fonts = { body: picked.body };
     library.firstRunDone = true;
     // the shelf was drawn (and the author record seeded as Anonymous) before
     // the name was typed — carry the name across
@@ -796,12 +779,13 @@ function renderChapters() {
     head.title = 'Right-click for chapter options · click after the number to add a title';
     const num = document.createElement('span');
     num.className = 'ch-num';
-    num.textContent = 'Chapter ' + (i + 1);
+    num.textContent = '§';
     const sep = document.createElement('span');
     sep.className = 'ch-sep';
     sep.textContent = '—';
     const titleSpan = document.createElement('span');
     titleSpan.className = 'ch-title';
+    titleSpan.dataset.ph = 'Section title';
     titleSpan.contentEditable = 'true';
     titleSpan.spellcheck = false;
     titleSpan.textContent = book.chapterTitles[chId] || '';
@@ -1442,7 +1426,6 @@ function syncChapter(body, chId) {
 
 // Heal text-node fragmentation in each paragraph as the caret leaves it:
 let lastCaretPara = null;
-let capOffBody = null;
 document.addEventListener('selectionchange', () => {
   if (!book || currentTab !== 'manuscript') return;
   const sel = window.getSelection();
@@ -1463,15 +1446,6 @@ document.addEventListener('selectionchange', () => {
   if (spellOn && caretP) {
     const ch = caretP.closest('.chapter');
     if (ch) scanSpellingIn(ch.querySelector('.chapter-body'), ch.dataset.id);
-  }
-  // the drop cap steps aside while the caret is in the first paragraph
-  const inFirst = caretP && caretP.parentElement &&
-    caretP === caretP.parentElement.querySelector('p');
-  const capBody = inFirst ? caretP.parentElement : null;
-  if (capBody !== capOffBody) {
-    if (capOffBody && capOffBody.isConnected) capOffBody.classList.remove('cap-off');
-    if (capBody) capBody.classList.add('cap-off');
-    capOffBody = capBody;
   }
 });
 
@@ -3171,8 +3145,10 @@ async function addImportedBooks(results, shelf) {
       outline: (library.tabDefaults && library.tabDefaults.outline) || 'Outline'
     };
     let words = 0;
-    for (const ch of r.chapters) {
+    meta.chapterTitles = {};
+    for (const [n, ch] of r.chapters.entries()) {
       const chId = 'ch-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+      if (r.titles && r.titles[n]) meta.chapterTitles[chId] = r.titles[n];
       const html = ch.map((p) =>
         p.scene ? '<p class="scene-break">***</p>' : `<p>${escHtml(p.text || '')}</p>`
       ).join('') || '<p><br></p>';
@@ -3545,27 +3521,19 @@ $('#goal-counter').onclick = openStats;
 /*  MENU: Help + fonts                                                 */
 /* ================================================================== */
 
-const DROPCAP_FONTS = {
-  literary: '"Didot", "Bodoni 72", Georgia, serif',
-  fantasy: '"Apple Chancery", "Snell Roundhand", cursive',
-  scifi: 'Futura, "Avenir Next", "Helvetica Neue", sans-serif'
-};
+// Bundled with the app (fonts/, SIL OFL), so every OS shows the same page.
+// Keep in step with the Format → Body Font menu in main.js.
 const BODY_FONTS = {
-  'Georgia': 'Georgia, "Times New Roman", serif',
-  'Palatino': '"Palatino", "Palatino Linotype", serif',
-  'Baskerville': 'Baskerville, Georgia, serif',
-  'Hoefler Text': '"Hoefler Text", Georgia, serif',
-  'Iowan Old Style': '"Iowan Old Style", Georgia, serif'
+  'Literata': "'Mutiny Literata', Georgia, serif",
+  'Source Serif': "'Mutiny Source Serif 4', Georgia, serif",
+  'Lora': "'Mutiny Lora', Georgia, serif",
+  'EB Garamond': "'Mutiny EB Garamond', Garamond, Georgia, serif"
 };
+const DEFAULT_BODY_FONT = 'Literata';
 
 function applyFonts() {
   const f = library.fonts || {};
-  if (f.body && BODY_FONTS[f.body]) {
-    document.documentElement.style.setProperty('--body-font', BODY_FONTS[f.body]);
-  }
-  if (f.dropcap && DROPCAP_FONTS[f.dropcap]) {
-    document.documentElement.style.setProperty('--dropcap-font', DROPCAP_FONTS[f.dropcap]);
-  }
+  document.documentElement.style.setProperty('--body-font', BODY_FONTS[f.body] || BODY_FONTS[DEFAULT_BODY_FONT]);
   document.body.classList.toggle('night', library.pageTheme === 'night');
   document.body.classList.toggle('bright', !!library.uiBright);
   const size = Math.min(22, Math.max(14, library.editorFontSize || 17));
@@ -3737,11 +3705,8 @@ function exportChapters() {
   return book.chapterOrder.map((chId, i) => {
     const el = document.querySelector(`.chapter[data-id="${chId}"] .chapter-body`);
     const paras = parasFromHtml(el ? el.innerHTML : (chapterHTML[chId] || ''));
-    const t = (book.chapterTitles || {})[chId];
-    // chapterless stories export as continuous text
-    const heading = book.chapterOrder.length === 1
-      ? ''
-      : 'Chapter ' + (i + 1) + (t ? ' — ' + t : '');
+    // a section's heading is its title; untitled sections just flow on
+    const heading = ((book.chapterTitles || {})[chId] || '').trim();
     return { num: i + 1, heading, paras };
   });
 }
@@ -3829,17 +3794,14 @@ function buildHtml(data, opts = {}) {
 <html><head><meta charset="utf-8"><title>${d.title}</title>
 <style>
   body { font-family: Georgia, serif; color: #1c1c1c; max-width: 620px; margin: 40px auto; line-height: 1.7; font-size: 13pt; }
-  .titlepage { text-align: center; margin: 30vh 0 20vh; page-break-after: always; }
-  .titlepage h1 { font-size: 30pt; margin: 0; }
-  .titlepage .sub { font-style: italic; color: #555; }
-  .titlepage .auth { margin-top: 40px; letter-spacing: 3px; text-transform: uppercase; font-size: 11pt; }
-  .chapter { page-break-before: always; }
-  .chapter h2 { text-align: center; letter-spacing: 4px; text-transform: uppercase; font-size: 12pt; font-weight: normal; color: #555; margin: 60px 0 40px; }
+  .titlepage { margin: 0 0 2.2em; }
+  .titlepage h1 { font-size: 26pt; line-height: 1.2; margin: 0; }
+  .titlepage .sub { font-style: italic; color: #555; margin: 0.4em 0 0; font-size: 14pt; }
+  .titlepage .auth { margin-top: 1.4em; letter-spacing: 2px; text-transform: uppercase; font-size: 9.5pt; color: #555; }
+  .chapter { margin-top: 1.8em; }
+  .chapter h2 { font-size: 15pt; margin: 0 0 0.7em; break-after: avoid; }
   .chapter p { text-indent: 2em; margin: 0; }
   .chapter h2 + p, .brk + p, .chapter p.first { text-indent: 0; }
-  /* an in-flow raised initial: stays inside its word for copy, search,
-     and screen readers, unlike a floated drop cap */
-  .chapter h2 + p::first-letter, .chapter p.first::first-letter { font-size: 1.8em; line-height: 1; }
   .brk { text-align: center; text-indent: 0 !important; letter-spacing: 8px; color: #888; margin: 2.5em 0; }
   .prov { margin-top: 80px; text-align: center; color: #999; font-size: 9pt; }
 </style></head><body>
@@ -3899,15 +3861,14 @@ function buildDocxEntries(data) {
   const d = data || bookExportData();
   const body = [];
   // title page
-  body.push(docxP([{ text: d.title, b: true }], { align: 'center', spaceBefore: 3000, size: 56 }));
-  if (d.subtitle) body.push(docxP([{ text: d.subtitle, i: true }], { align: 'center', size: 32 }));
-  body.push(docxP([{ text: d.author }], { align: 'center', spaceBefore: 800 }));
-  d.sections.forEach((ch) => {
+  body.push(docxP([{ text: d.title, b: true }], { size: 48 }));
+  if (d.subtitle) body.push(docxP([{ text: d.subtitle, i: true }], { size: 28 }));
+  body.push(docxP([{ text: d.author }], { spaceBefore: 240, size: 20 }));
+  d.sections.forEach((ch, i) => {
     if (ch.heading) {
-      body.push(docxP([{ text: ch.heading.toUpperCase(), b: false }], { align: 'center', pageBreak: true, spaceBefore: 1200, size: 28 }));
-      body.push(docxP([], {}));
-    } else {
-      body.push(docxP([], { pageBreak: true })); // headingless story still starts fresh
+      body.push(docxP([{ text: ch.heading, b: true }], { spaceBefore: 480, size: 30 }));
+    } else if (i > 0) {
+      body.push(docxP([], {})); // an untitled section still gets a breath
     }
     for (const p of ch.paras) {
       if (p.sceneBreak) body.push(docxP([{ text: '***' }], { align: 'center', spaceBefore: 240 }));
@@ -3962,10 +3923,8 @@ async function shelfExportData(shelf, anthologyTitle) {
       const paras = parasFromHtml(html);
       if (!paras.length) continue;
       num++;
-      const t = (meta.chapterTitles || {})[meta.chapterOrder[i]];
-      const heading = !multi
-        ? meta.title
-        : (i === 0 ? meta.title : `${meta.title} — Chapter ${i + 1}${t ? ': ' + t : ''}`);
+      const t = ((meta.chapterTitles || {})[meta.chapterOrder[i]] || '').trim();
+      const heading = !multi || i === 0 ? meta.title : (t ? `${meta.title} — ${t}` : '');
       sections.push({ num, heading, paras });
     }
   }
@@ -4165,12 +4124,6 @@ window.neo.onMenu(async (msg) => {
   if (msg.type === 'bodyFont') {
     library.fonts = library.fonts || {};
     library.fonts.body = msg.value;
-    await window.neo.writeLibrary(library);
-    applyFonts();
-  }
-  if (msg.type === 'dropCap') {
-    library.fonts = library.fonts || {};
-    library.fonts.dropcap = msg.value;
     await window.neo.writeLibrary(library);
     applyFonts();
   }

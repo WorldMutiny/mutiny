@@ -448,7 +448,9 @@ async function importFile(fp) {
     });
   } else {
     const raw = fs.readFileSync(fp, 'utf8');
-    paras = raw.split(/\r?\n\s*\r?\n/)
+    // a Markdown heading is its own paragraph even without a blank line after it
+    const spaced = ext === '.md' ? raw.replace(/^(#{1,6}[ \t].*)$/gm, '\n$1\n') : raw;
+    paras = spaced.split(/\r?\n\s*\r?\n/)
       .map((b) => ({ text: b.replace(/\s*\r?\n\s*/g, ' ').trim(), pageBreak: false }))
       .filter((p) => p.text);
   }
@@ -461,9 +463,15 @@ async function importFile(fp) {
   // Bare numbers only count as chapter markers when there's a ladder of them —
   // a story that merely OPENS with "Seven." keeps its seven.
   const numeralMode = paras.filter((p) => p.text && isNumeralish(p.text.trim())).length >= 2;
+  // "## Why cities matter" — a titled section; the first # is the essay title
+  const mdHeading = (t) => {
+    const m = ext === '.md' && t ? t.match(/^(#{1,6})\s+(.+?)\s*#*$/) : null;
+    return m ? { level: m[1].length, title: m[2].trim() } : null;
+  };
   const isHeading = (t) => t && (
     (/^(chapter|prologue|epilogue|part)\b/i.test(t) && t.length < 60) ||
-    (numeralMode && isNumeralish(t))
+    (numeralMode && isNumeralish(t)) ||
+    (mdHeading(t) && mdHeading(t).level > 1)
   );
   const isBreak = (t) => /^\s*([*#•~⁂—–-]\s*){1,7}$/.test(t || '');
 
@@ -473,11 +481,16 @@ async function importFile(fp) {
     for (const p of paras) {
       const brk = usePageBreaks && p.pageBreak;
       if (!p.text && !brk) continue;
-      if ((brk || isHeading(p.text)) && cur.length) {
+      if ((brk || isHeading(p.text)) && (cur.length || cur.title)) {
         chapters.push(cur);
         cur = [];
       }
-      if (isHeading(p.text)) continue; // the heading line itself is replaced by NEO's numbering
+      if (isHeading(p.text)) {
+        // Markdown headings name their section; other heading lines just split
+        const h = mdHeading(p.text);
+        if (h) cur.title = h.title;
+        continue;
+      }
       if (isBreak(p.text)) { cur.push({ scene: true }); continue; }
       if (p.text) cur.push({ text: p.text });
     }
@@ -506,25 +519,31 @@ async function importFile(fp) {
   if (first && first.length) {
     const t0 = (first[0].text || '').trim();
     const t1 = first.length > 1 ? (first[1].text || '').trim() : '';
+    const h1 = mdHeading(t0);
     const titleish = t0 && t0.length < 90 && !/[.!?]$/.test(t0) && (
       (norm(t0).length > 3 && norm(name).includes(norm(t0))) ||
-      /^by\s+\S/i.test(t1) ||
+      /^(by|por)\s+\S/i.test(t1) ||
       (t0 === t0.toUpperCase() && /[A-Z].*[A-Z]/.test(t0) && t0.length < 60)
     );
-    if (titleish) {
+    if (h1 && h1.level === 1) {
+      title = h1.title; // "# The essay's title"
+      first.shift();
+    } else if (titleish) {
       title = t0;
       first.shift();
     }
-    const bl = first.length ? (first[0].text || '').trim().match(/^by\s+(.{2,60})$/i) : null;
+    const bl = first.length ? (first[0].text || '').trim().match(/^(?:by|por)\s+(.{2,60})$/i) : null;
     if (bl) {
       author = bl[1].trim();
       first.shift();
     }
-    if (!first.length) chapters.shift();
+    if (!first.length && !first.title) chapters.shift();
     if (!chapters.length) chapters.push([{ text: '' }]);
   }
 
-  return { name, title, author, chapters };
+  // chapters travel as plain arrays of paragraphs; titles ride alongside
+  const titles = chapters.map((ch) => ch.title || '');
+  return { name, title, author, chapters: chapters.map((ch) => [...ch]), titles };
 }
 
 // Same parsing as the picker, but for files dropped from Finder/Explorer
@@ -687,9 +706,8 @@ function sendToWindow(msg) {
 
 function buildMenu() {
   const isMac = process.platform === 'darwin';
-  const bodyFonts = isMac
-    ? ['Georgia', 'Palatino', 'Baskerville', 'Hoefler Text', 'Iowan Old Style']
-    : ['Georgia', 'Palatino', 'Baskerville', 'Cambria', 'Constantia'];
+  // bundled typefaces — keep in step with BODY_FONTS in app.js
+  const bodyFonts = ['Literata', 'Source Serif', 'Lora', 'EB Garamond'];
   const template = [
     // appMenu exists only on macOS — including it on Windows throws,
     // which is exactly what kept NEO from ever opening a window there
@@ -758,14 +776,6 @@ function buildMenu() {
             label: f,
             click: () => sendToWindow({ type: 'bodyFont', value: f })
           }))
-        },
-        {
-          label: 'Drop Cap Style',
-          submenu: [
-            { label: 'Literary', click: () => sendToWindow({ type: 'dropCap', value: 'literary' }) },
-            { label: 'Fantasy', click: () => sendToWindow({ type: 'dropCap', value: 'fantasy' }) },
-            { label: 'Sci-Fi', click: () => sendToWindow({ type: 'dropCap', value: 'scifi' }) }
-          ]
         },
         {
           label: 'Align Paragraph',
