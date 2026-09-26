@@ -103,7 +103,7 @@
       "onlyLoadAppFromAsar": true
     }
   },
-  "author": "Maxx (fork of NEO by Hugh Howey)",
+  "author": "Maxx Darko",
   "license": "MIT",
   "devDependencies": {
     "electron": "^43.0.0",
