@@ -464,62 +464,21 @@ function dropIndicator() {
   return _dropInd;
 }
 
-// Covers are two layers the shelf composites live: art (a seeded abstract,
-// an image the writer chose, or one NEO painted from the text) and type.
-// See covers.js. Painted art is read once and downsampled to tile size so
-// forty books on a shelf cost about as much as forty small PNGs.
-const artCache = new Map(); // bookId/file -> { url, canvas }
-
-async function paintedArt(meta) {
-  const art = meta.coverArt;
-  if (!art || art.status !== 'done' || !art.file) return null;
-  const key = meta.id + '/' + art.file;
-  if (artCache.has(key)) return artCache.get(key);
-  try {
-    const data = await window.neo.readCover(meta.id, art.file);
-    if (!data) { window.neo.logError('painted cover missing on disk: ' + key); return null; }
-    const entry = await NeoCovers.fitImage(key, `data:${data.mime};base64,${data.base64}`);
-    if (!entry) { window.neo.logError('painted cover would not decode: ' + key); return null; }
-    artCache.set(key, entry);
-    return entry;
-  } catch (err) {
-    window.neo.logError('painted cover: ' + (err && err.stack || err));
-    return null;
-  }
-}
-
-// Which layers a book has to show, and which one is showing. Nothing is
-// ever thrown away by switching: the writer's image, NEO's painting, and the
-// abstract all stay available, and coverMode just picks one.
-const hasPainting = (meta) => !!(meta.coverArt && meta.coverArt.status === 'done' && meta.coverArt.file);
+// Covers are an abstract seeded from the essay (see covers.js), or an
+// image the writer chose. Switching never throws either away.
 function coverMode(meta) {
-  const m = meta.coverMode;
-  if (m === 'image' && meta.coverImage) return 'image';
-  if (m === 'painted' && hasPainting(meta)) return 'painted';
-  if (m === 'abstract') return 'abstract';
-  return meta.coverImage ? 'image' : hasPainting(meta) ? 'painted' : 'abstract';
+  if (meta.coverMode === 'abstract') return 'abstract';
+  return meta.coverImage ? 'image' : 'abstract';
 }
 
 function dressTile(el, meta) {
   el.classList.remove('has-cover');
-  const mode = coverMode(meta);
-  if (mode === 'image') {
+  if (coverMode(meta) === 'image') {
     el.classList.add('has-cover');
     el.style.background = `#1d1d1d url("${coverUrl(meta)}") center / cover no-repeat`;
     return;
   }
-  el.classList.toggle('cv-painting', !!(meta.coverArt && meta.coverArt.status === 'pending'));
-  const token = (el._dressToken = (el._dressToken || 0) + 1);
-  // a painting already decoded is drawn straight away; otherwise the
-  // abstract shows instantly and the painting replaces it once read.
-  // The tile may not be on the page yet when the art arrives, so the only
-  // staleness check is whether this tile has been dressed again since.
-  const cached = mode === 'painted' && artCache.get(meta.id + '/' + meta.coverArt.file);
-  NeoCovers.dress(el, NeoCovers.plan(meta, cached || undefined));
-  if (mode !== 'painted' || cached) return;
-  paintedArt(meta).then((art) => {
-    if (art && el._dressToken === token) NeoCovers.dress(el, NeoCovers.plan(meta, art));
-  });
+  NeoCovers.dress(el, NeoCovers.plan(meta));
 }
 
 function bookTile(meta) {
@@ -530,11 +489,9 @@ function bookTile(meta) {
   el.innerHTML = `
     <div class="b-text"><div class="b-title"></div><div class="b-author"></div></div>
     <span class="b-refresh" title="New cover">&#8635;</span>
-    <div class="b-painting" hidden></div>
     <div class="b-progress" hidden><div></div></div>`;
   el.querySelector('.b-author').textContent = meta.author || '';
   dressTile(el, meta);
-  el.querySelector('.b-painting').hidden = !(meta.coverArt && meta.coverArt.status === 'pending');
   el.querySelector('.b-refresh').onclick = async (e) => {
     e.stopPropagation();
     await refreshCover(meta, el);
@@ -641,114 +598,18 @@ function bookTile(meta) {
   return el;
 }
 
-/* ---- painted covers ----
-   At a thousand words a story has a shape, so NEO reads it and paints an
-   abstract cover to sit under the type. The writer's own cover (coverImage)
-   always wins; the abstract is the fallback; painting never blocks typing. */
-
-const PAINT_AT = 1000;
-const STALE_PAINT_MS = 10 * 60 * 1000; // a job that never came back
-
-function paintable(meta) {
-  if (!meta || meta.coverImage) return false; // the writer's own art is never painted over
-  if ((meta.wordCount || 0) < PAINT_AT) return false;
-  const art = meta.coverArt;
-  if (!art) return true;
-  if (art.status === 'pending') return Date.now() - Date.parse(art.at || 0) > STALE_PAINT_MS;
-  return false; // done, shelved, or failed: the ↻ on the tile is the way back in
-}
-
-function bookPlainText() {
-  return book.chapterOrder.map((id) => chapterText(id)).join('\n\n');
-}
-
-// Paint the open book, or a book on the shelf (text is read from disk then).
-async function requestPaint(meta, text) {
-  const provider = coverProvider();
-  if (!(await window.neo.hasSecret(provider))) {
-    if (!library.coverArtNudged) {
-      library.coverArtNudged = true;
-      await window.neo.writeLibrary(library);
-      toast('This story just passed 1,000 words \u2014 add an API key under File \u2192 Cover Art\u2026 and NEO will paint it a cover.', 8000);
-    }
-    return;
-  }
-  meta.coverArt = { status: 'pending', at: new Date().toISOString(), words: meta.wordCount || 0 };
-  if (book && book.id === meta.id) scheduleMetaSave();
-  else await window.neo.writeBookMeta(meta.id, meta);
-  markPainting(meta.id, true);
-  if (text == null) {
-    const m = await window.neo.readBookMeta(meta.id);
-    const parts = [];
-    for (const chId of (m && m.chapterOrder) || []) {
-      const holder = document.createElement('div');
-      holder.innerHTML = await window.neo.readChapter(meta.id, chId);
-      holder.querySelectorAll('.darling-anchor, .ph-mark, .ghost').forEach((n) => n.remove());
-      parts.push(holder.innerText);
-    }
-    text = parts.join('\n\n');
-  }
-  const cs = coverSettings();
-  const mine = (cs.models && cs.models[provider]) || {};
-  let res = null;
-  try {
-    res = await window.neo.paintCover(meta.id, text, { provider, textModel: mine.text, imageModel: mine.image, quality: cs.quality });
-  } catch (err) {
-    window.neo.logError('paint request: ' + (err && err.stack || err));
-    res = { error: String((err && err.message) || err) };
-  }
-  // the writer may have moved on — write to whichever copy of the meta is live
-  const live = (book && book.id === meta.id) ? book : (await window.neo.readBookMeta(meta.id)) || meta;
-  if (res && res.file) {
-    live.coverArt = { status: 'done', file: res.file, brief: res.brief, words: meta.wordCount || 0, at: new Date().toISOString() };
-    if (!live.coverImage) live.coverMode = 'painted';
-    artCache.delete(meta.id + '/' + res.file);
-  } else {
-    live.coverArt = { status: 'failed', error: (res && res.error) || 'unknown', at: new Date().toISOString() };
-    toast('NEO couldn\u2019t paint that cover: ' + live.coverArt.error, 7000);
-  }
-  if (live === book) scheduleMetaSave();
-  else await window.neo.writeBookMeta(meta.id, live);
-  markPainting(meta.id, false);
-  if (!$('#bookshelf-view').hidden) renderShelves();
-}
-
-// shimmer on the tile while its painting is in flight
-function markPainting(bookId, on) {
-  for (const el of $$('.book')) {
-    if (el.dataset.bookId !== bookId) continue;
-    el.classList.toggle('cv-painting', on);
-    const sh = el.querySelector('.b-painting');
-    if (sh) sh.hidden = !on;
-  }
-}
-
-// the ↻ on a tile: switch between the covers a book has, re-roll the
-// abstract, or paint a fresh one from the text
+// the ↻ on a tile: switch between the writer's image and the abstract,
+// or re-roll the abstract
 async function refreshCover(meta, el) {
   const mode = coverMode(meta);
-  const enough = (meta.wordCount || 0) >= PAINT_AT;
-  const hasKey = await window.neo.hasSecret(coverProvider());
   const options = [];
   if (meta.coverImage && mode !== 'image') options.push({ label: 'Show your cover art', desc: 'The image you gave this book.', value: 'image' });
-  if (hasPainting(meta) && mode !== 'painted') options.push({ label: 'Show NEO\u2019s painting', desc: 'The cover painted from the text.', value: 'painted' });
   if (mode !== 'abstract') options.push({ label: 'Show the abstract', desc: 'The seeded cover every book starts with.', value: 'abstract' });
   options.push({ label: 'New type & colours', desc: mode === 'abstract' ? 'A fresh abstract and a different title style.' : 'Re-sets the title in a different style over the same art.', value: 'reroll' });
-  if (hasKey) {
-    options.push(enough
-      ? { label: hasPainting(meta) ? 'Paint it again' : 'Paint a cover from the text', desc: 'NEO reads the manuscript and paints a new cover. About a minute; a few cents.', value: 'paint' }
-      : { label: 'Paint a cover from the text', desc: `Once the story passes ${PAINT_AT.toLocaleString()} words.`, value: 'nope' });
-  }
   // a plain abstract with nothing else to offer just re-rolls
   const choice = options.length === 1 ? 'reroll' : await optionModal(`Cover for \u201c${escHtml(meta.title)}\u201d`, null, options);
-  if (!choice || choice === 'nope') return;
+  if (!choice) return;
   const live = (book && book.id === meta.id) ? book : meta;
-  if (choice === 'paint') {
-    if (meta.coverArt && meta.coverArt.status === 'pending' && !paintable(meta)) { toast('Still painting\u2026'); return; }
-    live.coverMode = 'painted';
-    requestPaint(live, book && book.id === meta.id ? bookPlainText() : null);
-    return;
-  }
   if (choice === 'reroll') {
     live.coverSeed = meta.id + ':' + (meta.wordCount || 0) + ':' + Date.now().toString(36);
     if (mode === 'image') live.coverMode = 'abstract';
@@ -1854,7 +1715,7 @@ function renderStickies() {
     ta.addEventListener('input', () => {
       s.text = ta.value;
       clearTimeout(saveTimers.stickies);
-      saveTimers.stickies = setTimeout(() => window.neo.writeJSON(book.id, 'stickies', stickies), 600);
+      saveTimers.stickies = setTimeout(() => { if (book) window.neo.writeJSON(book.id, 'stickies', stickies); }, 600);
     });
     el.querySelector('.s-go').onclick = () => {
       switchTab('manuscript');
@@ -1940,6 +1801,7 @@ function focusSticky(sid) {
 /* ================================================================== */
 
 function renderNav() {
+  if (!book) return; // a refresh timer can outlive the book it was set for
   const list = $('#nav-list');
   list.innerHTML = '';
   book.chapterNotes = book.chapterNotes || {};
@@ -2783,14 +2645,8 @@ function updateCounters() {
       : `${book.chapterOrder.length} chapters`);
   // cache for the bookshelf progress bar
   if (book.wordCount !== total) {
-    // only a true crossing earns a painting — a story that was already long
-    // before NEO could paint keeps its abstract until the writer asks
-    const before = typeof book.wordCount === 'number' ? book.wordCount : total;
     book.wordCount = total;
     scheduleMetaSave();
-    if (before < PAINT_AT && total >= PAINT_AT && !(library.coverArt && library.coverArt.auto === false) && paintable(book)) {
-      requestPaint(book, bookPlainText());
-    }
   }
   trackDailyWords(total);
 }
@@ -2879,8 +2735,12 @@ $('#paper-scroll').addEventListener('scroll', () => {
 /* ================================================================== */
 
 function scheduleChapterSave(chId) {
+  const bookId = book.id;
   clearTimeout(saveTimers[chId]);
   saveTimers[chId] = setTimeout(() => {
+    // leaving a book flushes every chapter; a timer that fires after that
+    // must not write into whichever book is open now
+    if (!book || book.id !== bookId) return;
     window.neo.writeChapter(book.id, chId, chapterHTML[chId] || '');
   }, 800);
 }
@@ -3602,106 +3462,6 @@ function statsChartSvg() {
   </div>`;
 }
 
-/* ================================================================== */
-/*  COVER ART SETTINGS (File → Cover Art…)                             */
-/* ================================================================== */
-
-// One key per provider. The brief and the painting always come from the
-// same provider, so a writer only ever needs one account.
-const COVER_PROVIDERS = {
-  openai: { name: 'OpenAI', keyHint: 'sk-…', where: 'platform.openai.com → API keys', text: 'gpt-5-mini', image: 'gpt-image-1-mini', quality: true, cost: 'a few cents a picture' }
-};
-// Key formats change under us, so the only test is "one token, long enough" —
-// the provider does the rest.
-const looksLikeKey = (k) => /^\S{20,}$/.test(k);
-const coverSettings = () => library.coverArt || {};
-const coverProvider = () => (COVER_PROVIDERS[coverSettings().provider] ? coverSettings().provider : 'openai');
-
-function openCoverArt() {
-  const cs = coverSettings();
-  const bd = document.createElement('div');
-  bd.className = 'modal-backdrop';
-  const provOptions = Object.entries(COVER_PROVIDERS).map(([id, p]) =>
-    `<option value="${id}"${coverProvider() === id ? ' selected' : ''}>${p.name}</option>`).join('');
-  bd.innerHTML = `
-    <div class="modal" style="width:540px">
-      <h2 style="font-size:17px">Cover art</h2>
-      <p>Every book gets a cover on the shelf: an abstract with the title set in type. With an OpenAI key, NEO can also read a story once it passes ${PAINT_AT.toLocaleString()} words and paint a cover from the text. Paintings stay on your shelf — exports never include them.</p>
-      <div class="stats-row">
-        <select id="ca-provider" hidden>${provOptions}</select>
-        <label class="st-check"><input id="ca-auto" type="checkbox"${cs.auto === false ? '' : ' checked'}/> paint at ${PAINT_AT.toLocaleString()} words</label>
-      </div>
-      <div class="stats-row st-covers">
-        <label>API key <input id="ca-key" type="password" autocomplete="off" spellcheck="false" style="width:300px"/></label>
-      </div>
-      <p class="soft" id="ca-note" style="margin:-6px 0 12px;font-size:12px"></p>
-      <details class="st-advanced">
-        <summary class="soft">Models</summary>
-        <div class="stats-row">
-          <label>Brief <input id="ca-tmodel" type="text" spellcheck="false"/></label>
-          <label>Paint <input id="ca-imodel" type="text" spellcheck="false"/></label>
-          <label id="ca-quality-wrap">Quality
-            <select id="ca-quality">
-              ${['low', 'medium', 'high'].map((q) => `<option value="${q}"${(cs.quality || 'medium') === q ? ' selected' : ''}>${q}</option>`).join('')}
-            </select>
-          </label>
-        </div>
-        <p class="soft" style="font-size:12px;margin:0 0 6px">Leave blank for NEO\u2019s defaults. Names drift; if a provider retires one, NEO tries its own list before giving up.</p>
-      </details>
-      <div style="text-align:right;margin-top:14px">
-        <button class="m-cancel btn-quiet" style="margin-right:10px">Cancel</button>
-        <button class="m-ok btn-gold">Save</button>
-      </div>
-    </div>`;
-  document.body.appendChild(bd);
-  const sel = bd.querySelector('#ca-provider');
-  const key = bd.querySelector('#ca-key');
-  const note = bd.querySelector('#ca-note');
-  const models = (cs.models || {});
-  // per-provider fields: key placeholder, stored model overrides, quality
-  const showProvider = async () => {
-    const id = sel.value, p = COVER_PROVIDERS[id];
-    key.value = '';
-    key.placeholder = `${p.name} key (${p.keyHint})`;
-    bd.querySelector('#ca-tmodel').value = (models[id] && models[id].text) || '';
-    bd.querySelector('#ca-tmodel').placeholder = p.text;
-    bd.querySelector('#ca-imodel').value = (models[id] && models[id].image) || '';
-    bd.querySelector('#ca-imodel').placeholder = p.image;
-    bd.querySelector('#ca-quality-wrap').style.display = p.quality ? '' : 'none';
-    const has = await window.neo.hasSecret(id);
-    if (sel.value !== id) return;
-    note.textContent = has
-      ? `A ${p.name} key is saved, encrypted, outside your library folder. Paste a new one to replace it, or type \u201cremove\u201d to forget it.`
-      : `Get a key at ${p.where} (${p.cost}). It\u2019s stored encrypted on this computer and only ever sent to ${p.name}.`;
-  };
-  sel.onchange = showProvider;
-  showProvider();
-  const done = () => bd.remove();
-  bd.querySelector('.m-cancel').onclick = done;
-  bd.querySelector('.m-ok').onclick = async () => {
-    const id = sel.value, p = COVER_PROVIDERS[id];
-    const k = key.value.trim();
-    if (k === 'remove') await window.neo.setSecret(id, '');
-    else if (k && !looksLikeKey(k)) { toast(`That doesn\u2019t look like an API key (${p.name} keys look like ${p.keyHint}) \u2014 not saved`, 6000); return; }
-    else if (k) await window.neo.setSecret(id, k);
-    models[id] = {
-      text: bd.querySelector('#ca-tmodel').value.trim() || undefined,
-      image: bd.querySelector('#ca-imodel').value.trim() || undefined
-    };
-    library.coverArt = {
-      provider: id,
-      auto: bd.querySelector('#ca-auto').checked,
-      quality: bd.querySelector('#ca-quality').value,
-      models
-    };
-    await window.neo.writeLibrary(library);
-    done();
-    if (!(await window.neo.hasSecret(id))) toast(`Saved. Add a ${p.name} key to start painting.`, 5000);
-  };
-  bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(); } });
-  key.focus();
-}
-
 function openStats() {
   const hasBook = !!book;
   const today = hasBook ? (book.dailyCounts || {})[todayStr()] : null;
@@ -3905,7 +3665,7 @@ function showHelp() {
       <div class="help-grid">
         ${row(K('⌘E', 'Ctrl+E'), 'Email a timestamped draft to yourself')}
         ${row(K('⌘⇧I', 'Ctrl+Shift+I'), 'Import .docx / .txt / .md manuscripts')}
-        ${row('File → Export', 'txt · md · html · pdf · docx · epub')}
+        ${row('File → Export', 'txt · md · html · pdf · docx')}
       </div>
 
       <div class="help-sec">Mouse</div>
@@ -4069,8 +3829,6 @@ function buildHtml(data, opts = {}) {
 <html><head><meta charset="utf-8"><title>${d.title}</title>
 <style>
   body { font-family: Georgia, serif; color: #1c1c1c; max-width: 620px; margin: 40px auto; line-height: 1.7; font-size: 13pt; }
-  .coverpage { text-align: center; margin: 0 0 40px; page-break-after: always; }
-  .coverpage img { display: block; margin: 0 auto; width: 100%; max-width: 620px; max-height: 95vh; object-fit: contain; }
   .titlepage { text-align: center; margin: 30vh 0 20vh; page-break-after: always; }
   .titlepage h1 { font-size: 30pt; margin: 0; }
   .titlepage .sub { font-style: italic; color: #555; }
@@ -4085,7 +3843,6 @@ function buildHtml(data, opts = {}) {
   .brk { text-align: center; text-indent: 0 !important; letter-spacing: 8px; color: #888; margin: 2.5em 0; }
   .prov { margin-top: 80px; text-align: center; color: #999; font-size: 9pt; }
 </style></head><body>
-${opts.cover ? `<div class="coverpage"><img src="data:${opts.cover.mime};base64,${opts.cover.base64}" alt="Cover"/></div>` : ''}
 <div class="titlepage"><h1>${d.title}</h1>
 ${d.subtitle ? `<p class="sub">${d.subtitle}</p>` : ''}
 <p class="auth">${d.author}</p></div>
@@ -4188,157 +3945,6 @@ function buildDocxEntries(data) {
   ];
 }
 
-/* ---------- EPUB (KDP-friendly: EPUB 3, nav + NCX TOC, cover image) ---------- */
-
-// The cover that travels with an export: the writer's own image if they
-// gave one, otherwise the shelf's abstract with the title set in type,
-// rendered at KDP size. NEO's paintings never leave the shelf.
-async function exportCover(d) {
-  if (d.coverImage) {
-    const c = await window.neo.readCover(d.id, d.coverImage);
-    if (c) return { base64: c.base64, mime: c.mime, ext: c.ext };
-  }
-  await NeoCovers.ready;
-  const url = NeoCovers.renderFull(d).toDataURL('image/jpeg', 0.9);
-  return { base64: url.split(',')[1], mime: 'image/jpeg', ext: 'jpg' };
-}
-
-function chapterXhtml(ch, d) {
-  let first = true;
-  const paras = ch.paras.map((p) => {
-    if (p.sceneBreak) { first = true; return '<p class="brk">* * *</p>'; }
-    const classes = [];
-    if (first) classes.push('first');
-    if (p.align === 'center' || p.align === 'right') classes.push(p.align);
-    const cls = classes.length ? ` class="${classes.join(' ')}"` : '';
-    first = false;
-    const inner = paraRuns(p.html).map((r) => {
-      let t = escXml(r.text);
-      if (r.i) t = '<em>' + t + '</em>';
-      if (r.b) t = '<strong>' + t + '</strong>';
-      return t;
-    }).join('');
-    return `<p${cls}>${inner}</p>`;
-  }).join('\n');
-  return `<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
-<head><title>${escXml(ch.heading || d.title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>
-<body><section epub:type="chapter">${ch.heading ? `<h1>${escXml(ch.heading)}</h1>` : ''}
-${paras}
-</section></body></html>`;
-}
-
-async function buildEpubEntries(data) {
-  const d = data || bookExportData();
-  const chapters = d.sections;
-  const uuid = 'urn:uuid:neo-' + d.id;
-  const modified = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-
-  // real cover art when the book has it; the shelf's cover otherwise
-  const cover = await exportCover(d);
-  const coverName = 'cover.' + cover.ext;
-  const coverMime = cover.mime;
-  const coverContent = cover.base64;
-  const chItems = chapters.map((ch) =>
-    `<item id="ch${ch.num}" href="ch${ch.num}.xhtml" media-type="application/xhtml+xml"/>`).join('\n');
-  const chSpine = chapters.map((ch) => `<itemref idref="ch${ch.num}"/>`).join('\n');
-  const navPoints = chapters.map((ch) => `<li><a href="ch${ch.num}.xhtml">${escXml(ch.heading || d.title)}</a></li>`).join('\n');
-  const ncxPoints = chapters.map((ch) => `
-<navPoint id="ch${ch.num}" playOrder="${ch.num + 1}"><navLabel><text>${escXml(ch.heading || d.title)}</text></navLabel><content src="ch${ch.num}.xhtml"/></navPoint>`).join('');
-
-  const entries = [
-    { path: 'mimetype', content: 'application/epub+zip', store: true },
-    { path: 'META-INF/container.xml', content: `<?xml version="1.0" encoding="UTF-8"?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-<rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
-</container>` },
-    { path: 'OEBPS/content.opf', content: `<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
-<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-<dc:identifier id="bookid">${uuid}</dc:identifier>
-<dc:title>${escXml(d.title)}</dc:title>
-<dc:creator>${escXml(d.author)}</dc:creator>
-<dc:language>en</dc:language>
-<meta property="dcterms:modified">${modified}</meta>
-<meta name="cover" content="cover-image"/>
-</metadata>
-<manifest>
-<item id="cover-image" href="${coverName}" media-type="${coverMime}" properties="cover-image"/>
-<item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/>
-<item id="titlepage" href="title.xhtml" media-type="application/xhtml+xml"/>
-<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
-<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
-<item id="css" href="style.css" media-type="text/css"/>
-${chItems}
-</manifest>
-<spine toc="ncx">
-<itemref idref="cover" linear="no"/>
-<itemref idref="titlepage"/>
-<itemref idref="nav"${chapters.length === 1 ? ' linear="no"' : ''}/>
-${chSpine}
-</spine>
-<guide>
-<reference type="cover" title="Cover" href="cover.xhtml"/>
-<reference type="toc" title="Table of Contents" href="nav.xhtml"/>
-<reference type="text" title="Beginning" href="ch1.xhtml"/>
-</guide>
-</package>` },
-    { path: 'OEBPS/nav.xhtml', content: `<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
-<head><title>Table of Contents</title><link rel="stylesheet" type="text/css" href="style.css"/></head>
-<body><nav epub:type="toc" id="toc"><h1>Contents</h1>
-<ol>
-<li><a href="title.xhtml">Title Page</a></li>
-${navPoints}
-</ol></nav>
-<nav epub:type="landmarks" hidden=""><ol>
-<li><a epub:type="cover" href="cover.xhtml">Cover</a></li>
-<li><a epub:type="toc" href="nav.xhtml">Table of Contents</a></li>
-<li><a epub:type="bodymatter" href="ch1.xhtml">Beginning</a></li>
-</ol></nav>
-</body></html>` },
-    { path: 'OEBPS/toc.ncx', content: `<?xml version="1.0" encoding="utf-8"?>
-<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
-<head><meta name="dtb:uid" content="${uuid}"/></head>
-<docTitle><text>${escXml(d.title)}</text></docTitle>
-<navMap>
-<navPoint id="titlepage" playOrder="1"><navLabel><text>Title Page</text></navLabel><content src="title.xhtml"/></navPoint>${ncxPoints}
-</navMap></ncx>` },
-    { path: 'OEBPS/style.css', content: `body { font-family: serif; line-height: 1.5; margin: 1em; }
-h1 { text-align: center; font-weight: normal; letter-spacing: 0.2em; text-transform: uppercase; font-size: 1.2em; margin: 3em 0 2em; }
-p { text-indent: 1.2em; margin: 0; }
-p.first, p.brk + p { text-indent: 0; }
-p.center { text-align: center; text-indent: 0; }
-p.right { text-align: right; text-indent: 0; }
-p.brk { text-align: center; text-indent: 0; margin: 2.5em 0; letter-spacing: 0.5em; }
-.titlepage { text-align: center; margin-top: 30%; }
-.titlepage h2 { font-size: 2em; margin: 0; }
-.titlepage .sub { font-style: italic; }
-.titlepage .auth { margin-top: 4em; letter-spacing: 0.3em; text-transform: uppercase; }
-.coverimg { text-align: center; margin: 0; padding: 0; }
-.coverimg img { max-width: 100%; max-height: 100%; }` },
-    { path: 'OEBPS/cover.xhtml', content: `<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>Cover</title><link rel="stylesheet" type="text/css" href="style.css"/></head>
-<body><div class="coverimg"><img src="${coverName}" alt="${escXml(d.title)}"/></div></body></html>` },
-    { path: 'OEBPS/title.xhtml', content: `<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>${escXml(d.title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>
-<body><div class="titlepage"><h2>${escXml(d.title)}</h2>
-${d.subtitle ? `<p class="sub">${escXml(d.subtitle)}</p>` : ''}
-<p class="auth">${escXml(d.author)}</p></div></body></html>` },
-    { path: 'OEBPS/' + coverName, content: coverContent, base64: true }
-  ];
-  for (const ch of chapters) {
-    entries.push({ path: `OEBPS/ch${ch.num}.xhtml`, content: chapterXhtml(ch, d) });
-  }
-  return entries;
-}
-
 /* ---------- ANTHOLOGY: a whole shelf becomes one book ---------- */
 
 // Read every book on a shelf from disk and merge into export sections.
@@ -4378,7 +3984,6 @@ async function exportShelfAnthology(shelf) {
   const title = await askInput('Anthology title', 'Shown on the title page, cover, and metadata', shelf.name);
   if (title === null) return;
   const format = await optionModal('Export the anthology as…', null, [
-    { label: 'EPUB', desc: 'For ebook stores — the TOC lists every story.', value: 'epub' },
     { label: 'Word (.docx)', desc: 'For editors — each story starts on a new page.', value: 'docx' },
     { label: 'PDF', desc: 'For reading, sharing, and print.', value: 'pdf' }
   ]);
@@ -4389,8 +3994,7 @@ async function exportShelfAnthology(shelf) {
   const defaultName = safeName(data.title);
   let payload;
   if (format === 'docx') payload = { format, defaultName, zipEntries: buildDocxEntries(data) };
-  else if (format === 'epub') payload = { format, defaultName, zipEntries: await buildEpubEntries(data) };
-  else payload = { format: 'pdf', defaultName, content: buildHtml(data, { cover: await exportCover(data) }) };
+  else payload = { format: 'pdf', defaultName, content: buildHtml(data) };
   const saved = await window.neo.exportSave(payload);
   if (saved) toast(`Anthology of ${shelf.bookIds.length} works exported: ` + saved.split('/').pop(), 6000);
 }
@@ -4401,10 +4005,9 @@ async function doExport(format) {
   const defaultName = safeName(book.title);
   let payload;
   if (format === 'docx') payload = { format, defaultName, zipEntries: buildDocxEntries() };
-  else if (format === 'epub') payload = { format, defaultName, zipEntries: await buildEpubEntries() };
   else if (format === 'txt') payload = { format, defaultName, content: buildTxt() };
   else if (format === 'md') payload = { format, defaultName, content: buildMd() };
-  else payload = { format, defaultName, content: buildHtml(null, { cover: await exportCover(bookExportData()) }) };
+  else payload = { format, defaultName, content: buildHtml() };
   const saved = await window.neo.exportSave(payload);
   if (saved) toast('Exported: ' + saved.split('/').pop());
 }
@@ -4539,7 +4142,6 @@ window.neo.onMenu(async (msg) => {
   if (msg.type === 'typewriter') toggleTypewriter();
   if (msg.type === 'import') importBooks();
   if (msg.type === 'stats') openStats();
-  if (msg.type === 'coverArt') openCoverArt();
   if (msg.type === 'align') {
     applyAlign(msg.value);
   }

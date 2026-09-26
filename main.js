@@ -268,10 +268,8 @@ ipcMain.handle('cover:read', (_e, bookId, fname) => {
 });
 
 // ---------------------------------------------------------------------------
-// Painted covers: once a story passes a thousand words, NEO reads it and
-// paints an abstract cover (art.js). The API key lives encrypted in the
-// app's own data folder — never in the library, which gets synced and
-// backed up as plain files.
+// Secrets (API keys): encrypted in the app's own data folder — never in the
+// library, which gets synced and backed up as plain files.
 // ---------------------------------------------------------------------------
 
 const SECRETS_FILE = () => path.join(app.getPath('userData'), 'secrets.json');
@@ -306,54 +304,6 @@ ipcMain.handle('secret:set', (_e, name, value) => {
 });
 
 ipcMain.handle('secret:has', (_e, name) => !!readSecret(name));
-
-// One painting at a time per book; a second request while one is running
-// simply gets the running one's answer.
-const paintJobs = new Map();
-
-ipcMain.handle('cover:paint', (_e, bookId, text, options) => {
-  if (paintJobs.has(bookId)) return paintJobs.get(bookId);
-  const job = (async () => {
-    const provider = (options && options.provider) || 'openai';
-    const apiKey = readSecret(provider);
-    if (!apiKey) return { error: 'No API key for ' + provider + ' — add one under File → Cover Art…' };
-    const dir = bookDir(bookId);
-    if (!fs.existsSync(dir)) return { error: 'Book folder is missing' };
-    try {
-      const art = require('./art.js');
-      const out = await art.paintCover({
-        provider,
-        apiKey,
-        text: String(text || ''),
-        textModel: options && options.textModel,
-        imageModel: options && options.imageModel,
-        quality: options && options.quality
-      });
-      // sweep older paintings; the writer's own cover-*.png files are untouched
-      for (const f of fs.readdirSync(dir)) {
-        if (/^art-\d+\.(png|jpg|webp)$/.test(f)) fs.unlinkSync(path.join(dir, f));
-      }
-      const fname = 'art-' + Date.now() + '.' + (out.ext || 'jpg');
-      fs.writeFileSync(path.join(dir, fname), out.buffer);
-      // the brief sits beside the picture, so a future repaint can start from it
-      writeJSON(path.join(dir, 'art.json'), {
-        file: fname,
-        brief: out.brief,
-        provider,
-        textModel: out.textModel,
-        imageModel: out.imageModel,
-        painted: new Date().toISOString()
-      });
-      return { file: fname, brief: out.brief };
-    } catch (err) {
-      logError('paint', err);
-      return { error: String((err && err.message) || err) };
-    }
-  })();
-  paintJobs.set(bookId, job);
-  job.finally(() => paintJobs.delete(bookId));
-  return job;
-});
 
 // ---------------------------------------------------------------------------
 // Fullscreen
@@ -396,7 +346,7 @@ async function renderPDF(html) {
   }
 }
 
-// zipEntries: [{path, content, base64?, store?}] — order matters (EPUB mimetype first)
+// zipEntries: [{path, content, base64?, store?}]
 async function buildZip(zipEntries) {
   const JSZip = require('jszip');
   const zip = new JSZip();
@@ -405,11 +355,7 @@ async function buildZip(zipEntries) {
       compression: e.store ? 'STORE' : 'DEFLATE'
     });
   }
-  return zip.generateAsync({
-    type: 'nodebuffer',
-    compression: 'DEFLATE',
-    mimeType: 'application/epub+zip'
-  });
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
 
 ipcMain.handle('export:save', async (_e, { format, defaultName, content, zipEntries }) => {
@@ -758,8 +704,7 @@ function buildMenu() {
             { label: 'Markdown (.md)', click: () => sendToWindow({ type: 'export', format: 'md' }) },
             { label: 'Web Page (.html)', click: () => sendToWindow({ type: 'export', format: 'html' }) },
             { label: 'PDF (.pdf)', click: () => sendToWindow({ type: 'export', format: 'pdf' }) },
-            { label: 'Word (.docx)', click: () => sendToWindow({ type: 'export', format: 'docx' }) },
-            { label: 'EPUB (.epub)', click: () => sendToWindow({ type: 'export', format: 'epub' }) }
+            { label: 'Word (.docx)', click: () => sendToWindow({ type: 'export', format: 'docx' }) }
           ]
         },
         { type: 'separator' },
@@ -769,7 +714,6 @@ function buildMenu() {
           click: () => sendToWindow({ type: 'emailDraft' })
         },
         { label: 'Email Settings…', click: () => sendToWindow({ type: 'emailSettings' }) },
-        { label: 'Cover Art…', click: () => sendToWindow({ type: 'coverArt' }) },
         {
           label: isMac ? 'Goals & Settings…' : 'Goals && Settings…',
           accelerator: 'CmdOrCtrl+,',
