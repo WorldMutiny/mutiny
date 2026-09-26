@@ -4329,6 +4329,7 @@ function showHelp() {
         ${row(KDA, t('help.later'))}
         ${row(KCITE, t('help.cite'))}
         ${row(K('⌘⇧M', 'Ctrl+Shift+M'), t('help.rewrite'))}
+        ${row(K('⌘⇧C', 'Ctrl+Shift+C'), t('help.critique'))}
         ${row(KZ, t('help.undo'))}
         ${row(t('help.dashesKey'), t('help.dashes'))}
         ${row(K('⌘B · ⌘I', 'Ctrl+B · Ctrl+I'), t('help.bold'))}

@@ -400,6 +400,7 @@ document.addEventListener('keydown', (e) => {
   if (document.querySelector('.modal-backdrop:not([hidden])')) return;
   const cmd = e.metaKey || e.ctrlKey;
   if (cmd && e.shiftKey && e.code === 'KeyM') { e.preventDefault(); rewriteSelection(); }
+  if (cmd && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); critique('section'); } // the section the caret is in
 });
 
 window.neo.onMenu((msg) => {
