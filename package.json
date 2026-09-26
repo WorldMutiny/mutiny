@@ -1,9 +1,9 @@
 {
-  "name": "neo",
-  "productName": "NEO",
-  "version": "0.7.9",
-  "description": "A word processor for authors. Distraction-free by default.",
-  "homepage": "https://github.com/hughhowey/neo",
+  "name": "mutiny",
+  "productName": "Mutiny",
+  "version": "0.1.0",
+  "description": "A distraction-free essay writer with an optional AI research & critique assistant.",
+  "homepage": "https://github.com/worldmutiny/mutiny",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -13,12 +13,12 @@
     "package:all": "electron-builder --mac --win --linux"
   },
   "build": {
-    "appId": "com.hughhowey.neo",
-    "productName": "NEO",
+    "appId": "com.worldmutiny.mutiny",
+    "productName": "Mutiny",
     "publish": {
       "provider": "github",
-      "owner": "hughhowey",
-      "repo": "neo"
+      "owner": "worldmutiny",
+      "repo": "mutiny"
     },
     "mac": {
       "category": "public.app-category.productivity",
@@ -93,7 +93,7 @@
       "!.github/**"
     ]
   },
-  "author": "Hugh Howey",
+  "author": "Maxx (fork of NEO by Hugh Howey)",
   "license": "MIT",
   "devDependencies": {
     "electron": "^43.0.0",
@@ -106,6 +106,7 @@
     "nspell": "^2.1.5"
   },
   "allowScripts": {
-    "electron@33.4.11": true
+    "electron@33.4.11": true,
+    "electron-winstaller": false
   }
 }

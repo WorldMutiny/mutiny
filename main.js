@@ -1,4 +1,4 @@
-// NEO — main process
+// Mutiny — main process (fork of NEO by Hugh Howey)
 // Owns the window and all file-system access. The renderer talks to this
 // through the IPC handlers below (see preload.js for the exposed API).
 
@@ -16,7 +16,7 @@ app.commandLine.appendSwitch('blink-settings', 'smartInsertDeleteEnabled=false')
 // ---------------------------------------------------------------------------
 // Resolved properly at startup via app.getPath('documents') — this default
 // covers any early access and non-redirected setups.
-let LIBRARY_DIR = path.join(os.homedir(), 'Documents', 'NEO Library');
+let LIBRARY_DIR = path.join(os.homedir(), 'Documents', 'Mutiny Library');
 let LIBRARY_FILE = path.join(LIBRARY_DIR, 'library.json');
 
 function ensureLibrary() {
@@ -57,7 +57,7 @@ function writeCatalog() {
     }
     lines.sort((a, b) => a.localeCompare(b));
     fs.writeFileSync(path.join(LIBRARY_DIR, '_catalog.txt'),
-      'NEO LIBRARY CATALOG — which folder is which book\n' +
+      'MUTINY LIBRARY CATALOG — which folder is which book\n' +
       '(regenerated automatically; edits here do nothing)\n\n' +
       lines.join('\n') + '\n');
   } catch (err) {
@@ -204,7 +204,7 @@ ipcMain.handle('book:delete', async (_e, bookId, title) => {
       logError('trash', err);
       shell.showItemInFolder(bookDir(bookId));
       dialog.showMessageBox(win, {
-        message: 'NEO couldn’t move that folder to the Trash.',
+        message: 'Mutiny couldn’t move that folder to the Trash.',
         detail: 'The book is untouched. Its folder is highlighted so you can deal with it yourself.'
       });
       return false;
@@ -874,13 +874,13 @@ function buildMenu() {
       label: 'Help',
       submenu: [
         {
-          label: 'NEO Shortcuts',
+          label: 'Mutiny Shortcuts',
           accelerator: 'CmdOrCtrl+/',
           click: () => sendToWindow({ type: 'help' })
         },
         { type: 'separator' },
         {
-          label: 'About NEO',
+          label: 'About Mutiny',
           click: () => sendToWindow({ type: 'about' })
         },
         {
@@ -913,8 +913,8 @@ ipcMain.handle('app:version', () => app.getVersion());
 
 ipcMain.handle('update:check', async () => {
   try {
-    const res = await fetch('https://api.github.com/repos/hughhowey/neo/releases/latest', {
-      headers: { 'User-Agent': 'NEO-App' }
+    const res = await fetch('https://api.github.com/repos/worldmutiny/mutiny/releases/latest', {
+      headers: { 'User-Agent': 'Mutiny-App' }
     });
     if (!res.ok) throw new Error('GitHub API returned ' + res.status);
     const data = await res.json();
@@ -956,8 +956,12 @@ if (!app.requestSingleInstanceLock()) {
 // Auto-update from GitHub releases. Deliberately defensive: any failure is
 // logged and swallowed, so an unsigned build or offline machine never notices.
 // (macOS auto-update only works once the app is code-signed.)
+// Off until Mutiny publishes its own releases (PRD phase 6); inherited
+// config must never pull a NEO build over a Mutiny install.
+const AUTO_UPDATE_ENABLED = false;
+
 function checkForUpdates() {
-  if (!app.isPackaged) return;
+  if (!AUTO_UPDATE_ENABLED || !app.isPackaged) return;
   try {
     const { autoUpdater } = require('electron-updater');
     autoUpdater.logger = null;
@@ -975,7 +979,7 @@ app.whenReady().then(() => {
     if (process.platform === 'darwin' && fs.existsSync(devIcon)) {
       if (app.dock) app.dock.setIcon(devIcon);
       app.setAboutPanelOptions({
-        applicationName: 'NEO',
+        applicationName: 'Mutiny',
         applicationVersion: app.getVersion(),
         iconPath: devIcon
       });
@@ -987,7 +991,7 @@ app.whenReady().then(() => {
   try {
     // the real Documents folder (handles OneDrive-redirected Windows setups)
     try {
-      LIBRARY_DIR = path.join(app.getPath('documents'), 'NEO Library');
+      LIBRARY_DIR = path.join(app.getPath('documents'), 'Mutiny Library');
       LIBRARY_FILE = path.join(LIBRARY_DIR, 'library.json');
     } catch (err) {
       logError('paths', err);
@@ -1019,8 +1023,8 @@ app.whenReady().then(() => {
     // catastrophic: tell the human instead of dying in silence
     logError('startup', err);
     try {
-      dialog.showErrorBox('NEO failed to start',
-        'Please report this at github.com/hughhowey/neo/issues:\n\n' + String((err && err.stack) || err));
+      dialog.showErrorBox('Mutiny failed to start',
+        'Please report this at github.com/worldmutiny/mutiny/issues:\n\n' + String((err && err.stack) || err));
     } catch { /* nothing left to try */ }
   }
   app.on('activate', () => {
