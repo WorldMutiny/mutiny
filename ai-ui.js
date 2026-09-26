@@ -683,6 +683,7 @@ async function sendChat() {
   } else if (res.error === 'cancelled') {
     msg.text = res.text || msg.text;
     msg.stopped = true;
+    toast(t('ai.cancelled'));
   } else {
     chatLog.pop(); // no answer: leave the question for a retry
     toast(aiErrorText(res), 9000);
