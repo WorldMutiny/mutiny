@@ -23,6 +23,12 @@ Build a Linux AppImage with `npm run package:linux` (output in `dist/`).
 
 Your essays live in `~/Documents/Mutiny Library` — separate from any NEO library, so both apps can be installed side by side.
 
+## The assistant (optional)
+
+Mutiny can research the facts you mark, critique your argument and suggest better wording. It runs through **your own [Claude Code](https://claude.com/claude-code)** install and login — no API key — using the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview), locked down to web search/fetch for research and no tools at all for critique and rewriting; it never writes files and never changes your text unless you accept a suggestion. Turn it on in the Assistant menu.
+
+The Claude Agent SDK is © Anthropic and licensed under [Anthropic's terms](https://code.claude.com/docs/en/legal-and-compliance), not MIT; Mutiny doesn't bundle the Claude Code binary and uses the one you already have.
+
 ## Credits
 
 Mutiny stands on NEO, created by [Hugh Howey](https://hughhowey.com/neo/). NEO's original README is kept in [`NEO-README.md`](NEO-README.md). All of NEO's history is preserved in this repository.

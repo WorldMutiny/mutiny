@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.4 — fases 0, 1 y 2 completas · 2026-09-25
+**Estado:** v0.5 — fases 0, 1, 2 y 3a completas · 2026-09-25
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -213,15 +213,15 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] DOI (Crossref) e ISBN (Open Library → Google Books); fuentes candidatas con "Aceptar" (listas para la fase 3).
 - **Aceptación:** un ensayo con 5 citas se exporta con la bibliografía correcta en DOCX, PDF y MD.
 
-### Fase 3a — IA con Claude Code (MVP de IA)
-- [ ] Capa `ai/` con la interfaz de proveedores y el proveedor Claude Code (Agent SDK, herramientas restringidas).
-- [ ] Comentarios v2 (§6.2), Investigar marca, Criticar sección, Mejorar redacción, Chat del ensayo.
+### Fase 3a — IA con Claude Code (MVP de IA) ✅
+- [x] Capa `ai/` con la interfaz de proveedores y el proveedor Claude Code (Agent SDK, herramientas restringidas).
+- [x] Comentarios v2 (§6.2), Investigar marca, Criticar sección, Mejorar redacción. *(El chat del ensayo pasa a la fase 3b.)*
 - **Aceptación:**
   - "Investigar" sobre una marca devuelve al menos una fuente candidata con URL real y cita textual.
   - La IA nunca modifica un archivo por sí misma.
   - Cancelar una tarea la detiene en menos de 1 s.
 
-### Fase 3b — IA por API key
+### Fase 3b — IA por API key + chat del ensayo
 - [ ] Proveedor compatible con OpenAI y Anthropic API; key cifrada; "probar conexión".
 - [ ] Degradación clara: sin búsqueda web, "Investigar" se desactiva con una explicación.
 - **Aceptación:** funciona con un endpoint local (llama.cpp/Ollama) y uno en la nube.
