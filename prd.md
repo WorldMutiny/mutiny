@@ -147,6 +147,13 @@ Acciones disponibles desde el menú, el atajo o el clic derecho:
 - **DOI e ISBN:** un DOI se busca en Crossref y un ISBN en Open Library.
 - **Exportación:** numeración por orden de primera aparición. PDF, DOCX y TXT llevan números volados y una lista "Fuentes" al final; Markdown y HTML llevan además el enlace en el texto.
 
+**Decisiones de la fase 3a (2026-09-26):**
+- **Modelo:** el predeterminado de tu Claude Code, con un ajuste para cambiarlo.
+- **Chat del ensayo:** pasa a la fase 3b.
+- **Crítica:** la IA devuelve solo sus 3 a 7 observaciones más importantes por pasada, ordenadas por gravedad.
+- **Menos permisos que en el plan original:** las tareas llevan su texto en el prompt, así que no leen archivos. "Investigar" usa solo WebSearch y WebFetch; "Criticar" y "Mejorar" no usan ninguna herramienta. Todas corren en una carpeta vacía y aislada, sin cargar la configuración personal de Claude Code.
+- **Licencia:** el Claude Agent SDK es de Anthropic y se rige por sus términos comerciales, no por MIT. Mutiny usa el `claude` que el usuario ya tiene instalado y no incluye su binario en el AppImage. Si se publica, el README debe decirlo.
+
 ### 6.6 Reordenar (fase 4)
 
 - Vista de **tarjetas**: cada párrafo de una sección se muestra como una tarjeta que se arrastra. Con zoom, también frases dentro de un párrafo.

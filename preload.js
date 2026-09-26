@@ -42,6 +42,10 @@ contextBridge.exposeInMainWorld('neo', {
   i18n: (lang) => ipcRenderer.invoke('i18n:load', lang),
   lookupSource: (input) => ipcRenderer.invoke('sources:lookup', input),
   openLink: (url) => ipcRenderer.invoke('link:open', url),
+  aiStatus: (settings) => ipcRenderer.invoke('ai:status', settings),
+  aiRun: (jobId, task, input, settings) => ipcRenderer.invoke('ai:run', jobId, task, input, settings),
+  aiCancel: (jobId) => ipcRenderer.invoke('ai:cancel', jobId),
+  onAiProgress: (cb) => ipcRenderer.on('ai:progress', (_e, msg) => cb(msg)),
   openRelease: () => ipcRenderer.invoke('update:openRelease'),
 
   onMenu: (cb) => ipcRenderer.on('menu', (_e, msg) => cb(msg))

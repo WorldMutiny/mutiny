@@ -11,6 +11,9 @@ const os = require('os');
 // selection, and that pass can duplicate characters. Deletes stay literal.
 app.commandLine.appendSwitch('blink-settings', 'smartInsertDeleteEnabled=false');
 
+// development/test runs keep their app data apart from the real install
+if (process.env.MUTINY_USER_DATA) app.setPath('userData', process.env.MUTINY_USER_DATA);
+
 // ---------------------------------------------------------------------------
 // Library location: a folder of plain files the user can inspect, sync, back up.
 // ---------------------------------------------------------------------------
@@ -368,6 +371,9 @@ ipcMain.handle('link:open', (_e, url) => {
   } catch { /* not a URL */ }
   return true;
 });
+
+// AI assistant (ai/): research, critique, rewrite — see ai/index.js
+require('./ai/index.js').register(logError);
 
 // ---------------------------------------------------------------------------
 // Fullscreen
@@ -1046,7 +1052,8 @@ app.whenReady().then(() => {
   try {
     // the real Documents folder (handles OneDrive-redirected Windows setups)
     try {
-      LIBRARY_DIR = path.join(app.getPath('documents'), 'Mutiny Library');
+      // MUTINY_LIBRARY_DIR points a development/test run at another library
+      LIBRARY_DIR = process.env.MUTINY_LIBRARY_DIR || path.join(app.getPath('documents'), 'Mutiny Library');
       LIBRARY_FILE = path.join(LIBRARY_DIR, 'library.json');
     } catch (err) {
       logError('paths', err);
