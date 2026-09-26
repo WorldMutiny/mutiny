@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('neo', {
   spellLearn: (word) => ipcRenderer.invoke('spell:learn', word),
   appVersion: () => ipcRenderer.invoke('app:version'),
   i18n: (lang) => ipcRenderer.invoke('i18n:load', lang),
+  lookupSource: (input) => ipcRenderer.invoke('sources:lookup', input),
+  openLink: (url) => ipcRenderer.invoke('link:open', url),
   openRelease: () => ipcRenderer.invoke('update:openRelease'),
 
   onMenu: (cb) => ipcRenderer.on('menu', (_e, msg) => cb(msg))

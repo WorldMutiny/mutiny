@@ -351,6 +351,25 @@ ipcMain.handle('secret:set', (_e, name, value) => {
 ipcMain.handle('secret:has', (_e, name) => !!readSecret(name));
 
 // ---------------------------------------------------------------------------
+// Sources: turn a pasted URL / DOI / ISBN into a draft record (see
+// sources-lookup.js), and open a source's link in the writer's browser.
+// ---------------------------------------------------------------------------
+
+ipcMain.handle('sources:lookup', async (_e, input) => {
+  const { net } = require('electron');
+  return require('./sources-lookup.js').lookup(input, (url, opts) => net.fetch(url, opts));
+});
+
+// only web addresses ever leave the app — never file:// or custom schemes
+ipcMain.handle('link:open', (_e, url) => {
+  try {
+    const u = new URL(String(url));
+    if (u.protocol === 'http:' || u.protocol === 'https:') require('electron').shell.openExternal(u.href);
+  } catch { /* not a URL */ }
+  return true;
+});
+
+// ---------------------------------------------------------------------------
 // Fullscreen
 // ---------------------------------------------------------------------------
 
