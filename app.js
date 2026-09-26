@@ -228,6 +228,26 @@ function showFirstRun() {
     preview();
   }
 
+  // Step 2 → 3: the optional assistant, with what was found on this computer
+  $('#fr-next').onclick = async () => {
+    $('#fr-step2').hidden = true;
+    $('#fr-step3').hidden = false;
+    const state = $('.fr-ai-state');
+    state.textContent = t('ai.checking');
+    const st = await window.neo.aiStatus({});
+    const ready = st.installed && st.loggedIn;
+    state.textContent = !st.installed ? t('ai.state.missing')
+      : !st.loggedIn ? t('ai.state.loggedOut', { v: st.version })
+      : t('ai.state.ready', { v: st.version, plan: st.plan || '—' });
+    $('#fr-ai-on').disabled = !st.installed;
+    $('#fr-ai-on').style.opacity = st.installed ? '' : '0.5';
+    if (!ready && st.installed) state.textContent += ' ' + t('fr.aiLater');
+  };
+  $('#fr-ai-on').onclick = async () => {
+    library.ai = { ...(library.ai || {}), enabled: true };
+    $('#fr-done').click();
+  };
+
   $('#fr-done').onclick = async () => {
     library.fonts = { body: picked.body };
     library.firstRunDone = true;
@@ -865,7 +885,7 @@ function renderChapters() {
     body.spellcheck = false; // NEO runs its own spellcheck pass
     body.innerHTML = chapterHTML[chId] || '<p><br></p>';
     // older marks used a "?" that read as a broken image — normalize to the flag
-    body.querySelectorAll('.ph-mark').forEach((m) => { m.textContent = '⚑'; });
+    body.querySelectorAll('.ph-mark:not(.ai)').forEach((m) => { m.textContent = '⚑'; });
     // heal the engine's style-junk spans left by past merges and splits
     stripJunkSpans(body);
     // heal prose that got merged into a scene-break's styled paragraph:
@@ -915,12 +935,16 @@ async function deleteChapterToDarlings(chId) {
 
 async function chapterMenu(chId, index) {
   const words = countWords(chapterText(chId));
+  const opts = [];
+  if (words && aiEnabled()) opts.push({ label: t('ai.critiqueThis'), desc: t('ai.critiqueThisDesc'), value: 'critique' });
+  opts.push({ label: t('section.delete'), desc: t(words ? 'section.deleteDesc' : 'section.deleteEmptyDesc'), danger: true, value: 'delete' });
   const choice = await optionModal(
     t('section.menuTitle', { n: index + 1 }),
     words ? tn('count.wordsSentence', words) : t('section.empty'),
-    [{ label: t('section.delete'), desc: t(words ? 'section.deleteDesc' : 'section.deleteEmptyDesc'), danger: true, value: 'delete' }]
+    opts
   );
   if (choice === 'delete') await deleteChapterToDarlings(chId);
+  if (choice === 'critique') { currentChapterId = chId; critique('section'); }
 }
 
 /* ================================================================== */
@@ -1528,7 +1552,7 @@ function cleanPasteHtml(html) {
         // placeholder marks travel with their text; reconcileMarks pairs
         // each one back up with a note after the paste lands
         closeCite();
-        if (r.mark) inner += `<span class="ph-mark" data-sid="${escHtml(r.mark)}" contenteditable="false">⚑</span>`;
+        if (r.mark) inner += `<span class="ph-mark${r.ai ? ' ai' : ''}" data-sid="${escHtml(r.mark)}" contenteditable="false">${r.ai ? '✦' : '⚑'}</span>`;
         continue;
       }
       if (r.citeMark) {
@@ -1637,6 +1661,7 @@ document.addEventListener('keydown', (e) => {
     if (currentTab === 'manuscript') darlingFromKeyboard();
   }
   if (e.key === 'Escape') {
+    if (typeof aiCancel === 'function' && aiCancel()) return; // stop the assistant first
     if (closeSidePane()) return;
     if (!$('#searchbar').hidden) closeSearch();
     else window.neo.fullscreenEscape().then((exited) => { if (!exited) backToShelf(); });
@@ -1748,30 +1773,67 @@ function insertPlaceholder() {
   scheduleNavRefresh();
 }
 
+// Notes in the text: the writer's ⚑ marks and the assistant's ✦ comments,
+// in the order they sit in the essay. Each sticky:
+// { id, chapterId, text, resolved, kind: 'mark'|'critique', author: 'me'|'ai',
+//   category?, severity?, research?: { answer, sourceIds, at } }
+let sideFilter = 'all';
+
 function renderStickies() {
   const wrap = $('#sticky-list');
   wrap.innerHTML = '';
-  const open = stickies.filter((s) => !s.resolved);
+  const where = new Map();
+  $$('.chapter-body .ph-mark').forEach((m, i) => where.set(m.dataset.sid, i));
+  const open = stickies.filter((s) => !s.resolved)
+    .sort((a, b) => (where.has(a.id) ? where.get(a.id) : 1e9) - (where.has(b.id) ? where.get(b.id) : 1e9));
+  const fromAi = (s) => s.author === 'ai';
+  if (open.some(fromAi)) {
+    const bar = document.createElement('div');
+    bar.className = 'side-filter';
+    for (const f of ['all', 'me', 'ai']) {
+      const b = document.createElement('button');
+      b.textContent = t('side.filter.' + f);
+      b.classList.toggle('on', sideFilter === f);
+      b.onclick = () => { sideFilter = f; renderStickies(); };
+      bar.appendChild(b);
+    }
+    wrap.appendChild(bar);
+  } else {
+    sideFilter = 'all';
+  }
+  const shown = open.filter((s) => sideFilter === 'all' || (sideFilter === 'ai') === fromAi(s));
   if (open.length === 0) {
     wrap.innerHTML = `<div class="stickies-empty">${t('side.empty', { key: KPH })}</div>`;
     return;
   }
-  for (const s of open) {
+  for (const s of shown) {
     const chIdx = book.chapterOrder.indexOf(s.chapterId);
     const el = document.createElement('div');
-    el.className = 'sticky unresolved';
+    el.className = 'sticky unresolved' + (fromAi(s) ? ' ai' : '');
     el.dataset.sid = s.id;
-    el.innerHTML = `
-      <div class="s-ch">${chIdx >= 0 ? t('side.section', { n: chIdx + 1 }) : t('side.unplaced')}</div>
-      <textarea placeholder="${t('side.notePh')}" spellcheck="false"></textarea>
-      <div class="s-actions"><button class="s-go">${t('side.goTo')}</button> <button class="s-done">${t('side.resolve')}</button></div>`;
-    const ta = el.querySelector('textarea');
-    ta.value = s.text;
-    ta.addEventListener('input', () => {
-      s.text = ta.value;
-      clearTimeout(saveTimers.stickies);
-      saveTimers.stickies = setTimeout(() => { if (book) window.neo.writeJSON(book.id, 'stickies', stickies); }, 600);
-    });
+    const place = chIdx >= 0 ? t('side.section', { n: chIdx + 1 }) : t('side.unplaced');
+    if (s.kind === 'critique') {
+      el.innerHTML = `
+        <div class="s-ch"><span class="s-kind sev-${escHtml(s.severity || 'medium')}">✦ ${t('crit.cat.' + (s.category || 'clarity'))}</span> · ${place}</div>
+        <div class="s-text"></div>
+        <div class="s-actions"><button class="s-go">${t('side.goTo')}</button> <button class="s-note">${t('side.toNotes')}</button> <button class="s-done">${t('side.done')}</button></div>`;
+      el.querySelector('.s-text').textContent = s.text;
+      el.querySelector('.s-note').onclick = () => stickyToNotes(s);
+    } else {
+      el.innerHTML = `
+        <div class="s-ch">${place}</div>
+        <textarea placeholder="${t('side.notePh')}" spellcheck="false"></textarea>
+        <div class="s-research"></div>
+        <div class="s-actions"><button class="s-go">${t('side.goTo')}</button> <button class="s-ask" hidden>${t('ai.research')}</button> <button class="s-done">${t('side.resolve')}</button></div>`;
+      const ta = el.querySelector('textarea');
+      ta.value = s.text;
+      ta.addEventListener('input', () => {
+        s.text = ta.value;
+        clearTimeout(saveTimers.stickies);
+        saveTimers.stickies = setTimeout(() => { if (book) window.neo.writeJSON(book.id, 'stickies', stickies); }, 600);
+      });
+      if (typeof renderResearch === 'function') renderResearch(s, el);
+    }
     el.querySelector('.s-go').onclick = () => {
       switchTab('manuscript');
       const mark = document.querySelector(`.ph-mark[data-sid="${s.id}"]`);
@@ -1780,6 +1842,17 @@ function renderStickies() {
     el.querySelector('.s-done').onclick = () => resolveSticky(s.id);
     wrap.appendChild(el);
   }
+}
+
+// keep an assistant's comment by moving it into the Notes tab
+async function stickyToNotes(s) {
+  const chIdx = book.chapterOrder.indexOf(s.chapterId);
+  const head = `✦ ${t('crit.cat.' + (s.category || 'clarity'))}${chIdx >= 0 ? ' · ' + t('side.section', { n: chIdx + 1 }) : ''}`;
+  flushAux();
+  const html = await window.neo.readAux(book.id, 'notes');
+  await window.neo.writeAux(book.id, 'notes', (html || '') + `<p><b>${escHtml(head)}</b></p><p>${escHtml(s.text)}</p>`);
+  resolveSticky(s.id);
+  toast(t('side.movedToNotes'));
 }
 
 // Pair every mark in the manuscript with a note: pasted duplicates get their
@@ -1798,7 +1871,7 @@ function reconcileMarks() {
     if (seen.has(sid)) {
       const nid = 's-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 5);
       m.dataset.sid = nid;
-      stickies.push({ id: nid, chapterId: chId, text: existing ? existing.text : '', resolved: false });
+      stickies.push({ ...(existing || { text: '' }), id: nid, chapterId: chId, resolved: false });
       seen.add(nid);
       changed = true;
       continue;
@@ -4255,6 +4328,7 @@ function showHelp() {
         ${row(KPH, t('help.mark'))}
         ${row(KDA, t('help.later'))}
         ${row(KCITE, t('help.cite'))}
+        ${row(K('⌘⇧M', 'Ctrl+Shift+M'), t('help.rewrite'))}
         ${row(KZ, t('help.undo'))}
         ${row(t('help.dashesKey'), t('help.dashes'))}
         ${row(K('⌘B · ⌘I', 'Ctrl+B · Ctrl+I'), t('help.bold'))}
@@ -4564,7 +4638,7 @@ function paraRuns(pHtml) {
       } else if (child.nodeType === Node.ELEMENT_NODE) {
         const cls = child.classList;
         if (cls && cls.contains('ph-mark')) {
-          runs.push({ mark: child.dataset.sid || '' });
+          runs.push({ mark: child.dataset.sid || '', ai: cls.contains('ai') });
           continue;
         }
         if (cls && cls.contains('cite-mark')) {

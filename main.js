@@ -898,6 +898,16 @@ function buildMenu() {
       ]
     },
     {
+      label: T('menu.assistant'),
+      submenu: [
+        { label: T('menu.aiRewrite'), click: () => sendToWindow({ type: 'ai', action: 'rewrite' }) },
+        { label: T('menu.aiCritiqueSection'), click: () => sendToWindow({ type: 'ai', action: 'critique-section' }) },
+        { label: T('menu.aiCritiqueEssay'), click: () => sendToWindow({ type: 'ai', action: 'critique-essay' }) },
+        { type: 'separator' },
+        { label: T('menu.aiSettings'), click: () => sendToWindow({ type: 'ai', action: 'settings' }) }
+      ]
+    },
+    {
       label: T('menu.view'),
       submenu: [
         {

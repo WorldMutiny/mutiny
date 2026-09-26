@@ -72,7 +72,22 @@
         <p style="margin-bottom:6px" data-i18n="fr.typeface"></p>
         <div id="fr-bodyfonts" class="fr-fontrow"></div>
         <div style="text-align:right;margin-top:20px">
-          <button id="fr-done" class="btn-gold" data-i18n="fr.start"></button>
+          <button id="fr-next" class="btn-gold" data-i18n="fr.next"></button>
+        </div>
+      </div>
+      <div id="fr-step3" hidden>
+        <h2 data-i18n="fr.aiTitle"></h2>
+        <p data-i18n="fr.aiIntro"></p>
+        <p class="soft fr-ai-state" style="font-size:13px"></p>
+        <div class="fr-choices">
+          <button class="fr-choice" id="fr-ai-on">
+            <strong data-i18n="fr.aiOn"></strong>
+            <span data-i18n="fr.aiOnDesc"></span>
+          </button>
+          <button class="fr-choice" id="fr-done">
+            <strong data-i18n="fr.aiOff"></strong>
+            <span data-i18n="fr.aiOffDesc"></span>
+          </button>
         </div>
       </div>
     </div>
@@ -129,6 +144,7 @@
         <div class="tab darlings" data-tab="darlings" data-i18n="tab.darlings" data-i18n-title="tab.darlingsTitle"></div>
       </div>
       <div id="counters">
+        <button id="ai-status" hidden data-i18n-title="ai.cancelTitle"><span class="ai-spin"></span><span class="ai-text"></span><span class="ai-x">✕</span></button>
         <span id="goal-counter" data-i18n-title="bar.goalTitle"></span>
         <span id="pos-counter"></span>
         <span id="word-counter" data-i18n-title="bar.wordsTitle"></span>
@@ -156,5 +172,6 @@
   <script src="i18n.js"></script>
   <script src="covers.js"></script>
   <script src="app.js"></script>
+  <script src="ai-ui.js"></script>
 </body>
 </html>
