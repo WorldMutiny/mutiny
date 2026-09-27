@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.10 — fases 0 a 5c completas · 2026-09-27
+**Estado:** 0.9.0-beta.1 — fases 0 a 6 (sin publicar aún) · 2026-09-27
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx Darko
 
@@ -309,9 +309,13 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
   Además: insignias en Fuentes, comentario ✦ en el texto, solo verifica lo nuevo, y aviso no bloqueante al exportar.
 
 ### Fase 6 — Multiplataforma y publicación
-- [ ] Builds de Mac (dmg) y Windows (exe) con GitHub Actions. NEO ya tiene la configuración de electron-builder para las tres plataformas.
-- [ ] Notarización de Mac: requiere una cuenta de Apple Developer (99 USD/año). Sin ella, el usuario tiene que autorizar la app a mano en macOS.
-- [ ] Auto-updater apuntando a los releases del repo propio.
+- [x] Identidad pública **Maxx Darko <mutiny@worldmutiny.com>**; repo nuevo `github.com/worldmutiny/mutiny` (organización), con el historial reescrito y una auditoría de privacidad limpia. NEO Pocket eliminado.
+- [x] Builds con GitHub Actions (`build.yml`): AppImage x64/arm64, `.exe` (instalador y portable) y `.dmg` (arm64/x64). Cada uno se prueba al arrancar y se adjunta a un release en borrador al etiquetar `v*`. Sin firma: Mac con firma ad-hoc gratuita, sin notarizar (decisión del usuario).
+- [x] Claude Code y Codex se buscan también en las rutas de macOS y Windows; el PATH de las CLIs incluye esas carpetas.
+- [x] Aviso de versiones nuevas: una vez al día, solo en builds instaladas, lee los releases públicos (betas incluidas) y se puede apagar. Sin auto-actualización (sin firma no es posible en Mac); Linux se actualiza con `install-linux.sh <AppImage>`.
+- [x] Versión **0.9.0-beta.1**, README público, CHANGELOG, `scripts/release.sh`.
+- [ ] Publicar: etiquetar v0.9.0-beta.1, revisar el borrador, **hacer público el repo** con Secret scanning y Push protection activados.
+- [ ] Más adelante: paquete de AUR.
 
 ### Notas de implementación — fase 1 (2026-09-25)
 
