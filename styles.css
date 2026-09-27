@@ -1084,3 +1084,6 @@ body.night .ro-card:focus { border-color: var(--accent); }
 .st-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 .st-foot .st-check { margin: 0; font-size: 12px; }
 .st-foot .st-check input { width: auto; display: inline; margin: 0; }
+
+.sp-line { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 4px 0 14px; }
+.sp-line .sp-time { margin-left: auto; font-variant-numeric: tabular-nums; }

@@ -452,7 +452,35 @@ function sampleVoice(docs) {
   });
 }
 
+// The editor's progress chip isn't on the shelf, so generating shows its own
+// dialog: what's happening, for how long, and a way to stop it.
+let styleJob = null;
+function styleProgress(words, texts) {
+  const bd = document.createElement('div');
+  bd.className = 'modal-backdrop';
+  bd.innerHTML = `
+    <div class="modal sp-modal" style="width:440px">
+      <h2 style="font-size:16px">${t('voice.genTitle')}</h2>
+      <p>${t('voice.genMsg', { n: fmtN(words), texts })}</p>
+      <div class="sp-line"><span class="ai-spin"></span><span class="sp-stage">${t('voice.generating')}</span><span class="sp-time soft"></span></div>
+      <p class="soft" style="font-size:12px">${t('voice.genWait')}</p>
+      <div style="text-align:right"><button class="m-cancel btn-quiet">${t('voice.genStop')}</button></div>
+    </div>`;
+  document.body.appendChild(bd);
+  const t0 = Date.now();
+  const tick = () => { bd.querySelector('.sp-time').textContent = t('voice.genSecs', { n: Math.round((Date.now() - t0) / 1000) }); };
+  tick();
+  const timer = setInterval(tick, 1000);
+  const stop = () => { bd.querySelector('.sp-stage').textContent = t('voice.genStopping'); aiCancel(); };
+  bd.querySelector('.m-cancel').onclick = stop;
+  bd.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') stop(); });
+  bd.querySelector('.m-cancel').focus();
+  return { close() { clearInterval(timer); bd.remove(); } };
+}
+
 async function generateStyle() {
+  if (styleJob) { toast(t('voice.genRunning')); return; }
+  if (typeof aiJob !== 'undefined' && aiJob) { toast(t('ai.busy')); return; }
   const docs = await voiceCorpus();
   const words = docs.reduce((a, d) => a + d.words, 0);
   if (words < VOICE_MIN) { toast(t('voice.tooLittle', { n: fmtN(VOICE_MIN) }), 6000); return; }
@@ -476,12 +504,19 @@ async function generateStyle() {
     if (how === 'keep') previous = current;
   }
   const m = measureVoice(docs);
-  const data = await aiRun('styleProfile', {
-    texts: sampleVoice(docs),
-    stats: measuresForModel(m),
-    lang: m.lang,
-    previous
-  }, t('voice.generating'));
+  styleJob = styleProgress(words, docs.length);
+  let data = null;
+  try {
+    data = await aiRun('styleProfile', {
+      texts: sampleVoice(docs),
+      stats: measuresForModel(m),
+      lang: m.lang,
+      previous
+    }, t('voice.generating'));
+  } finally {
+    styleJob.close();
+    styleJob = null;
+  }
   const md = data && typeof data.markdown === 'string' ? data.markdown.trim() : '';
   if (!md) return;
   openStyle({ draft: md, words, texts: docs.length, before: current });
@@ -492,6 +527,8 @@ async function generateStyle() {
 // View and edit estilo.md. With `draft` (fresh from the assistant), nothing
 // is written until the writer saves.
 async function openStyle(opts = {}) {
+  // one style window at a time: an older one left open would save stale text
+  document.querySelectorAll('.st-modal').forEach((m) => m.closest('.modal-backdrop').remove());
   const current = await window.neo.readStyle();
   const draft = opts.draft;
   const gen = library.styleGen;
@@ -530,6 +567,18 @@ async function openStyle(opts = {}) {
   });
   bd.querySelector('.m-ok').onclick = async () => {
     const text = ta.value.replace(/\s+$/, '') + '\n';
+    // never quietly replace a style that changed meanwhile, or blank one out
+    if (!draft) {
+      const onDisk = await window.neo.readStyle();
+      const changed = onDisk !== current && onDisk.trim() !== text.trim();
+      const blanking = !text.trim() && onDisk.trim();
+      if (changed || blanking) {
+        const ok = await optionModal(t(blanking ? 'voice.blankTitle' : 'voice.changedTitle'), t(blanking ? 'voice.blankMsg' : 'voice.changedMsg'), [
+          { label: t(blanking ? 'voice.blankGo' : 'voice.changedGo'), danger: true, value: 'go' }
+        ]);
+        if (ok !== 'go') return;
+      }
+    }
     await window.neo.writeStyle(text.trim() ? text : '');
     if (draft) library.styleGen = { at: new Date().toISOString(), words: opts.words || 0, texts: opts.texts || 0, hash: textHash(text) };
     await window.neo.writeLibrary(library);
