@@ -37,7 +37,38 @@ function cliEnv(prefixes, extra) {
     if (v == null) continue;
     if (ENV_KEEP.includes(k) || k.startsWith('LC_') || k.startsWith('XDG_') || prefixes.some((p) => k.startsWith(p))) out[k] = v;
   }
+  // an app opened from the Dock or Start gets a bare PATH; npm-installed CLIs
+  // are scripts that need `node` from the same places they were found
+  const pathKey = Object.keys(out).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
+  out[pathKey] = [...new Set([...(out[pathKey] || '').split(path.delimiter), ...toolDirs()].filter(Boolean))].join(path.delimiter);
   return { ...out, ...(extra || {}) };
+}
+
+// Where Claude Code, Codex and node usually live, per system — searched in
+// addition to PATH.
+function toolDirs() {
+  const fs = require('fs');
+  const os = require('os');
+  const home = os.homedir();
+  const J = (...p) => path.join(...p);
+  const dirs = [
+    J(home, '.local', 'bin'), J(home, '.claude', 'local'), J(home, '.npm-global', 'bin'), J(home, '.bun', 'bin'),
+    J(home, '.volta', 'bin'), J(home, '.local', 'share', 'mise', 'shims'), J(home, '.asdf', 'shims')
+  ];
+  // nvm: the newest node first
+  try {
+    const nvm = J(home, '.nvm', 'versions', 'node');
+    for (const v of fs.readdirSync(nvm).sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))) dirs.push(J(nvm, v, 'bin'));
+  } catch { /* no nvm */ }
+  if (process.platform === 'darwin') dirs.push('/opt/homebrew/bin', '/usr/local/bin');
+  if (process.platform === 'linux') dirs.push('/usr/local/bin', '/usr/bin');
+  if (process.platform === 'win32') {
+    const appData = process.env.APPDATA || J(home, 'AppData', 'Roaming');
+    const local = process.env.LOCALAPPDATA || J(home, 'AppData', 'Local');
+    dirs.push(J(appData, 'npm'), J(local, 'Programs', 'claude'), J(home, 'scoop', 'shims'), J(local, 'Microsoft', 'WinGet', 'Links'));
+    for (const d of [process.env.ProgramFiles, process.env['ProgramFiles(x86)']]) if (d) dirs.push(J(d, 'nodejs'));
+  }
+  return dirs;
 }
 
 // ---------------------------------------------------------------- addresses
@@ -84,4 +115,4 @@ function isLocalHost(url) {
   } catch { return false; }
 }
 
-module.exports = { cleanModel, cleanEffort, toolPathOk, cliEnv, isPrivateUrl, isLocalHost };
+module.exports = { toolDirs, cleanModel, cleanEffort, toolPathOk, cliEnv, isPrivateUrl, isLocalHost };

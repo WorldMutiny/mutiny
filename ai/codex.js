@@ -13,18 +13,23 @@ const os = require('os');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
 const { chatAsPrompt, parseJsonLoose } = require('./tasks.js');
-const { cleanModel, cleanEffort, toolPathOk, cliEnv } = require('./guard.js');
+const { cleanModel, cleanEffort, toolPathOk, cliEnv, toolDirs } = require('./guard.js');
 
 function candidatePaths() {
   const home = os.homedir();
   const exe = process.platform === 'win32' ? 'codex.exe' : 'codex';
   const fromPath = (process.env.PATH || '').split(path.delimiter).filter(Boolean).map((d) => path.join(d, exe));
+  const vendor = [];
+  // npm on Windows: codex.cmd wraps a real binary shipped inside the package
+  if (process.platform === 'win32') {
+    const npm = path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'npm', 'node_modules', '@openai', 'codex', 'vendor');
+    for (const arch of ['x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc']) vendor.push(path.join(npm, arch, 'codex', exe));
+  }
   return [...new Set([
     ...fromPath,
     path.join(home, '.local', 'share', 'mise', 'installs', 'codex', 'latest', 'bin', exe),
-    path.join(home, '.local', 'bin', exe),
-    path.join(home, '.npm-global', 'bin', exe),
-    '/opt/homebrew/bin/codex', '/usr/local/bin/codex', '/usr/bin/codex'
+    ...toolDirs().map((d) => path.join(d, exe)),
+    ...vendor
   ])];
 }
 

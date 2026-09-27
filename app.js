@@ -4985,8 +4985,15 @@ async function doEmailDraft() {
 }
 
 // Help → Check for Update…: on-demand release lookup, only ever runs on a click
-async function checkForUpdate() {
+// quiet: the once-a-day check at start — says nothing unless there's news,
+// and offers each new version only once
+async function checkForUpdate(quiet) {
   const res = await window.neo.checkForUpdate();
+  if (quiet) {
+    if (res.error || !res.packaged || !res.hasUpdate || library.updateOffered === res.latestVersion) return; // dev checkouts stay quiet
+    library.updateOffered = res.latestVersion;
+    await window.neo.writeLibrary(library);
+  }
   if (res.error) { toast(t('update.failed')); return; }
   if (!res.hasUpdate) { toast(t('update.latest', { v: res.currentVersion })); return; }
   const bd = document.createElement('div');
@@ -5103,7 +5110,18 @@ function boot() {
     applyFonts();
     typewriterEnabled = !!library.typewriter;
     applyTypewriter();
+    autoUpdateCheck();
   });
+}
+
+// once a day, in installed builds only: is there a newer Mutiny? (a read of
+// the public release list on GitHub — nothing about the writer is sent)
+async function autoUpdateCheck() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (!library.firstRunDone || library.updateCheckedOn === today || library.updateChecks === false) return;
+  library.updateCheckedOn = today;
+  await window.neo.writeLibrary(library);
+  setTimeout(() => checkForUpdate(true), 4000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
 else boot();

@@ -13,7 +13,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
-const { cleanModel, cleanEffort, toolPathOk, cliEnv } = require('./guard.js');
+const { cleanModel, cleanEffort, toolPathOk, cliEnv, toolDirs } = require('./guard.js');
 
 // Launched from a desktop launcher, the app may not see the shell's PATH
 // (mise, nvm, ~/.local/bin), so the usual install spots are checked too.
@@ -21,14 +21,11 @@ function candidatePaths() {
   const home = os.homedir();
   const exe = process.platform === 'win32' ? 'claude.exe' : 'claude';
   const fromPath = (process.env.PATH || '').split(path.delimiter).filter(Boolean).map((d) => path.join(d, exe));
+  // the native installer (every system) puts claude.exe/claude in ~/.local/bin;
+  // an npm install on Windows leaves only claude.cmd, which can't be run safely
   const known = [
     path.join(home, '.local', 'share', 'mise', 'installs', 'claude', 'latest', exe),
-    path.join(home, '.claude', 'local', exe),
-    path.join(home, '.local', 'bin', exe),
-    path.join(home, '.npm-global', 'bin', exe),
-    '/opt/homebrew/bin/claude',
-    '/usr/local/bin/claude',
-    '/usr/bin/claude'
+    ...toolDirs().map((d) => path.join(d, exe))
   ];
   return [...new Set([...fromPath, ...known])];
 }

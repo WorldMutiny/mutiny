@@ -1140,12 +1140,25 @@ ipcMain.handle('appmenu:native', (e, visible) => {
 // lookup, separate from the silent auto-updater. Works in dev builds too.
 let lastReleaseUrl = null;
 
+// semver order, pre-releases included: 0.9.0-beta.2 < 0.9.0-beta.10 < 0.9.0 < 0.9.1
 function compareVersions(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const na = pa[i] || 0, nb = pb[i] || 0;
-    if (na !== nb) return na - nb;
+  const parse = (v) => {
+    const [core, pre] = String(v).replace(/^v/, '').split('-', 2);
+    return { nums: core.split('.').map((n) => parseInt(n, 10) || 0), pre: pre ? pre.split('.') : [] };
+  };
+  const pa = parse(a), pb = parse(b);
+  for (let i = 0; i < 3; i++) {
+    const d = (pa.nums[i] || 0) - (pb.nums[i] || 0);
+    if (d) return d;
+  }
+  if (!pa.pre.length || !pb.pre.length) return pb.pre.length - pa.pre.length; // a release beats its pre-releases
+  for (let i = 0; i < Math.max(pa.pre.length, pb.pre.length); i++) {
+    const x = pa.pre[i], y = pb.pre[i];
+    if (x === undefined) return -1;
+    if (y === undefined) return 1;
+    const nx = /^\d+$/.test(x), ny = /^\d+$/.test(y);
+    const d = nx && ny ? Number(x) - Number(y) : nx ? -1 : ny ? 1 : x.localeCompare(y);
+    if (d) return d;
   }
   return 0;
 }
@@ -1156,18 +1169,23 @@ ipcMain.handle('app:version', () => app.getVersion());
 
 ipcMain.handle('update:check', async () => {
   try {
-    const res = await fetch('https://api.github.com/repos/worldmutiny/mutiny/releases/latest', {
-      headers: { 'User-Agent': 'Mutiny-App' }
+    // the list, not /latest: that one skips pre-releases, and the betas are ones
+    const res = await fetch('https://api.github.com/repos/worldmutiny/mutiny/releases?per_page=20', {
+      headers: { 'User-Agent': 'Mutiny-App', Accept: 'application/vnd.github+json' },
+      signal: AbortSignal.timeout(10000),
+      redirect: 'follow'
     });
     if (!res.ok) throw new Error('GitHub API returned ' + res.status);
-    const data = await res.json();
-    const latestVersion = String(data.tag_name || '').replace(/^v/, '');
+    const list = (await res.json()).filter((r) => r && !r.draft && /^v?\d+\.\d+\.\d+/.test(String(r.tag_name || '')));
     const currentVersion = app.getVersion();
-    lastReleaseUrl = data.html_url || null;
+    const newest = list.sort((x, y) => compareVersions(y.tag_name, x.tag_name))[0];
+    const latestVersion = newest ? String(newest.tag_name).replace(/^v/, '') : currentVersion;
+    lastReleaseUrl = newest && /^https:\/\/github\.com\/worldmutiny\/mutiny\/releases\//i.test(newest.html_url || '') ? newest.html_url : null;
     return {
-      hasUpdate: !!latestVersion && compareVersions(latestVersion, currentVersion) > 0,
+      hasUpdate: !!newest && compareVersions(latestVersion, currentVersion) > 0,
       latestVersion,
-      currentVersion
+      currentVersion,
+      packaged: app.isPackaged
     };
   } catch (err) {
     logError('update', err);
