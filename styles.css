@@ -1153,3 +1153,35 @@ body.night .ro-card:focus { border-color: var(--page-accent); }
 #aux-paper .btn-gold { background: var(--page-accent); color: #191919; }
 #aux-paper .btn-quiet { color: var(--page-muted); }
 #aux-paper .btn-quiet:hover { color: var(--ink); }
+
+/* ---- Omarchy: Sources, Later and Reorder aren't writing pages ----
+   The system theme dresses them like the rest of the interface. Only the
+   writing pages (Draft, Notes, Outline) keep the paper. */
+body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]),
+body.omarchy #reorder-paper {
+  --ink: var(--fg);
+  --page-accent: var(--accent);
+  --page-muted: var(--muted);
+  --page-red: var(--red);
+  --body-font: var(--ui-font);
+}
+body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) {
+  --paper: var(--pane);
+  box-shadow: none; border: 1px solid var(--line-soft);
+}
+body.omarchy #reorder-paper { --paper: var(--surface); }
+body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) h2 { color: var(--muted); }
+body.omarchy #aux-paper[data-kind="darlings"] .darling { border-color: var(--line); border-left-color: var(--accent); border-radius: 0; }
+body.omarchy #aux-paper[data-kind="darlings"] .darling .d-meta { color: var(--muted); font-family: var(--ui-font); }
+body.omarchy #aux-paper[data-kind="darlings"] .darling button { border-color: var(--line); color: var(--faint); border-radius: 0; }
+body.omarchy #aux-paper[data-kind="darlings"] .darling button:hover { border-color: var(--accent); color: var(--fg); }
+body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .darlings-empty { color: var(--faint); }
+body.omarchy #aux-paper[data-kind="sources"] .src-item { border-top-color: var(--line-soft); }
+body.omarchy #aux-paper[data-kind="sources"] .src-input { border-color: var(--line); border-radius: 0; }
+body.omarchy #aux-paper[data-kind="sources"] .src-url { color: var(--fg-2); }
+body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .btn-gold { background: var(--accent); color: var(--accent-ink); }
+body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .btn-quiet:hover { color: var(--fg); }
+body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+body.omarchy #reorder-paper .ro-card { border-radius: 0; box-shadow: none; border-color: var(--line-soft); }
+body.omarchy #reorder-paper .ro-card:focus { border-color: var(--accent); }
+body.omarchy #reorder-paper .ro-meta { color: var(--muted); }

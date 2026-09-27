@@ -133,6 +133,7 @@
   "ai.wait.rewrite": "usually 10–30 s",
   "ai.who.api": "Anthropic API",
   "ai.who.defaultModel": "default model",
+  "appearance.menuHint": "Mutiny follows your Omarchy theme. The menu bar is hidden — press Alt to show it.",
   "author.addPen": "Add a byline…",
   "author.addPenDesc": "A separate set of shelves under another name",
   "author.anonymous": "Anonymous",

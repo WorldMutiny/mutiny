@@ -93,6 +93,7 @@ async function applyAppearance() {
     for (const k of THEME_TOKENS) style.removeProperty(k);
     style.removeProperty('color-scheme');
     document.body.classList.remove('omarchy', 'ui-light');
+    if (appearanceNow.mode === 'omarchy') window.neo.omarchyMenuBar(false);
     appearanceNow = { mode: 'mutiny', name: '' };
     return appearanceNow;
   }
@@ -103,6 +104,15 @@ async function applyAppearance() {
   style.setProperty('color-scheme', light ? 'light' : 'dark');
   document.body.classList.add('omarchy');
   document.body.classList.toggle('ui-light', light);
+  if (appearanceNow.mode !== 'omarchy') {
+    window.neo.omarchyMenuBar(true);
+    // once: where the menu went
+    if (library && !library.menuHintShown) {
+      library.menuHintShown = true;
+      window.neo.writeLibrary(library);
+      setTimeout(() => toast(t('appearance.menuHint'), 7000), 1500);
+    }
+  }
   appearanceNow = { mode: 'omarchy', name: th.name || '' };
   return appearanceNow;
 }

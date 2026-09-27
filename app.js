@@ -2456,6 +2456,7 @@ function switchTab(name) {
   }
   paper.hidden = true;
   aux.hidden = false;
+  aux.dataset.kind = name; // Sources and Later aren't writing pages: a system theme may dress them
   auxEditor.hidden = true;
   dList.hidden = true;
   sList.hidden = true;

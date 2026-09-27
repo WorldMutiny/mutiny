@@ -105,6 +105,16 @@ function watch(onChange) {
 
 function register(ipcMain, windows) {
   ipcMain.handle('omarchy:theme', () => read());
+  // The window's menu bar is drawn natively and can't take a theme's colours;
+  // like other apps on Omarchy, Mutiny hides it there (Alt brings it back).
+  ipcMain.handle('omarchy:menubar', (e, themed) => {
+    if (process.platform !== 'linux') return false;
+    const win = windows().find((w) => w.webContents === e.sender);
+    if (!win) return false;
+    win.setAutoHideMenuBar(!!themed);
+    win.setMenuBarVisibility(!themed);
+    return true;
+  });
   watch(() => { for (const w of windows()) if (!w.isDestroyed()) w.webContents.send('omarchy:changed'); });
 }
 
