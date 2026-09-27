@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.6 — fases 0 a 3b completas · 2026-09-25
+**Estado:** v0.7 — fases 0 a 4 completas · 2026-09-26
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -243,7 +243,13 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] Degradación clara: sin búsqueda web, "Investigar" se desactiva con una explicación.
 - **Aceptación:** funciona con un endpoint local (llama.cpp/Ollama) y uno en la nube.
 
-### Fase 4 — Reordenar + Rewrite manual
+### Fase 4 — Reordenar + Rewrite manual ✅
+- [x] Modo **Reordenar** dentro del Borrador (botón "⇅ Reordenar" o Ctrl+Shift+O): tarjetas por párrafo, arrastrar o Alt+↑/↓, también entre secciones; doble clic abre las frases del párrafo para reordenarlas.
+- [x] Vista **Esqueleto**: solo la primera frase de cada párrafo; clic para ir ahí.
+- [x] Panel izquierdo: cada sección se despliega (▸) con las primeras frases de sus párrafos.
+- [x] **Versiones** (Ctrl+Shift+M): escribes alternativas junto al original, el asistente puede sumar las suyas, eliges una; el original y las no usadas van a Para después (casilla para desactivarlo).
+- [x] Corte de frases que respeta abreviaturas ("Dr.", "EE. UU.", "3.5"), citas y marcas.
+- **Aceptación:** reordenar y deshacer conservan citas, marcas ⚑ y formato.
 ### Fase 5 — Mi estilo + Verificar fuentes
 ### Fase 6 — Multiplataforma y publicación
 - [ ] Builds de Mac (dmg) y Windows (exe) con GitHub Actions. NEO ya tiene la configuración de electron-builder para las tres plataformas.
