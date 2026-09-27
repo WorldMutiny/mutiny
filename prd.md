@@ -167,6 +167,13 @@ Acciones disponibles desde el menú, el atajo o el clic derecho:
 - Vista de **tarjetas**: cada párrafo de una sección se muestra como una tarjeta que se arrastra. Con zoom, también frases dentro de un párrafo.
 - Pensado para responder "¿fluye el argumento?" sin editar el texto.
 
+**Decisiones de la fase 4 (2026-09-26):**
+- **Reordenar es un modo del Borrador:** un botón en la barra de abajo y `Ctrl+Shift+O`, no una pestaña propia.
+- **Niveles:** párrafos (entre secciones incluso) y frases dentro de un párrafo, con doble clic; `Alt+↑/↓` para mover con el teclado.
+- **Vista esqueleto:** muestra la primera frase de cada párrafo.
+- **Barra izquierda:** sigue para navegar y mover secciones, y ahora, plegable por sección, muestra la primera frase de cada párrafo (clic → ir al párrafo).
+- **Banco de versiones (`Ctrl+Shift+M`):** tu original, tus propias variantes y, si la IA está activa, las del asistente en la misma lista. Las versiones que no elijas van a "Para después", con una casilla para no guardarlas.
+
 ### 6.7 Mi estilo (fase 5)
 
 La versión sin complicaciones, sin fine-tuning:
