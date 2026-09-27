@@ -575,6 +575,8 @@
   "stats.today": "today",
   "stats.total": "total words",
   "stats.uiLang": "Interface language",
+  "stats.updates": "Check for new versions when Mutiny opens",
+  "stats.updatesNote": "Once a day, Mutiny reads the public list of releases on GitHub. Nothing about you or your essays is sent.",
   "stats.words": "words",
   "tab.darlings": "Later",
   "tab.darlingsTitle": "Drag any selection here. It’s kept for later, not gone.",

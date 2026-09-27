@@ -575,6 +575,8 @@
   "stats.today": "hoy",
   "stats.total": "palabras en total",
   "stats.uiLang": "Idioma de la interfaz",
+  "stats.updates": "Buscar versiones nuevas al abrir Mutiny",
+  "stats.updatesNote": "Una vez al día, Mutiny lee la lista pública de versiones en GitHub. No se envía nada sobre ti ni tus ensayos.",
   "stats.words": "palabras",
   "tab.darlings": "Para después",
   "tab.darlingsTitle": "Arrastra aquí cualquier selección. Se guarda para después, no se pierde.",

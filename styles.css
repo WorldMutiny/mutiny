@@ -1248,3 +1248,4 @@ body.omarchy.night .ol-text:focus { border-bottom-color: var(--line); }
 body.omarchy.night .ol-hint { color: var(--faint); }
 body.omarchy.night .chapter-body :is(.cite.orphan, .cite-mark.orphan) { text-decoration-color: var(--red); }
 body.omarchy.night .chapter-body .cite-mark.orphan { color: var(--red); }
+.stats-row .st-check input { width: auto; display: inline; margin: 0; }

@@ -4,13 +4,58 @@
 
 **A distraction-free writer for essays — opinion and popular non-fiction — with an optional AI assistant that researches and critiques, but never touches your page without asking.**
 
-Mutiny is a fork of [NEO](https://github.com/hughhowey/neo) by Hugh Howey, a lovely word processor built for novelists. Mutiny keeps what makes NEO great (a clean page, plain files on your disk, no accounts, no cloud) and retargets it at essays: outline-first structure, sources and citations, and an AI research & critique assistant.
+Mutiny is built on [NEO](https://github.com/hughhowey/neo) by Hugh Howey, a lovely word processor made for novelists. It keeps what makes NEO great — a clean page, plain files on your disk, no accounts, no cloud — and retargets it at essays: outline-first structure, sources and citations, reordering, versions of a sentence, and an assistant that can learn your voice.
 
-> **Status:** early development. See [`prd.md`](prd.md) for the plan (in Spanish).
+> **Status: 0.9 beta.** It works and it's used daily, but expect rough edges. Please report what breaks.
+
+**Español:** Mutiny es un procesador de textos para ensayos (opinión y divulgación), con la interfaz en español e inglés. Abajo están las instrucciones de instalación.
+
+## Download
+
+Get the latest version from [Releases](https://github.com/worldmutiny/mutiny/releases).
+
+The builds are **not signed** with paid Apple or Microsoft certificates, so your system will ask once before opening Mutiny:
+
+| System | File | First time |
+|---|---|---|
+| **Windows** | `Mutiny-…-windows-setup.exe` (or the `portable` one) | SmartScreen says "Windows protected your PC": click **More info → Run anyway**. |
+| **macOS** (Apple Silicon: `arm64`, Intel: `x64`) | `Mutiny-…-mac-arm64.dmg` | Drag Mutiny to Applications. The first time, **right-click the app → Open → Open**. If macOS says it's "damaged", run `xattr -cr /Applications/Mutiny.app` in Terminal once. |
+| **Linux** | `Mutiny-…-linux-x86_64.AppImage` | `chmod +x` it and run it — or, from a clone, `scripts/install-linux.sh` to install it with a launcher entry. |
+
+Mutiny checks once a day whether a newer version exists (it reads the public list of releases; you can turn this off in **File → Goals & settings**). It doesn't update itself: download the new version and install it over the old one — your essays are kept.
+
+### On Omarchy
+
+On [Omarchy](https://omarchy.org), Mutiny follows your desktop theme — colours, font and square corners — and changes with it live, including its menu bar. The writing typefaces stay yours. `scripts/install-linux.sh` also adds a **Mutiny** row to the Omarchy menu. Prefer the classic look? **File → Goals & settings → Appearance**.
+
+## Your files
+
+Your essays live in `Documents/Mutiny Library`, one folder per essay, as plain HTML and JSON you can open, sync or back up. Mutiny keeps a daily backup of the library in its `Backups` folder.
+
+What leaves your computer — and only when you use it:
+
+- **The assistant**, if you turn it on: the text it works on goes to the service you chose.
+- **Source lookup**: when you paste a URL, DOI or ISBN, Mutiny fetches that page's metadata (or asks Crossref / Open Library).
+- **The daily version check**, described above.
+
+Nothing else: no accounts, no analytics, no telemetry.
+
+## The assistant (optional)
+
+Mutiny can research the facts you mark, critique your argument, offer versions of a sentence, chat about your essay, and write a profile of your style from your own texts (**My voice** shelf). It never writes files and never changes your text unless you accept a suggestion. Turn it on in the **Assistant** menu and pick what it runs on:
+
+- **Claude Code** — your own install and Claude plan, through the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview). Install it with Anthropic's native installer (on Windows, the `npm` install isn't supported by Mutiny).
+- **Codex** — OpenAI's Codex CLI on your ChatGPT plan.
+- **Anthropic API** — an API key.
+- **OpenAI-compatible** — OpenAI, Google Gemini (AI Studio key), OpenRouter, Cerebras, Ollama, llama.cpp… (no web research).
+
+API keys are encrypted by your system's keychain and only sent to their own service. See [SECURITY.md](SECURITY.md) for how the assistant is locked down.
+
+The Claude Agent SDK is © Anthropic and licensed under [Anthropic's terms](https://code.claude.com/docs/en/legal-and-compliance), not MIT. Mutiny doesn't bundle the Claude Code binary; it uses the one you already have.
 
 ## Running from source
 
-Requires [Node.js](https://nodejs.org).
+Requires [Node.js](https://nodejs.org) 22.
 
 ```
 git clone https://github.com/worldmutiny/mutiny.git
@@ -19,26 +64,17 @@ npm install
 npm start
 ```
 
-Build a Linux AppImage with `npm run package:linux` (output in `dist/`).
+`npm run package:linux` builds an AppImage in `dist/`. Tagging `vX.Y.Z` on GitHub builds all three systems (see `.github/workflows/build.yml`). The product plan and the decisions behind it are in [`prd.md`](prd.md) (in Spanish).
 
-Your essays live in `~/Documents/Mutiny Library` — separate from any NEO library, so both apps can be installed side by side.
+## Contact
 
-## The assistant (optional)
+Maxx Darko · [worldmutiny.com](https://worldmutiny.com) · mutiny@worldmutiny.com
 
-Mutiny can research the facts you mark, critique your argument, suggest better wording and chat about your essay. It never writes files and never changes your text unless you accept a suggestion. Turn it on in the Assistant menu and pick what it runs on:
-
-- **Claude Code** — your own install and Claude plan, through the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview), locked down to web search/fetch for research and no tools otherwise.
-- **Codex** — OpenAI's Codex CLI on your ChatGPT plan, with its shell and other tools switched off.
-- **Anthropic API** — an API key (Claude Opus 5 by default).
-- **OpenAI-compatible** — OpenAI, Google Gemini (AI Studio key), OpenRouter, Cerebras, Ollama, llama.cpp… (no web research).
-
-API keys are stored encrypted on your computer (or read from the usual environment variable) and only sent to their service.
-
-The Claude Agent SDK is © Anthropic and licensed under [Anthropic's terms](https://code.claude.com/docs/en/legal-and-compliance), not MIT; Mutiny doesn't bundle the Claude Code binary and uses the one you already have.
+Bugs and ideas: [Issues](https://github.com/worldmutiny/mutiny/issues). Security problems: see [SECURITY.md](SECURITY.md).
 
 ## Credits
 
-Mutiny stands on NEO, created by [Hugh Howey](https://hughhowey.com/neo/). NEO's original README is kept in [`NEO-README.md`](NEO-README.md). All of NEO's history is preserved in this repository.
+Mutiny stands on NEO, created by [Hugh Howey](https://hughhowey.com/neo/); NEO's original README is kept in [`NEO-README.md`](NEO-README.md) and its history is preserved in this repository. Bundled typefaces (Literata, Source Serif 4, Lora, EB Garamond, iA Writer Quattro/Duo and the cover faces) are under the SIL Open Font License.
 
 ## License
 

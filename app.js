@@ -4176,6 +4176,9 @@ function openStats() {
         </label>
         <span class="soft st-appearance-now">${appearanceNow.mode === 'omarchy' ? t('stats.appearanceUsing', { name: escHtml(appearanceNow.name || 'Omarchy') }) : ''}</span>
       </div>
+      <div class="stats-row">
+        <label class="st-check" title="${t('stats.updatesNote')}"><input type="checkbox" id="st-updates"${library.updateChecks === false ? '' : ' checked'}/> ${t('stats.updates')}</label>
+      </div>
       ${hasBook ? `
       <div class="stats-row">
         <label>${t('stats.sprint')} <input id="st-sprint" type="number" min="50" value="${sprint ? sprint.target : 500}"/> ${t('stats.words')}</label>
@@ -4202,6 +4205,7 @@ function openStats() {
       await setLanguage(uiLang);
       if (hasBook) refreshEditorLanguage();
     }
+    library.updateChecks = bd.querySelector('#st-updates').checked;
     library.dailyGoal = parseInt(bd.querySelector('#st-daily').value, 10) || 0;
     library.dayEndsAt = parseInt(bd.querySelector('#st-dayends').value, 10) || 0;
     library.writingStyle = bd.querySelector('#st-style').value;

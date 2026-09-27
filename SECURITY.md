@@ -1,6 +1,6 @@
 # Security
 
-Mutiny is a local app: your essays, notes and sources are plain files in your own library folder, and nothing leaves your computer unless you use the assistant or look up a source.
+Mutiny is a local app: your essays, notes and sources are plain files in your own library folder, and nothing leaves your computer unless you use the assistant or look up a source. Once a day it also reads the public list of releases on GitHub to tell you about new versions (you can turn that off in the settings); nothing about you is sent.
 
 ## API keys
 
@@ -23,4 +23,4 @@ Mutiny is a local app: your essays, notes and sources are plain files in your ow
 
 ## Reporting
 
-Please report security issues privately to the maintainer through GitHub (a private security advisory on the repository) rather than a public issue.
+Please report security issues privately — through a private security advisory on the repository (**Security → Report a vulnerability**) or by email to mutiny@worldmutiny.com — rather than in a public issue.
