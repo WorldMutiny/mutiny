@@ -17,7 +17,7 @@ v=${1:?usage: scripts/release.sh X.Y.Z[-beta.N]}
 git rev-parse -q --verify "refs/tags/v$v" >/dev/null && { echo "v$v already exists." >&2; exit 1; }
 grep -q "^## $v" CHANGELOG.md || { echo "CHANGELOG.md has no '## $v' section yet." >&2; exit 1; }
 
-npm version "$v" --no-git-tag-version >/dev/null
+npm version "$v" --no-git-tag-version --allow-same-version >/dev/null
 git add package.json package-lock.json
 git diff --cached --quiet || git commit -qm "Mutiny $v"
 git tag -a "v$v" -m "Mutiny $v"
