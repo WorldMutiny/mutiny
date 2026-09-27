@@ -34,4 +34,37 @@ Categories=Office;
 EOF
 update-desktop-database "$apps" 2>/dev/null || true
 
+# On Omarchy: a "Mutiny" row in the Omarchy menu (Super+Alt+Space). The menu
+# reads ~/.config/omarchy/extensions/omarchy-menu.jsonc; the row is added
+# once and refreshed on later installs, and nothing else in the file changes.
+menu="$HOME/.config/omarchy/extensions/omarchy-menu.jsonc"
+if [[ -d $HOME/.config/omarchy ]] && command -v python3 >/dev/null; then
+  MUTINY_BIN="$dest/mutiny" python3 - "$menu" <<'PY'
+import json, os, re, sys
+path = sys.argv[1]
+row = '  "mutiny": ' + json.dumps({
+    "icon": "\U000f03eb",
+    "label": "Mutiny",
+    "description": "Write an essay",
+    "aliases": ["mutiny", "essay", "ensayo"],
+    "action": 'omarchy-launch-or-focus mutiny "uwsm-app -- %s --no-sandbox"' % os.environ["MUTINY_BIN"],
+}, ensure_ascii=False)
+text = open(path, encoding="utf-8").read() if os.path.exists(path) else "{\n}\n"
+lines = text.split("\n")
+at = [i for i, l in enumerate(lines) if re.match(r'\s*"mutiny"\s*:', l)]
+if at:
+    lines[at[0]] = row + ("," if lines[at[0]].rstrip().endswith(",") else "")
+else:
+    end = max(i for i, l in enumerate(lines) if l.strip() == "}")
+    # the entry before ours needs a comma; comments and blank lines don't
+    prev = next((i for i in range(end - 1, -1, -1) if lines[i].strip() and not lines[i].strip().startswith("//")), None)
+    if prev is not None and lines[prev].strip() not in ("{",) and not lines[prev].rstrip().endswith(","):
+        lines[prev] = lines[prev].rstrip() + ","
+    lines.insert(end, row)
+os.makedirs(os.path.dirname(path), exist_ok=True)
+open(path, "w", encoding="utf-8").write("\n".join(lines))
+PY
+  echo "Added Mutiny to the Omarchy menu"
+fi
+
 echo "Installed $(basename "$appimage") → $dest"

@@ -453,6 +453,8 @@ ipcMain.handle('link:open', (_e, url) => {
 
 // AI assistant (ai/): research, critique, rewrite — see ai/index.js
 require('./ai/index.js').register(logError, readSecret, readStyle);
+// Omarchy: the interface follows the desktop's theme (see omarchy.js)
+require('./omarchy.js').register(ipcMain, () => BrowserWindow.getAllWindows());
 
 // ---------------------------------------------------------------------------
 // Fullscreen

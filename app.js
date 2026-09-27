@@ -70,8 +70,8 @@ function optionModal(title, message, options) {
     const bd = document.createElement('div');
     bd.className = 'modal-backdrop';
     const buttons = options.map((o, i) =>
-      `<button class="fr-choice" data-i="${i}" style="width:100%;margin-bottom:8px;${o.danger ? 'border-color:#6b3a34' : ''}">
-        <strong${o.danger ? ' style="color:#d97b6c"' : ''}>${o.label}</strong>
+      `<button class="fr-choice" data-i="${i}" style="width:100%;margin-bottom:8px;${o.danger ? 'border-color:color-mix(in srgb, var(--danger-soft) 40%, var(--bg))' : ''}">
+        <strong${o.danger ? ' style="color:var(--danger-soft)"' : ''}>${o.label}</strong>
         ${o.desc ? `<span>${o.desc}</span>` : ''}
       </button>`).join('');
     bd.innerHTML = `
@@ -152,6 +152,7 @@ async function loadLibrary() {
   // the language is asked first thing on a fresh install; until then the
   // main process guesses from the OS
   await loadI18n(library.language);
+  await applyAppearance(); // theme.js: Omarchy's theme, when Mutiny runs there
   if (ensureVoiceShelf()) await window.neo.writeLibrary(library);
   if (!library.firstRunDone) {
     showFirstRun();
@@ -4100,7 +4101,7 @@ function statsChartSvg() {
 
   const bars = daily.map((v, i) => {
     const h = Math.round((v / maxD) * (H * 0.45));
-    return `<rect x="${(PAD + i * bw).toFixed(1)}" y="${H - PAD - h}" width="${(bw - 2).toFixed(1)}" height="${h}" rx="1.5" fill="#3d5a4f"/>`;
+    return `<rect x="${(PAD + i * bw).toFixed(1)}" y="${H - PAD - h}" width="${(bw - 2).toFixed(1)}" height="${h}" rx="1.5" style="fill:color-mix(in srgb, var(--ok) 45%, var(--bg))"/>`;
   }).join('');
   const line = cumulative.map((v, i) => {
     const x = (PAD + i * bw + bw / 2).toFixed(1);
@@ -4108,16 +4109,16 @@ function statsChartSvg() {
     return (i === 0 ? 'M' : 'L') + x + ',' + y;
   }).join(' ');
   const goalLine = goal
-    ? `<line x1="${PAD}" x2="${W - PAD}" y1="${(H - PAD - (goal / maxC) * (H - PAD * 2 - 20)).toFixed(1)}" y2="${(H - PAD - (goal / maxC) * (H - PAD * 2 - 20)).toFixed(1)}" stroke="#c9a86a" stroke-dasharray="5,4" stroke-width="1" opacity="0.7"/>`
+    ? `<line x1="${PAD}" x2="${W - PAD}" y1="${(H - PAD - (goal / maxC) * (H - PAD * 2 - 20)).toFixed(1)}" y2="${(H - PAD - (goal / maxC) * (H - PAD * 2 - 20)).toFixed(1)}" style="stroke:var(--accent)" stroke-dasharray="5,4" stroke-width="1" opacity="0.7"/>`
     : '';
   return `<svg id="stats-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     ${bars}
-    <path d="${line}" fill="none" stroke="#c9a86a" stroke-width="2"/>
+    <path d="${line}" fill="none" style="stroke:var(--accent)" stroke-width="2"/>
     ${goalLine}
   </svg>
-  <div style="display:flex;justify-content:space-between;font-size:10px;color:#666;padding:2px 4px">
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint);padding:2px 4px">
     <span>${t('chart.ago')}</span>
-    <span style="color:#3d8a6a">${t('chart.daily')}</span>
+    <span style="color:var(--ok)">${t('chart.daily')}</span>
     <span style="color:var(--accent)">${t('chart.total')}${goal ? t('chart.goal') : ''}</span>
     <span>${t('chart.today')}</span>
   </div>`;
@@ -4165,6 +4166,15 @@ function openStats() {
           </select>
         </label>
       </div>
+      <div class="stats-row"${/Linux/.test(navigator.userAgent) ? '' : ' hidden'}>
+        <label title="${t('stats.appearanceNote')}">${t('stats.appearance')}
+          <select id="st-appearance">
+            <option value="auto"${(library.appearance || 'auto') === 'auto' ? ' selected' : ''}>${t('stats.appearanceAuto')}</option>
+            <option value="mutiny"${library.appearance === 'mutiny' ? ' selected' : ''}>${t('stats.appearanceMutiny')}</option>
+          </select>
+        </label>
+        <span class="soft st-appearance-now">${appearanceNow.mode === 'omarchy' ? t('stats.appearanceUsing', { name: escHtml(appearanceNow.name || 'Omarchy') }) : ''}</span>
+      </div>
       ${hasBook ? `
       <div class="stats-row">
         <label>${t('stats.sprint')} <input id="st-sprint" type="number" min="50" value="${sprint ? sprint.target : 500}"/> ${t('stats.words')}</label>
@@ -4209,6 +4219,14 @@ function openStats() {
   };
   bd.querySelector('.m-ok').onclick = close;
   bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
+  // the appearance switches at once, so the writer sees what they chose
+  bd.querySelector('#st-appearance').onchange = async (e) => {
+    library.appearance = e.target.value;
+    await window.neo.writeLibrary(library);
+    const now = await applyAppearance();
+    bd.querySelector('.st-appearance-now').textContent = now.mode === 'omarchy' ? t('stats.appearanceUsing', { name: now.name || 'Omarchy' })
+      : e.target.value === 'auto' ? t('stats.appearanceNone') : '';
+  };
   if (hasBook) {
     bd.querySelector('#st-sprint-btn').onclick = () => {
       if (sprint && !sprint.done) {
@@ -4996,8 +5014,8 @@ async function showAbout() {
   bd.innerHTML = `
     <div class="modal" style="width:340px;text-align:center">
       <h2 style="font-size:22px;letter-spacing:6px">MUTINY</h2>
-      <p style="color:#999">${t('about.version', { v })}</p>
-      <p style="font-size:13px;color:#777">${t('about.tagline')}</p>
+      <p style="color:var(--muted)">${t('about.version', { v })}</p>
+      <p style="font-size:13px;color:var(--faint)">${t('about.tagline')}</p>
       <p style="font-size:12px;color:#666">${t('about.credit')}</p>
       <div style="margin-top:16px">
         <button class="m-ok btn-gold">${t('about.back')}</button>

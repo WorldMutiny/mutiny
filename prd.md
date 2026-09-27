@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.9 — fases 0 a 5b completas · 2026-09-27
+**Estado:** v0.10 — fases 0 a 5c completas · 2026-09-27
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -286,6 +286,18 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] **"Seguir escribiendo"** solo en las tareas cuyo resultado se guarda solo (Criticar, Investigar, Generar mi estilo). Al terminar en segundo plano, los comentarios o la investigación llegan con un aviso. El estilo no se abre de golpe: el chip cambia a "✦ Tu estilo está listo — verlo". Versiones no lleva este botón, porque ahí estás esperando para elegir.
 - [x] Si el ensayo se cierra mientras una tarea corre en segundo plano, el resultado no se aplica a otro ensayo: se avisa.
 - [x] **Chat**: sin ventana. Tiene un indicador dentro de su panel (qué hace, proveedor, segundos, Detener) y conserva el chip.
+
+### Fase 5c — Edición Omarchy ✅
+- [x] **Una sola app**: en Omarchy, la interfaz sigue el tema del sistema automáticamente. Ajustes → Apariencia permite "La de Mutiny"; el ajuste solo aparece en Linux.
+- [x] **Todo es Omarchy excepto la hoja.** Borrador, Notas y Esquema (y Fuentes y Para después, que se muestran en la misma hoja) conservan su papel, su tinta, su tipografía y su acento dorado. Las portadas tampoco cambian.
+- [x] La interfaz toma de Omarchy:
+  - la paleta (`omarchy-theme-color`, con colores con nombre y modo claro u oscuro);
+  - el borde de los controles (`shell.toml`);
+  - la tipografía (`omarchy-font-current`);
+  - las esquinas rectas.
+- [x] **En vivo**: cambiar de tema en Omarchy recolorea Mutiny al instante. La tipografía se relee al volver a la ventana.
+- [x] CSS de la interfaz convertido a tokens (unos 260 colores escritos a mano), con la hoja aislada en `--paper`, `--ink` y `--page-accent`. También prepara temas propios para Mac y Windows.
+- [x] El instalador agrega una fila **Mutiny** al menú de Omarchy (`extensions/omarchy-menu.jsonc`), una sola vez, sin tocar el resto del archivo. Sin atajo de teclado, por decisión del usuario.
 
 ### Versión futura — Verificar fuentes
 - [ ] Pospuesto por decisión del usuario (2026-09-27). El plan discutido tiene dos niveles:
