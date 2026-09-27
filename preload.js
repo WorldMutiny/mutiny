@@ -55,7 +55,6 @@ contextBridge.exposeInMainWorld('neo', {
   openRelease: () => ipcRenderer.invoke('update:openRelease'),
 
   omarchyTheme: () => ipcRenderer.invoke('omarchy:theme'),
-  omarchyMenuBar: (themed) => ipcRenderer.invoke('omarchy:menubar', !!themed),
   onOmarchyChanged: (cb) => ipcRenderer.on('omarchy:changed', () => cb()),
 
   onMenu: (cb) => ipcRenderer.on('menu', (_e, msg) => cb(msg))
