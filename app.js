@@ -1671,6 +1671,10 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape') {
     if (typeof aiCancel === 'function' && aiCancel()) return; // stop the assistant first
+    if (typeof reorderOn !== 'undefined' && reorderOn) { // sentences → cards → the draft
+      if (reorderView === 'sentences') { reorderView = 'cards'; reorderPara = null; renderReorder(); } else toggleReorder(false);
+      return;
+    }
     if (closeSidePane()) return;
     if (!$('#searchbar').hidden) closeSearch();
     else window.neo.fullscreenEscape().then((exited) => { if (!exited) backToShelf(); });
@@ -2136,7 +2140,10 @@ $('#side-pin').onclick = () => {
 /* ================================================================== */
 
 $$('.tab').forEach((tab) => {
-  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  tab.addEventListener('click', () => {
+    if (typeof reorderOn !== 'undefined' && reorderOn) toggleReorder(false);
+    switchTab(tab.dataset.tab);
+  });
   tab.addEventListener('dblclick', async () => {
     const kind = tab.dataset.tab;
     if (kind !== 'notes' && kind !== 'outline') return;
@@ -3354,6 +3361,7 @@ window.addEventListener('blur', () => { if (book) flushAllSaves(); });
 setInterval(() => { if (book) flushAllSaves(); }, 20000);
 
 async function backToShelf() {
+  if (typeof reorderOn !== 'undefined' && reorderOn) toggleReorder(false);
   flushAllSaves();
   tabPlaces = {};
   book = null;
@@ -3495,6 +3503,7 @@ async function structuralUndo() {
   if (currentTab === 'outline') renderOutline();
   if (currentTab === 'sources') renderSources();
   updateCounters();
+  if (typeof reorderRefresh === 'function') reorderRefresh();
   restoreCaret(snap.caret); // back to work, no announcement
   if (snap.rejoin) rejoinAtCaret();
   resetNativeUndo();
@@ -4343,6 +4352,7 @@ function showHelp() {
         ${row(K('⌘⇧M', 'Ctrl+Shift+M'), t('help.rewrite'))}
         ${row(K('⌘⇧C', 'Ctrl+Shift+C'), t('help.critique'))}
         ${row(K('⌘⇧A', 'Ctrl+Shift+A'), t('help.chat'))}
+        ${row(K('⌘⇧O', 'Ctrl+Shift+O'), t('help.reorder'))}
         ${row(KZ, t('help.undo'))}
         ${row(t('help.dashesKey'), t('help.dashes'))}
         ${row(K('⌘B · ⌘I', 'Ctrl+B · Ctrl+I'), t('help.bold'))}
