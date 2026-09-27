@@ -5,7 +5,7 @@
 
 **Estado:** v0.10 — fases 0 a 5c completas · 2026-09-27
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
-**Autor:** Maxx
+**Autor:** Maxx Darko
 
 ---
 

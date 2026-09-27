@@ -71,11 +71,11 @@
         }
       ],
       "category": "Office",
-      "synopsis": "A distraction-free word processor for authors",
+      "synopsis": "A distraction-free essay writer",
       "desktop": {
         "entry": {
-          "Comment": "A word processor for authors. Distraction-free by default.",
-          "Keywords": "writing;writer;novel;book;author;manuscript;wordprocessor;"
+          "Comment": "A distraction-free essay writer",
+          "Keywords": "writing;writer;essay;article;opinion;research;"
         }
       },
       "maintainer": "Maxx Darko <mutiny@worldmutiny.com>"
@@ -86,7 +86,6 @@
     },
     "files": [
       "**/*",
-      "!pocket/**",
       "!dist/**",
       "!Backups/**",
       "!*.md",
@@ -103,7 +102,11 @@
       "onlyLoadAppFromAsar": true
     }
   },
-  "author": "Maxx Darko",
+  "author": {
+    "name": "Maxx Darko",
+    "email": "mutiny@worldmutiny.com",
+    "url": "https://worldmutiny.com"
+  },
   "license": "MIT",
   "devDependencies": {
     "electron": "^43.0.0",

@@ -5017,7 +5017,8 @@ async function showAbout() {
       <h2 style="font-size:22px;letter-spacing:6px">MUTINY</h2>
       <p style="color:var(--muted)">${t('about.version', { v })}</p>
       <p style="font-size:13px;color:var(--faint)">${t('about.tagline')}</p>
-      <p style="font-size:12px;color:#666">${t('about.credit')}</p>
+      <p style="font-size:12px;color:var(--faint);margin-bottom:4px">${t('about.credit')}</p>
+      <p style="font-size:12px;color:var(--faint)">${t('about.author')}</p>
       <div style="margin-top:16px">
         <button class="m-ok btn-gold">${t('about.back')}</button>
       </div>
