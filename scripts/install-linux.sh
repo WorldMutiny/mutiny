@@ -60,7 +60,9 @@ row = '  "mutiny": ' + json.dumps({
     "label": "Mutiny",
     "description": "Write an essay",
     "aliases": ["mutiny", "essay", "ensayo"],
-    "action": 'omarchy-launch-or-focus mutiny "uwsm-app -- %s --no-sandbox"' % os.environ["MUTINY_BIN"],
+    # match the window's class exactly: a browser tab titled "…/mutiny" must not
+    # be focused instead of opening Mutiny
+    "action": "omarchy-launch-or-focus '^mutiny$' \"uwsm-app -- %s --no-sandbox\"" % os.environ["MUTINY_BIN"],
 }, ensure_ascii=False)
 text = open(path, encoding="utf-8").read() if os.path.exists(path) else "{\n}\n"
 lines = text.split("\n")
