@@ -1,214 +1,241 @@
-# Cómo usar Mutiny
+# How to use Mutiny
 
-Mutiny es un procesador de textos para **ensayos** —de opinión y de divulgación—, construido sobre [NEO](https://github.com/hughhowey/neo) de Hugh Howey. De NEO conserva lo esencial: una página limpia, archivos normales en tu computadora, nada de cuentas ni nube. Encima le agrega estructura para argumentar, fuentes y citas, herramientas para reordenar y reescribir, y un asistente de IA **opcional** que investiga y critica, pero nunca toca tu texto sin que tú lo aceptes.
+*[Leer en español](TUTORIAL_ES.md)*
 
-> En Mac, donde este tutorial dice **Ctrl**, usa **⌘**. Pulsa **Ctrl+/** en cualquier momento para ver todos los atajos.
+Mutiny is a word processor for **essays** — opinion and popular non-fiction — built on [NEO](https://github.com/hughhowey/neo) by Hugh Howey. From NEO it keeps what matters: a clean page, plain files on your computer, no accounts, no cloud. On top of that it adds structure for making an argument, sources and citations, tools to reorder and rewrite, and an **optional** AI assistant that researches and critiques but never touches your text unless you accept.
 
-*(El tutorial original de NEO está en [NEO-TUTORIAL.md](NEO-TUTORIAL.md).)*
+> On a Mac, read **⌘** wherever this tutorial says **Ctrl**. Press **Ctrl+/** at any time to see every shortcut.
+
+*(NEO's original tutorial is kept in [NEO-TUTORIAL.md](NEO-TUTORIAL.md).)*
 
 ---
 
-## 1. Instalar
+## 1. Install
 
-Descarga la versión para tu sistema en [Releases](https://github.com/worldmutiny/mutiny/releases). Las instrucciones para abrirla la primera vez (las apps no llevan firma de pago de Apple ni de Microsoft) están en el [README](README.md#download).
+Download the version for your system from [Releases](https://github.com/worldmutiny/mutiny/releases). The [README](README.md#download) explains how to open it the first time: the builds aren't signed with paid Apple or Microsoft certificates.
 
-## 2. La primera vez
+## 2. The first time
 
-Mutiny te hace unas pocas preguntas, una sola vez. Todo se puede cambiar después en **Archivo → Metas y ajustes** (Ctrl+,):
+Mutiny asks a few questions, once. You can change all of it later in **File → Goals & Settings…** (Ctrl+,):
 
-1. **Idioma** de la interfaz: español o inglés.
-2. **Quién eres**: tu nombre, que va en cada ensayo y en las exportaciones, y un seudónimo opcional.
-3. **Cómo escribes**:
-   - *Descubro escribiendo*: los ensayos nuevos abren en una página en blanco.
-   - *Parto de un esquema*: abren en el **Esquema**, con una plantilla para ordenar tu argumento.
-4. **Cómo se ve la página**: elige la tipografía con una muestra exacta de lo que verás.
-5. **El asistente**, si lo quieres (ver [§ 10](#10-el-asistente-opcional)).
-6. **Tu voz**: si tienes textos tuyos, súbelos para que el asistente aprenda cómo escribes (ver [§ 11](#11-mi-voz-que-el-asistente-escriba-como-tú)). Puedes saltar este paso.
+1. **Language** of the interface: English or Spanish.
+2. **Who you are**: your name, which goes on every essay and export, and an optional pen name.
+3. **How you write**:
+   - *I discover by writing*: new essays open on a blank page.
+   - *I start from an outline*: they open in the **Outline**, with a template for laying out your argument.
+4. **How the page looks**: pick a typeface from a sample that shows exactly what you'll see.
+5. **The assistant**, if you want one (see [§ 10](#10-the-assistant-optional)).
+6. **Your voice**: if you have texts of your own, add them so the assistant can learn how you write (see [§ 11](#11-my-voice-have-the-assistant-write-like-you)). You can skip this.
 
-## 3. El estante
+## 3. The shelf
 
-Mutiny abre en un estante de ensayos:
+Mutiny opens on a shelf of essays:
 
-- **+** empieza un ensayo nuevo.
-- Crea más estantes con **+ Estante**. Renómbralos con un clic en su nombre y reordénalos arrastrándolos por el ⠿.
-- Arrastra los ensayos para ordenarlos o moverlos de estante.
-- **Clic derecho en un ensayo**: ponerle una meta de palabras (aparece una barrita de avance en la portada), cambiar la portada, copiarlo a *Mi voz*, quitarlo del estante o mandarlo a la papelera.
-- **Portadas**: cada ensayo recibe una portada abstracta generada a partir de su título. El **↻** la cambia. También puedes arrastrar una imagen sobre el ensayo para usarla de portada.
-- **Seudónimos**: clic en tu nombre, arriba a la derecha, para agregar otro nombre de autor con sus propios estantes y cambiar entre ellos.
-- **Importar** (Ctrl+Shift+I, o arrastrando archivos al estante): documentos `.docx`, `.txt` y `.md`. En Markdown, `#` es el título del ensayo y `##` crea secciones.
+- **+** starts a new essay.
+- Add shelves with **+ Shelf**. Rename one by clicking its name, and reorder shelves by dragging their ⠿.
+- Drag essays to reorder them or move them between shelves.
+- **Right-click an essay** to:
+  - set a word goal (a small progress bar appears on the cover);
+  - change the cover;
+  - copy it to *My voice*;
+  - remove it from the shelf or move it to the trash.
+- **Covers**: every essay gets an abstract cover generated from its title. **↻** gives it another one. You can also drag an image onto an essay to make it the cover.
+- **Pen names**: click your name at the top right to add another author name with its own shelves, and switch between them.
+- **Import** (Ctrl+Shift+I, or drag files onto a shelf): `.docx`, `.txt` and `.md` documents. In Markdown, `#` is the essay's title and `##` starts a section.
 
-## 4. Escribir
+## 4. Writing
 
-Escribe el título, pulsa Enter y empieza.
+Type the title, press Enter, and start.
 
-- **Enter dos veces**: un separador `***` dentro de la sección.
-- **Enter tres veces**: una **sección nueva**. Un ensayo es una sola página continua: las secciones van una debajo de otra, cada una con su título opcional (una sección sin título se marca con un § discreto).
-- `--` se convierte en raya (—), `...` en puntos suspensivos (…) y las comillas se curvan solas (“ ”).
-- **La ortografía no te interrumpe mientras escribes.** Cuando quieras revisarla, pulsa **Ctrl+;**: se subrayan las palabras dudosas, y un clic derecho sobre ellas te da sugerencias. Pulsa Ctrl+; de nuevo para apagarla. Cada ensayo tiene su propio idioma para la ortografía y las exportaciones (en Metas y ajustes).
-- **Buscar y reemplazar**: Ctrl+F.
-- **Deshacer** los movimientos grandes (borrar una sección, reemplazar todo, mover a *Para después*, reordenar): Ctrl+Z cuando no estás escribiendo.
+- **Enter twice**: a `***` break inside the section.
+- **Enter three times**: a **new section**. An essay is one continuous page: sections follow one another, each with an optional title. A section without a title is marked with a quiet §.
+- `--` becomes an em dash (—), `...` an ellipsis (…), and quotes curl themselves (“ ”).
+- **Spelling doesn't nag you while you write.** When you want to check it, press **Ctrl+;**: doubtful words are underlined, and right-clicking one gives suggestions. Press Ctrl+; again to turn it off. Each essay has its own language for spelling and exports (in Goals & Settings).
+- **Find and replace**: Ctrl+F.
+- **Undo** big moves too (deleting a section, replace all, sending a passage to *Later*, reordering): Ctrl+Z while you're not typing.
 
-## 5. Marcar y seguir
+## 5. Mark it and keep going
 
-¿Te falta un dato, una cifra, una fuente? Pulsa **Ctrl+Shift+X**. Mutiny deja una marca ⚑ en el texto y una nota en el panel derecho, **En el texto**, y tú sigues escribiendo. El panel izquierdo muestra un punto rojo en cada sección que tiene notas pendientes. Con el asistente activado, puedes **Investigar** una marca: busca el dato y te trae fuentes (ver [§ 10](#10-el-asistente-opcional)).
+Missing a fact, a figure, a source? Press **Ctrl+Shift+X**. Mutiny leaves a ⚑ mark in the text and a note in the right pane, **In the text**, and you keep writing. The left pane shows a red dot on every section with open notes. With the assistant on, you can **Research** a mark: it looks the fact up and brings back sources (see [§ 10](#10-the-assistant-optional)).
 
-## 6. Los paneles escondidos y las pestañas
+## 6. The hidden panes and the tabs
 
-La pantalla está despejada hasta que necesitas algo:
+The screen stays clear until you need something:
 
-- **Borde izquierdo**: la lista de secciones con sus palabras y una nota breve de qué va en cada una. Arrástralas para reordenarlas. El **▸** despliega la primera frase de cada párrafo; un clic en una te lleva ahí.
-- **Borde derecho**: *En el texto* (tus marcas y los comentarios del asistente) y el *Chat*. El **☉** lo deja fijo.
-- **Pestañas de abajo**:
-  - **Borrador**: el texto.
-  - **Notas**: una página libre para ideas sueltas.
-  - **Esquema**: la estructura del argumento.
-  - **Fuentes**: tus referencias.
-  - **Para después**: lo que recortaste.
+- **Left edge**: the list of sections, with their word counts and a short note on what each one does. Drag them to reorder. The **▸** unfolds the first sentence of every paragraph; click one to go there.
+- **Right edge**: *In the text* (your marks and the assistant's comments) and the *Chat*. The **☉** pins it open.
+- **Tabs along the bottom**:
+  - **Draft**: the text.
+  - **Notes**: a free page for loose ideas.
+  - **Outline**: the structure of your argument.
+  - **Sources**: your references.
+  - **Later**: what you cut.
 
-  Doble clic en una pestaña para renombrarla.
-- **Contadores**: un clic alterna entre las palabras de todo el ensayo y las de la sección.
+  Double-click a tab to rename it.
+- **Counters**: one click switches between the whole essay's words and this section's.
 
-## 7. El Esquema
+## 7. The Outline
 
-Mutiny parte del método de escritura de ensayos de Jordan Peterson: primero, en una frase, qué quieres decir en cada sección y en cada párrafo; después, escribirlo.
+Mutiny starts from Jordan Peterson's essay-writing method: first say, in one sentence, what each section and each paragraph will do — then write it.
 
-- Cada línea numerada es una **sección** y las líneas con sangría son sus **párrafos**. Enter crea una línea nueva, Tab convierte una sección vacía en párrafo, Shift+Tab hace lo contrario, y Retroceso en una línea vacía la quita.
-- Lo que escribes en el Esquema aparece en el Borrador como **párrafo fantasma**, en gris y cursiva, en su lugar. Esa frase-guía queda esperando a que la conviertas en prosa.
+- Each numbered line is a **section**, and the indented lines are its **paragraphs**.
+  - Enter makes a new line.
+  - Tab turns an empty section line into a paragraph of the one above; Shift+Tab does the reverse.
+  - Backspace on an empty line removes it.
+- What you write in the Outline appears in the Draft as a **ghost paragraph**, grey and italic, in its place. That guide sentence waits there for you to turn it into prose.
 
-## 8. Fuentes y citas
+## 8. Sources and citations
 
-En la pestaña **Fuentes**:
+In the **Sources** tab:
 
-- **Pega una URL, un DOI o un ISBN** y pulsa Añadir. Mutiny obtiene solo el título, el autor, el sitio y la fecha (de la página, de Crossref o de Open Library); revisas y guardas. También puedes añadir una a mano.
-- **Citar** (Ctrl+Shift+K):
-  - con palabras seleccionadas, esas palabras se vuelven la cita, subrayada y con su número;
-  - sin selección, se inserta una marca **[n]** donde está el cursor.
-- La numeración sigue el orden de aparición y se actualiza sola.
-- **Al exportar**, PDF, Word y texto llevan números volados y una lista de **Fuentes** al final; Markdown y HTML llevan además el enlace.
-- Las fuentes que encuentra el asistente llegan como **candidatas**, y solo se citan cuando las aceptas.
+- **Paste a URL, a DOI or an ISBN** and press Add. Mutiny fetches only the title, author, site and date (from the page, Crossref or Open Library). You review them and save. You can also *Add one by hand*.
+- **Cite** with Ctrl+Shift+K:
+  - with words selected, those words become the citation, underlined and numbered;
+  - with nothing selected, a **[n]** mark goes in at the cursor.
+- Numbers follow the order of first appearance and update themselves.
+- **When you export**, PDF, Word and plain text carry superscript numbers and a **Sources** list at the end; Markdown and HTML also carry the link.
+- Sources the assistant finds arrive as **candidates**. They can only be cited once you accept them.
 
-## 9. Reordenar y reescribir
+## 9. Reorder and rewrite
 
-**Reordenar** (Ctrl+Shift+O, o el botón ⇅ abajo a la izquierda) convierte el borrador en tarjetas, una por párrafo:
+**Reorder** (Ctrl+Shift+O, or the ⇅ button at the bottom left) turns the draft into cards, one per paragraph:
 
-- **Arrastra** las tarjetas, o usa **Alt+↑/↓**, también entre secciones.
-- **Doble clic** en una tarjeta muestra sus **frases** para reordenarlas.
-- **Esqueleto**: solo la primera frase de cada párrafo. Leída sola, debería contar tu argumento.
-- **Enter** abre ese párrafo en el borrador y **Esc** regresa.
+- **Drag** the cards, or use **Alt+↑/↓**, across sections too.
+- **Double-click** a card to see its **sentences** and reorder them.
+- **Skeleton**: only the first sentence of each paragraph. Read on its own, it should tell your argument.
+- **Enter** opens that paragraph in the draft, and **Esc** goes back.
 
-**Versiones** (selecciona un pasaje y pulsa Ctrl+Shift+M): arriba ves el original; debajo escribes tus alternativas, que puedes editar en la misma lista. Si el asistente está activo, **Pedir al asistente** agrega las suyas, con una línea de por qué. Eliges una con **Usar esta**. El original y las versiones que no usaste se guardan en **Para después**; si no las quieres, desmarca la casilla.
+**Versions** (select a passage and press Ctrl+Shift+M):
+- The original sits at the top. Below it you write alternatives, and you can edit them in the list.
+- If the assistant is on, **Ask the assistant** adds its own, each with a line on why.
+- Pick one with **Use this**. The original and the versions you didn't use are kept in **Later**; untick the box if you don't want them.
 
-**Para después**: en vez de borrar un pasaje que te gusta, selecciónalo y pulsa **Ctrl+Shift+D**, o arrástralo a la pestaña *Para después*. Sale del texto, pero no se pierde, y puedes **restaurarlo** en el lugar exacto de donde salió.
+**Later**: instead of deleting a passage you like, select it and press **Ctrl+Shift+D**, or drag it onto the *Later* tab. It leaves the text but isn't lost, and you can **restore** it to the exact spot it came from.
 
-## 10. El asistente (opcional)
+## 10. The assistant (optional)
 
-Actívalo en **Asistente → Ajustes del asistente…** y elige con qué trabaja:
+Turn it on in **Assistant → Assistant Settings…** and choose what it runs on:
 
-| Proveedor | Qué necesitas |
+| Provider | What you need |
 |---|---|
-| **Claude Code** | Claude Code instalado con tu sesión (tu plan de Claude) |
-| **Codex** | El Codex CLI con tu sesión de ChatGPT |
-| **API de Anthropic** | Una API key |
-| **Compatible con OpenAI** | Una API key o un servidor local: OpenAI, Gemini, OpenRouter, Cerebras, Ollama, llama.cpp… (sin búsqueda web) |
+| **Claude Code** | Claude Code installed and logged in (your Claude plan) |
+| **Codex** | The Codex CLI logged in with ChatGPT |
+| **Anthropic API** | An API key |
+| **OpenAI-compatible** | An API key or a local server: OpenAI, Gemini, OpenRouter, Cerebras, Ollama, llama.cpp… (no web search) |
 
-Qué puede hacer:
+What it can do:
 
-- **Investigar una marca ⚑**: en el panel *En el texto*, botón **Investigar**. Busca en la web, responde con el dato y trae **fuentes candidatas** con la cita textual que lo prueba. Si una te sirve, **Citar aquí** la acepta y la pone junto a la marca.
-- **Criticar** (Ctrl+Shift+C para la sección donde estás; el ensayo completo está en el menú Asistente): de 3 a 7 observaciones sobre la tesis, saltos lógicos, afirmaciones sin fuente o el contraargumento que falta. Aparecen como ✦ en el texto y en el panel.
-- **Versiones** de un pasaje, dentro de la ventana de Versiones (ver [§ 9](#9-reordenar-y-reescribir)).
-- **Chat** sobre tu ensayo (Ctrl+Shift+A): conversa con el texto actual, el esquema y las notas como contexto. Si seleccionas un pasaje antes, el chat trata de ese pasaje. Cualquier respuesta se puede mandar a Notas.
+- **Research a ⚑ mark**: in the *In the text* pane, press **Research**. It searches the web, answers with the fact and brings back **candidate sources**, each with the exact quote that proves it. If one works for you, **Cite here** accepts it and places it by the mark.
+- **Critique**: Ctrl+Shift+C for the section you're in; *Critique the Whole Essay* is in the Assistant menu. You get 3 to 7 remarks on the thesis, logical leaps, unsourced claims or the missing counterargument, shown as ✦ in the text and in the pane.
+- **Versions** of a passage, inside the Versions window (see [§ 9](#9-reorder-and-rewrite)).
+- **Chat** about your essay (Ctrl+Shift+A): it sees the current text, the outline and your notes. If you select a passage first, the chat is about that passage. Any answer can be sent to your Notes (**→ Notes**).
 
-Mientras trabaja, una ventana te dice **qué está haciendo** (qué busca, qué página lee), sobre cuánto texto, con qué proveedor y cuántos segundos lleva. Tiene **Detener**, y en la crítica y la investigación también **Seguir escribiendo**: la tarea sigue en la barra de abajo y te avisa cuando termina. El chat muestra su progreso dentro de su propio panel.
+While it works, a window shows **what it's doing** (what it searches, which page it reads), on how much text, with which provider, and for how many seconds. It has **Stop**. Critique and research also have **Keep writing**: the task goes on in the bottom bar and tells you when it's done. The chat shows its progress inside its own pane.
 
-El asistente **nunca escribe archivos ni cambia tu texto por su cuenta**. Solo le llega lo que le pides que trabaje, y solo al servicio que elegiste. Tus API keys se guardan cifradas con el llavero de tu sistema. Detalles en [SECURITY.md](SECURITY.md).
+The assistant **never writes files or changes your text by itself**. It only receives what you ask it to work on, and only the service you chose receives it. Your API keys are encrypted by your system's keychain. Details in [SECURITY.md](SECURITY.md).
 
-## 11. Mi voz: que el asistente escriba como tú
+## 11. My voice: have the assistant write like you
 
-El estante **◉ Mi voz** guarda textos tuyos para que el asistente aprenda tu estilo:
+The **◉ My voice** shelf keeps texts of yours so the assistant can learn your style:
 
-- **Llénalo** importando textos (.docx, .md, .txt) o **copiando** ensayos tuyos: arrástralos al estante o usa clic derecho → *Copiar a Mi voz*. Es una copia congelada: tu ensayo se queda donde está, y copiarlo otra vez actualiza la copia.
-- **El medidor** te dice cuánto material hay y qué esperar: con menos de 2,000 palabras es muy poco; de 5,000 a 10,000 alcanza para un buen primer perfil; con 15,000 o más en temas variados, el perfil es sólido.
-- **Ver análisis** muestra lo que Mutiny mide sin IA: largo de frases y párrafos, ritmo, preguntas, persona, puntuación, conectores y los giros que repites.
-- **✦ Generar mi estilo**: el asistente lee tus textos y escribe tu perfil (`estilo.md`, en la carpeta de tu biblioteca). Lo revisas y corriges antes de guardarlo.
-- Desde entonces, **Versiones y el Chat escriben como tú**; se apaga con la casilla de *Mi estilo*. Cuando agregas más textos, **Actualizar mi estilo** lo rehace, y si lo editaste a mano te pregunta antes de reemplazarlo.
-- Si un ensayo tiene mucho texto del asistente sin cambios, al copiarlo a *Mi voz* Mutiny te avisa y te ofrece dejar fuera esos pasajes, para que tu estilo no aprenda de la IA.
+- **Fill it** by importing texts (.docx, .md, .txt) or **copying** your essays: drag them onto the shelf, or right-click → *Copy to My voice*. It's a frozen copy: your essay stays where it is, and copying it again updates the copy.
+- **The meter** tells you how much material there is and what to expect:
+  - under 2,000 words is very little;
+  - 5,000–10,000 is enough for a good first profile;
+  - 15,000 or more, on varied topics, makes it solid.
+- **Analysis** shows what Mutiny measures without AI: sentence and paragraph length, rhythm, questions, person, punctuation, connectors and the phrases you repeat.
+- **✦ Generate my style**: the assistant reads your texts and writes your profile (`estilo.md`, in your library folder). You review and correct it before it's saved.
+- From then on, **Versions and the Chat write like you**. The *Use my style in Versions and the Chat* box turns it off.
+- When you add more texts, **Update my style** redoes the profile. If you edited it by hand, it asks before replacing it.
+- If an essay has a lot of the assistant's text left unchanged, copying it to *My voice* warns you and offers to leave those passages out, so your style doesn't learn from the AI.
 
-## 12. Metas, sprints y la gráfica
+## 12. Goals, sprints and the chart
 
-En **Metas y ajustes** (Ctrl+, o clic en el contador "hoy") pones una **meta diaria** y una **meta por ensayo**, empiezas un **sprint** de palabras y ves la **gráfica de tus últimos 30 días**. Ahí también se elige cuándo termina tu día de escritura (por si escribes pasada la medianoche), el idioma del ensayo y el de la interfaz.
+In **Goals & Settings…** (Ctrl+, or click the "today" counter) you can:
+- set a **daily goal** and a **goal per essay**;
+- start a word **sprint** and see the **chart of your last 30 days**;
+- choose when your writing day ends (in case you write past midnight);
+- set the essay's language and the interface's.
 
-## 13. Cómo se ve
+## 13. How it looks
 
-- **Formato → Tipografía**: Literata, Source Serif, Lora, EB Garamond, iA Writer Quattro y Duo, todas incluidas, o una fuente de tu sistema. Tamaño: Ctrl+= y Ctrl+−.
-- **Ver → Página**: **Noche** (hoja oscura) o **Papel** (hoja blanca).
-- **Ver → Interfaz más clara**, si los controles te parecen demasiado tenues.
-- **Zoom de la página**: Ctrl+rueda del ratón, o el control de abajo a la derecha.
-- **Pantalla completa**: Ctrl+Shift+F. **Máquina de escribir**, que mantiene la línea actual centrada: Ctrl+Shift+T.
+- **Format → Body Font**: Literata, Source Serif, Lora, EB Garamond, iA Writer Quattro and Duo — all bundled — or a font from your system. Size: Ctrl+= and Ctrl+−.
+- **View → Page**: **Night** (dark sheet) or **Paper** (white sheet).
+- **View → Brighter Interface**, if the controls feel too faint.
+- **Page zoom**: Ctrl+mouse wheel, or the control at the bottom right.
+- **Full screen**: Ctrl+Shift+F. **Typewriter scrolling**, which keeps the current line centred: Ctrl+Shift+T.
 
-### En Omarchy
+### On Omarchy
 
-En [Omarchy](https://omarchy.org), la interfaz de Mutiny —estantes, paneles, ventanas y la **barra de menú**— toma los colores, la tipografía y las esquinas rectas de tu tema, y cambia **en vivo** cuando cambias de tema:
+On [Omarchy](https://omarchy.org), Mutiny's interface — shelves, panes, windows and the **menu bar** — takes your theme's colours, font and square corners, and changes **live** when you switch themes:
 
-- Con la página en **Noche**, la hoja también toma los colores del tema y conserva tu tipografía de escritura. Con **Papel** tienes la hoja blanca.
-- En la barra de menú propia, **Alt** entra al menú; las flechas se mueven, Enter elige y Esc sale.
-- Para volver al aspecto clásico: **Metas y ajustes → Apariencia → La de Mutiny**.
-- `scripts/install-linux.sh` agrega además una fila **Mutiny** al menú de Omarchy.
+- With the page on **Night**, the sheet takes the theme's colours too and keeps your writing typeface. **Paper** gives you the white sheet.
+- In the menu bar, **Alt** enters the menu; the arrows move, Enter picks and Esc leaves.
+- For the classic look: **Goals & Settings → Appearance → Mutiny's own**.
+- `scripts/install-linux.sh` also adds a **Mutiny** row to the Omarchy menu.
 
-## 14. Sacar tu ensayo
+## 14. Getting your essay out
 
-- **Archivo → Exportar**: PDF, Word (.docx), página web (.html), Markdown y texto plano. Todos llevan tus citas numeradas y la lista de Fuentes.
-- **Enviarme el borrador por correo** (Ctrl+E): te manda un PDF con fecha y hora y una huella digital del texto. Sirve como respaldo y como constancia de que esas palabras existían en esa fecha. Se configura en *Archivo → Ajustes de correo*.
-- **Clic derecho en el nombre de un estante → Exportar como colección**: une todos sus ensayos en un solo documento con índice.
+- **File → Export**: PDF, Word (.docx), web page (.html), Markdown and plain text. All of them carry your numbered citations and the Sources list.
+- **Email Draft to Myself** (Ctrl+E): sends you a PDF stamped with the date and time and a digital fingerprint of the text. It's a backup, and a record that those words existed on that date. Set it up in *File → Email Settings…*.
+- **Right-click a shelf's name → Export shelf as a collection…**: joins all its essays into one document with a table of contents.
 
-## 15. Tus archivos, a salvo
+## 15. Your files, safe
 
-Todo se guarda solo, constantemente, en archivos normales dentro de **Documentos/Mutiny Library**: una carpeta por ensayo, con cada sección como un archivo. Puedes abrirla, respaldarla o sincronizarla como quieras. Mutiny hace además una **copia diaria** de toda la biblioteca en su carpeta *Backups* y conserva las últimas dos semanas. Si Mutiny desapareciera mañana, cada palabra seguiría ahí.
+Everything saves by itself, constantly, into plain files in **Documents/Mutiny Library**: one folder per essay, each section a file. You can open it, back it up or sync it however you like. Mutiny also makes a **daily copy** of the whole library in its *Backups* folder and keeps the last two weeks. If Mutiny vanished tomorrow, every word would still be there.
 
-**Versiones nuevas**: una vez al día Mutiny revisa si hay una versión nueva y te avisa. Para actualizar, descarga la nueva e instálala encima; tus ensayos se conservan. El aviso se apaga en Metas y ajustes.
+**New versions**: once a day Mutiny checks whether there's a newer version and tells you. To update, download it and install it over the old one; your essays are kept. You can turn the check off in Goals & Settings.
 
-## 16. Qué se quitó de NEO (y por qué)
+## 16. What was taken out of NEO (and why)
 
-Mutiny es un fork: nació de NEO, que está hecho para novelistas. Esto es lo que dejó atrás:
+Mutiny is a fork: it grew out of NEO, which is made for novelists. This is what it left behind:
 
-| En NEO | En Mutiny | Por qué |
+| In NEO | In Mutiny | Why |
 |---|---|---|
-| **Portadas pintadas con IA** (OpenAI generaba una ilustración a partir del texto, con tu API key) | Solo portadas abstractas generadas localmente, o una imagen tuya | Para ensayos importa menos, costaba dinero y mandaba tu texto a un servicio de imágenes. La IA de Mutiny está enfocada en investigar, criticar y reescribir |
-| **Exportar a EPUB** | Se quitó | Pensado para publicar novelas en Amazon; NEO lo marcaba como poco probado |
-| **Capitulares** (la letra grande al inicio de cada capítulo) | Se quitó, también del onboarding | Estética de libro; un ensayo es una página continua |
-| **Capítulos numerados en hojas separadas** | **Secciones** en una sola página continua | Así se lee y se escribe un ensayo |
-| **"Darlings"** | **Para después**, que también guarda las versiones no usadas | El mismo concepto con nombre en español y más usos |
-| *Pantser / plotter* | *Descubro escribiendo / Parto de un esquema* | El mismo concepto, con un esquema de ensayo en lugar de uno de novela |
-| **NEO Pocket** (la app Android) | Se quitó | Mutiny es de escritorio (Linux, Windows, Mac) |
-| **Actualización automática** desde los releases de NEO | Un aviso de versión nueva, desde los releases de Mutiny | Sin firma de pago, la actualización automática no funciona en Mac; y nunca debe bajar una versión de NEO sobre Mutiny |
-| Biblioteca **NEO Library** | **Mutiny Library** | Las dos apps pueden convivir sin tocarse |
+| **AI-painted covers** (OpenAI illustrated a cover from your text, with your API key) | Only abstract covers made locally, or your own image | They matter less for essays, cost money, and sent your text to an image service. Mutiny's AI is focused on research, critique and rewriting |
+| **EPUB export** | Removed | Meant for publishing novels on Amazon; NEO flagged it as barely tested |
+| **Drop caps** (the big first letter of each chapter) | Removed, also from the first-run questions | A book look; an essay is one continuous page |
+| **Numbered chapters on separate sheets** | **Sections** on one continuous page | That's how an essay is read and written |
+| **"Darlings"** | **Later**, which also keeps unused versions | The same idea, with more uses |
+| *Pantser / plotter* | *I discover by writing / I start from an outline* | The same idea, with an essay outline instead of a novel's |
+| **NEO Pocket** (the Android app) | Removed | Mutiny is for the desktop (Linux, Windows, Mac) |
+| **Automatic updates** from NEO's releases | A new-version notice, from Mutiny's releases | Without paid signing, self-updating doesn't work on a Mac; and a NEO build must never replace Mutiny |
+| The **NEO Library** folder | **Mutiny Library** | Both apps can live side by side without touching each other |
 
-Se conservan de NEO: el estante y los seudónimos, las portadas abstractas, las marcas, los paneles escondidos, las metas, los sprints y la gráfica, la ortografía bajo demanda, el envío por correo, los respaldos diarios y los archivos planos.
+Kept from NEO:
+- the shelf and pen names;
+- the abstract covers;
+- the marks and the hidden panes;
+- the goals, sprints and chart;
+- spellcheck on demand;
+- emailing yourself the draft;
+- daily backups and plain files.
 
-## 17. Atajos
+## 17. Shortcuts
 
-| Atajo | Qué hace |
+| Shortcut | What it does |
 |---|---|
-| **Enter ×2 / ×3** | Separador `***` / sección nueva |
-| **Ctrl+Shift+X** | Poner una marca ⚑ ("vuelve aquí") |
-| **Ctrl+Shift+D** | Mandar el pasaje seleccionado a *Para después* |
-| **Ctrl+Shift+K** | Citar una fuente |
-| **Ctrl+Shift+M** | Versiones del texto seleccionado |
-| **Ctrl+Shift+C** | Criticar la sección (el ensayo completo, en el menú Asistente) |
-| **Ctrl+Shift+A** | Chat sobre el ensayo |
-| **Ctrl+Shift+O** | Reordenar (tarjetas, frases, esqueleto) |
-| **Alt+↑ / ↓** | Mover una tarjeta en Reordenar |
-| **Ctrl+F** | Buscar y reemplazar |
-| **Ctrl+;** | Revisar ortografía |
-| **Ctrl+Z** | Deshacer (también los movimientos grandes) |
-| **Ctrl+= / Ctrl+− / Ctrl+0** | Texto más grande / más pequeño / normal |
-| **Ctrl+Shift+F** | Pantalla completa |
-| **Ctrl+Shift+T** | Máquina de escribir |
-| **Ctrl+,** | Metas y ajustes |
-| **Ctrl+E** | Enviarte el borrador por correo |
-| **Ctrl+Shift+I** | Importar documentos |
-| **Ctrl+/** | Ver todos los atajos |
-| **Esc** | Cerrar lo que esté abierto, o volver al estante |
+| **Enter ×2 / ×3** | `***` break / new section |
+| **Ctrl+Shift+X** | Leave a ⚑ mark ("come back here") |
+| **Ctrl+Shift+D** | Send the selected passage to *Later* |
+| **Ctrl+Shift+K** | Cite a source |
+| **Ctrl+Shift+M** | Versions of the selected text |
+| **Ctrl+Shift+C** | Critique the section (the whole essay is in the Assistant menu) |
+| **Ctrl+Shift+A** | Chat about the essay |
+| **Ctrl+Shift+O** | Reorder (cards, sentences, skeleton) |
+| **Alt+↑ / ↓** | Move a card in Reorder |
+| **Ctrl+F** | Find and replace |
+| **Ctrl+;** | Check spelling |
+| **Ctrl+Z** | Undo (big moves too) |
+| **Ctrl+= / Ctrl+− / Ctrl+0** | Larger / smaller / normal text |
+| **Ctrl+Shift+F** | Full screen |
+| **Ctrl+Shift+T** | Typewriter scrolling |
+| **Ctrl+,** | Goals & Settings |
+| **Ctrl+E** | Email the draft to yourself |
+| **Ctrl+Shift+I** | Import documents |
+| **Ctrl+/** | See every shortcut |
+| **Esc** | Close whatever is open, or go back to the shelf |
 
 ---
 
-Gracias a Hugh Howey por NEO, que hizo posible todo esto. Y ahora a escribir: un borrador no tiene que ser bueno, solo tiene que existir.
+Thanks to Hugh Howey for NEO, which made all of this possible. Now go write: a draft doesn't have to be good. It just has to exist.
