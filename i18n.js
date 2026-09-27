@@ -34,8 +34,13 @@ function te(lang, key, vars) {
   try { return t(key, vars); } finally { I18N.strings = saved; }
 }
 
+// numbers as the writer reads them: Spanish uses Mexico's 1,517 (Spain's
+// "1517" / "22.034" would clash with the strings' own "2,000")
+const numLocale = () => (I18N.lang === 'es' ? 'es-MX' : I18N.lang);
+const fmtN = (n) => Number(n || 0).toLocaleString(numLocale());
+
 function tn(key, n, vars) {
-  const count = typeof n === 'number' ? n.toLocaleString(I18N.lang) : n;
+  const count = typeof n === 'number' ? fmtN(n) : n;
   return t(key + (n === 1 ? '.one' : '.other'), { n: count, ...(vars || {}) });
 }
 

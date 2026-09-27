@@ -152,6 +152,7 @@ async function loadLibrary() {
   // the language is asked first thing on a fresh install; until then the
   // main process guesses from the OS
   await loadI18n(library.language);
+  if (ensureVoiceShelf()) await window.neo.writeLibrary(library);
   if (!library.firstRunDone) {
     showFirstRun();
   }
@@ -243,9 +244,25 @@ function showFirstRun() {
     $('#fr-ai-on').style.opacity = st.installed ? '' : '0.5';
     if (!ready && st.installed) state.textContent += ' ' + t('fr.aiLater');
   };
-  $('#fr-ai-on').onclick = async () => {
+  // Step 3 → 4: Mi voz — the writer's own texts, optional
+  const toVoice = () => {
+    $('#fr-step3').hidden = true;
+    $('#fr-step4').hidden = false;
+  };
+  $('#fr-ai-on').onclick = () => {
     library.ai = { ...(library.ai || {}), enabled: true };
-    $('#fr-done').click();
+    toVoice();
+  };
+  $('#fr-ai-off').onclick = toVoice;
+  $('#fr-voice-import').onclick = async () => {
+    await importToVoice();
+    const docs = await voiceCorpus();
+    const words = docs.reduce((a, d) => a + d.words, 0);
+    if (docs.length) {
+      $('.fr-voice-state').textContent = tn('voice.texts', docs.length) + ' · ' + tn('count.words', words) + ' · ' +
+        t('voice.level.' + voiceLevel(words)) + '. ' + t('voice.expect.' + voiceLevel(words));
+      $('#fr-done strong').textContent = t('fr.voiceNext');
+    }
   };
 
   $('#fr-done').onclick = async () => {
@@ -278,7 +295,7 @@ function currentAuthor() {
 
 function shelvesFor(authorId) {
   const homeId = library.authors[0].id;
-  return library.shelves.filter((s) => (s.authorId || homeId) === authorId);
+  return library.shelves.filter((s) => s.kind === 'voice' || (s.authorId || homeId) === authorId);
 }
 
 function displayAuthor() {
@@ -383,18 +400,19 @@ async function renderShelves() {
     // right-click a shelf label: publish it as one book, or delete it
     label.addEventListener('contextmenu', async (e) => {
       e.preventDefault();
-      const choice = await optionModal(t('shelf.menuTitle', { name: escHtml(shelfName(shelf)) }), null, [
-        {
-          label: t('shelf.exportCollection'),
-          desc: tn('shelf.exportCollectionDesc', shelf.bookIds.length),
-          value: 'anthology'
-        },
-        { label: t('shelf.delete'), desc: t('shelf.deleteDesc'), danger: true, value: 'del' }
-      ]);
+      const choices = [{
+        label: t('shelf.exportCollection'),
+        desc: tn('shelf.exportCollectionDesc', shelf.bookIds.length),
+        value: 'anthology'
+      }];
+      if (isVoiceShelf(shelf)) choices.push({ label: t('voice.myStyle'), desc: t('voice.myStyleDesc'), value: 'style' });
+      else choices.push({ label: t('shelf.delete'), desc: t('shelf.deleteDesc'), danger: true, value: 'del' });
+      const choice = await optionModal(t('shelf.menuTitle', { name: escHtml(shelfName(shelf)) }), null, choices);
+      if (choice === 'style') { openStyle(); return; }
       if (choice === 'anthology') {
         await exportShelfAnthology(shelf);
       } else if (choice === 'del') {
-        const mine = shelvesFor(currentAuthor().id);
+        const mine = shelvesFor(currentAuthor().id).filter((s) => !isVoiceShelf(s));
         if (mine.length === 1) {
           toast(t('shelf.onlyOne'));
           return;
@@ -460,6 +478,15 @@ async function renderShelves() {
       const bookId = e.dataTransfer.getData('application/x-neo-book');
       if (!bookId) return;
       e.preventDefault();
+      // an essay dropped on Mi voz is copied there, not moved
+      if (isVoiceShelf(shelf) && !shelf.bookIds.includes(bookId)) {
+        const ind = document.querySelector('.drop-indicator');
+        if (ind) ind.remove();
+        const tile = document.querySelector('.book.dragging');
+        if (tile) tile.classList.remove('dragging');
+        await copyToVoice(bookId);
+        return;
+      }
       // insertion index = how many (non-dragged) books sit before the indicator
       const ind = document.querySelector('.drop-indicator');
       let index = shelf.bookIds.filter((b) => b !== bookId).length;
@@ -489,16 +516,19 @@ async function renderShelves() {
       row.appendChild(bookTile(meta));
     }
 
-    // the blank page — click to begin
-    const blank = document.createElement('div');
-    blank.className = 'new-book';
-    blank.textContent = '+';
-    blank.title = t('shelf.newEssay');
-    blank.onclick = () => createBookOnShelf(shelf);
-    row.appendChild(blank);
+    // the blank page — click to begin (Mi voz takes texts in, it doesn't start them)
+    if (!isVoiceShelf(shelf)) {
+      const blank = document.createElement('div');
+      blank.className = 'new-book';
+      blank.textContent = '+';
+      blank.title = t('shelf.newEssay');
+      blank.onclick = () => createBookOnShelf(shelf);
+      row.appendChild(blank);
+    }
 
     sec.appendChild(label);
     sec.appendChild(row);
+    if (isVoiceShelf(shelf)) await decorateVoiceShelf(sec, row, shelf);
     built.appendChild(sec);
   }
   wrap.replaceChildren(built);
@@ -587,7 +617,7 @@ function bookTile(meta) {
         renderShelves();
       }
     } else if (/\.(docx|txt|md)$/i.test(p)) {
-      const homeShelf = library.shelves.find((s) => s.bookIds.includes(meta.id)) || library.shelves[0];
+      const homeShelf = library.shelves.find((s) => s.bookIds.includes(meta.id)) || firstEssayShelf();
       const results = await window.neo.importFiles([p]);
       if (results.length) await addImportedBooks(results, homeShelf);
     }
@@ -601,6 +631,8 @@ function bookTile(meta) {
     if (meta.coverImage) {
       options.push({ label: t('tile.removeCover'), desc: t('tile.removeCoverDesc'), danger: true, value: 'uncover' });
     }
+    const vs = voiceShelf();
+    if (vs && !vs.bookIds.includes(meta.id)) options.push({ label: t('voice.copyTo'), desc: t('voice.copyToDesc'), value: 'voice' });
     options.push(
       { label: t('tile.setGoal'), desc: t('tile.setGoalDesc'), value: 'goal' },
       { label: t('tile.remove'), desc: t('tile.removeDesc'), value: 'remove' },
@@ -611,7 +643,9 @@ function bookTile(meta) {
       }
     );
     const choice = await optionModal(`“${escHtml(displayTitle(meta))}”`, null, options);
-    if (choice === 'cover') {
+    if (choice === 'voice') {
+      await copyToVoice(meta.id);
+    } else if (choice === 'cover') {
       const src = await window.neo.pickCover();
       if (!src) return;
       const fname = await window.neo.setCover(meta.id, src);
@@ -3772,7 +3806,7 @@ const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 // Turn parsed manuscripts into books on a shelf — used by the file picker
 // and by dropping files from Finder straight onto a shelf.
 async function addImportedBooks(results, shelf) {
-  shelf = shelf || shelvesFor(currentAuthor().id)[0] || library.shelves[0];
+  shelf = shelf || firstEssayShelf();
   let ok = 0;
   for (const r of results) {
     if (r.error) { toast(t('import.failed', { name: r.name, error: r.error }), 6000); continue; }
@@ -3809,7 +3843,12 @@ async function addImportedBooks(results, shelf) {
 
 async function importBooks() {
   const results = await window.neo.importPick();
-  if (results.length) await addImportedBooks(results, shelvesFor(currentAuthor().id)[0] || library.shelves[0]);
+  if (results.length) await addImportedBooks(results, firstEssayShelf());
+}
+
+// where new essays land by default — never Mi voz
+function firstEssayShelf() {
+  return shelvesFor(currentAuthor().id).find((s) => !isVoiceShelf(s)) || library.shelves.find((s) => !isVoiceShelf(s)) || library.shelves[0];
 }
 
 $('#import-btn').onclick = importBooks;
@@ -5037,8 +5076,14 @@ window.addEventListener('unhandledrejection', (e) => reportError('Unhandled: ' +
 
 /* ================================================================== */
 
-loadLibrary().then(() => {
-  applyFonts();
-  typewriterEnabled = !!library.typewriter;
-  applyTypewriter();
-});
+// start once every script has run: ai-ui.js, versions.js, reorder.js and
+// voice.js load after this file, and the library needs some of them
+function boot() {
+  loadLibrary().then(() => {
+    applyFonts();
+    typewriterEnabled = !!library.typewriter;
+    applyTypewriter();
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+else boot();

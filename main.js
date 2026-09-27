@@ -305,6 +305,23 @@ const COVER_EXTS = ['png', 'jpg', 'jpeg', 'webp'];
 
 ipcMain.handle('library:path', () => LIBRARY_DIR);
 
+// estilo.md: the writer's style, a plain file at the library root so the same
+// profile works from Claude Code in a terminal. One fixed name, never a path
+// from the renderer.
+const STYLE_FILE = () => path.join(LIBRARY_DIR, 'estilo.md');
+const STYLE_MAX = 200000;
+function readStyle() {
+  try { return fs.readFileSync(STYLE_FILE(), 'utf8').slice(0, STYLE_MAX); } catch { return ''; }
+}
+ipcMain.handle('style:read', () => readStyle());
+ipcMain.handle('style:write', (_e, text) => {
+  ensureLibrary();
+  const tmp = STYLE_FILE() + '.tmp';
+  fs.writeFileSync(tmp, String(text || '').slice(0, STYLE_MAX));
+  fs.renameSync(tmp, STYLE_FILE());
+  return true;
+});
+
 ipcMain.handle('cover:pick', async () => {
   const win = BrowserWindow.getFocusedWindow();
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
@@ -435,7 +452,7 @@ ipcMain.handle('link:open', (_e, url) => {
 });
 
 // AI assistant (ai/): research, critique, rewrite — see ai/index.js
-require('./ai/index.js').register(logError, readSecret);
+require('./ai/index.js').register(logError, readSecret, readStyle);
 
 // ---------------------------------------------------------------------------
 // Fullscreen

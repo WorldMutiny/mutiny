@@ -91,7 +91,7 @@ async function openVersions() {
     const data = await aiRun('rewrite', { passage: original, paragraph: p.innerText, lang: spellLang(), mode }, t('ai.rewriting'));
     bd.style.display = '';
     if (!data) return;
-    for (const v of data.variants || []) if (v && v.text) versions.push({ text: String(v.text).trim(), why: String(v.why || ''), by: 'ai' });
+    for (const v of data.variants || []) if (v && v.text) { const tx = String(v.text).trim(); versions.push({ text: tx, orig: tx, why: String(v.why || ''), by: 'ai' }); }
     draw();
   };
   $v('.vs-ask').onclick = () => ask();
@@ -108,6 +108,9 @@ async function openVersions() {
     const keep = $v('.vs-keep').checked;
     close();
     await applyRewrite(range, p, text); // the original goes to Later from here
+    // the assistant's words, kept as chosen: Mi voz can leave them out later
+    // (edited in the list first, it's the writer's own wording)
+    if (chosen.by === 'ai' && text === String(chosen.orig || '').replace(/\s+/g, ' ').trim()) noteAiText(text);
     if (keep) {
       const seen = new Set([text, original]);
       const rest = versions.filter((v, k) => k !== i && v.text.trim() && !seen.has(v.text.trim()) && seen.add(v.text.trim()));

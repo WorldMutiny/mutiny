@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.7 — fases 0 a 4 completas · 2026-09-26
+**Estado:** v0.8 — fases 0 a 5a completas · 2026-09-27
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -174,14 +174,30 @@ Acciones disponibles desde el menú, el atajo o el clic derecho:
 - **Barra izquierda:** sigue para navegar y mover secciones, y ahora, plegable por sección, muestra la primera frase de cada párrafo (clic → ir al párrafo).
 - **Banco de versiones (`Ctrl+Shift+M`):** tu original, tus propias variantes y, si la IA está activa, las del asistente en la misma lista. Las versiones que no elijas van a "Para después", con una casilla para no guardarlas.
 
-### 6.7 Mi estilo (fase 5)
+### 6.7 Mi estilo (fase 5a)
 
-La versión sin complicaciones, sin fine-tuning:
+Automático, sin fine-tuning: la IA lee tus textos y escribe el perfil; tú solo lo revisas.
 
-- `estilo.md` en la raíz de la biblioteca: reglas de voz en prosa ("frases cortas", "nada de 'cabe destacar'", "tuteo", …). Editable desde Ajustes.
-- **Ensayos de referencia:** marcar 2–5 ensayos propios como "representativos de mi voz". Se envían como ejemplos (fragmentos) a "Mejorar redacción".
-- **Extraer mi estilo:** la IA lee tus ensayos marcados y propone un borrador de `estilo.md`, que tú editas.
-- Como es un archivo plano, el mismo `estilo.md` sirve desde Claude Code en la terminal.
+- **Estante "Mi voz"**: siempre existe y no se puede borrar. Recibe textos importados (.docx, .md, .txt) y **copias congeladas** de tus ensayos: se arrastra el ensayo al estante o se usa clic derecho → "Copiar a Mi voz". El ensayo original no se mueve, y copiarlo otra vez actualiza la misma copia. No cuenta en estadísticas ni en metas.
+- **Medidor sin IA** en la cabecera del estante: textos, palabras y nivel de confianza, con un texto de qué esperar:
+  - menos de 2,000 palabras: muy poco material;
+  - menos de 5,000: confianza baja;
+  - menos de 15,000: confianza media;
+  - desde 15,000: confianza alta.
+- **"Ver análisis"**: medidas exactas hechas por Mutiny, sin IA: frases, ritmo, párrafos, preguntas, persona, puntuación, conectores, giros repetidos y vocabulario. Avisa si hay un solo texto o si todos son del mismo tema.
+- **"Generar mi estilo"**: se necesitan al menos 1,500 palabras, y por debajo de 5,000 avisa. La IA recibe los textos y las medidas, y escribe `estilo.md` en la raíz de la biblioteca, con 7 secciones:
+  - voz y registro;
+  - ritmo;
+  - cómo argumenta;
+  - palabras y giros, con cuántas veces aparecen para evitar la caricatura;
+  - qué evita;
+  - pasajes de ejemplo citados tal cual;
+  - reglas para el asistente.
+- Se revisa y edita antes de guardar. Con más de unas 22,000 palabras se toman fragmentos del inicio, medio y final de cada texto. Si editaste el archivo a mano, pregunta si conservar tus cambios o empezar de cero.
+- **Versiones y el Chat lo usan solos.** El proceso principal lee `estilo.md`, así que el renderer no puede inyectar otro. Se desactiva con la casilla "Usar mi estilo".
+- **Texto de la IA sin cambios**: al elegir una versión del asistente tal cual, Mutiny la registra. Al copiar el ensayo a Mi voz, si el 10% o más sigue intacto, avisa y ofrece copiar sin esos pasajes.
+- Paso opcional en el onboarding: "Tu voz", con un botón para importar.
+- Como `estilo.md` es un archivo plano, sirve también desde Claude Code en la terminal.
 
 ### 6.8 Onboarding para ensayistas
 
@@ -250,7 +266,15 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] **Versiones** (Ctrl+Shift+M): escribes alternativas junto al original, el asistente puede sumar las suyas, eliges una; el original y las no usadas van a Para después (casilla para desactivarlo).
 - [x] Corte de frases que respeta abreviaturas ("Dr.", "EE. UU.", "3.5"), citas y marcas.
 - **Aceptación:** reordenar y deshacer conservan citas, marcas ⚑ y formato.
-### Fase 5 — Mi estilo + Verificar fuentes
+### Fase 5a — Mi voz ✅
+- [x] Estante "Mi voz" (importar y copias congeladas de ensayos) con medidor de confianza.
+- [x] Análisis sin IA (frases, ritmo, persona, puntuación, conectores, giros).
+- [x] "Generar mi estilo": la IA escribe `estilo.md`, revisable y editable, que Versiones y el Chat siguen.
+- [x] Aviso y exclusión del texto de la IA sin cambios al copiar un ensayo.
+- [x] Paso "Tu voz" en el onboarding.
+- **Aceptación:** con 4 textos (unas 1,500 palabras) genera un perfil en segundos, y las versiones del asistente adoptan la voz sin caricaturizarla.
+
+### Fase 5b — Verificar fuentes
 ### Fase 6 — Multiplataforma y publicación
 - [ ] Builds de Mac (dmg) y Windows (exe) con GitHub Actions. NEO ya tiene la configuración de electron-builder para las tres plataformas.
 - [ ] Notarización de Mac: requiere una cuenta de Apple Developer (99 USD/año). Sin ella, el usuario tiene que autorizar la app a mano en macOS.

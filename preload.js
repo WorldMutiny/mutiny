@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('neo', {
   logError: (msg) => ipcRenderer.invoke('log:error', msg),
   importPick: () => ipcRenderer.invoke('import:pick'),
   libraryPath: () => ipcRenderer.invoke('library:path'),
+  readStyle: () => ipcRenderer.invoke('style:read'),
+  writeStyle: (text) => ipcRenderer.invoke('style:write', text),
   pickCover: () => ipcRenderer.invoke('cover:pick'),
   setCover: (bookId, srcPath) => ipcRenderer.invoke('cover:set', bookId, srcPath),
   removeCover: (bookId) => ipcRenderer.invoke('cover:remove', bookId),
