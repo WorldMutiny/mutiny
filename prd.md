@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** 0.9.0-beta.1 — fases 0 a 6 (sin publicar aún) · 2026-09-27
+**Estado:** 0.9.0-beta.1 publicada — fases 0 a 6 · 2026-09-27
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx Darko
 
@@ -314,7 +314,7 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] Claude Code y Codex se buscan también en las rutas de macOS y Windows; el PATH de las CLIs incluye esas carpetas.
 - [x] Aviso de versiones nuevas: una vez al día, solo en builds instaladas, lee los releases públicos (betas incluidas) y se puede apagar. Sin auto-actualización (sin firma no es posible en Mac); Linux se actualiza con `install-linux.sh <AppImage>`.
 - [x] Versión **0.9.0-beta.1**, README público, CHANGELOG, `scripts/release.sh`.
-- [ ] Publicar: etiquetar v0.9.0-beta.1, revisar el borrador, **hacer público el repo** con Secret scanning y Push protection activados.
+- [x] Publicado (2026-09-27): repo público con Secret scanning, Push protection y reporte privado de vulnerabilidades; release **v0.9.0-beta.1**. TUTORIAL.md reescrito (el de NEO queda en NEO-TUTORIAL.md).
 - [ ] Más adelante: paquete de AUR.
 
 ### Notas de implementación — fase 1 (2026-09-25)
