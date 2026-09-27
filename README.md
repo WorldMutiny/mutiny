@@ -8,7 +8,7 @@ Mutiny is built on [NEO](https://github.com/hughhowey/neo) by Hugh Howey, a love
 
 > **Status: 0.9 beta.** It works and it's used daily, but expect rough edges. Please report what breaks.
 
-**Español:** Mutiny es un procesador de textos para ensayos (opinión y divulgación), con la interfaz en español e inglés. Abajo están las instrucciones de instalación.
+**Español:** Mutiny es un procesador de textos para ensayos (opinión y divulgación), con la interfaz en español e inglés. Abajo están las instrucciones de instalación, y en [TUTORIAL.md](TUTORIAL.md) cómo usar todo.
 
 ## Download
 
@@ -74,7 +74,7 @@ Bugs and ideas: [Issues](https://github.com/worldmutiny/mutiny/issues). Security
 
 ## Credits
 
-Mutiny stands on NEO, created by [Hugh Howey](https://hughhowey.com/neo/); NEO's original README is kept in [`NEO-README.md`](NEO-README.md) and its history is preserved in this repository. Bundled typefaces (Literata, Source Serif 4, Lora, EB Garamond, iA Writer Quattro/Duo and the cover faces) are under the SIL Open Font License.
+Mutiny stands on NEO, created by [Hugh Howey](https://hughhowey.com/neo/); NEO's original README and tutorial are kept in [`NEO-README.md`](NEO-README.md) and [`NEO-TUTORIAL.md`](NEO-TUTORIAL.md) and its history is preserved in this repository. Bundled typefaces (Literata, Source Serif 4, Lora, EB Garamond, iA Writer Quattro/Duo and the cover faces) are under the SIL Open Font License.
 
 ## License
 
