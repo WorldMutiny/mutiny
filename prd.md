@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.8 — fases 0 a 5a completas · 2026-09-27
+**Estado:** v0.8 — fases 0 a 5a completas (en main) · 2026-09-27
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -294,6 +294,7 @@ Decisiones tomadas en el camino que no estaban en el plan:
 
 ### Fase final — Pulido de la experiencia de usuario
 - [ ] Revisión completa de la UX una vez que todas las funciones estén en su lugar (pedido 2026-09-26).
+- [ ] **Progreso visible de la IA en todas sus tareas** (pedido 2026-09-27): sugerencias/Versiones, crítica, investigación y chat. Hoy solo aparece el chip de la barra inferior del editor. Usar el modelo de "Escribiendo tu estilo" (`styleProgress` en `voice.js`): una ventana con qué hace, sobre cuánto texto, los segundos y un botón Detener, y **conservar también el chip** de abajo. El usuario quiere las dos cosas.
 
 ## 8. Riesgos
 
