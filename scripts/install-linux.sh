@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
-# Install the newest dist/Mutiny-*.AppImage for the current user.
+# Install Mutiny for the current user — a downloaded AppImage given as the
+# argument, or the newest one built in dist/ for this machine's architecture.
 # Extracts the AppImage instead of running it, so FUSE isn't needed, and
 # registers a desktop entry so app launchers (e.g. Omarchy's) pick it up.
+# Running it again with a newer AppImage updates Mutiny; essays are kept.
+#
+#   scripts/install-linux.sh [path/to/Mutiny-….AppImage]
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
-appimage=$(ls -t dist/Mutiny-*.AppImage 2>/dev/null | head -1)
-[[ -n $appimage ]] || { echo "No AppImage in dist/ — run: npx electron-builder --linux AppImage --x64" >&2; exit 1; }
+if [[ $# -ge 1 ]]; then
+  appimage=$(realpath "$1")
+  [[ -f $appimage ]] || { echo "No such file: $1" >&2; exit 1; }
+  chmod +x "$appimage"
+  cd "$(dirname "$0")/.."
+else
+  cd "$(dirname "$0")/.."
+  case "$(uname -m)" in aarch64|arm64) arch=arm64 ;; *) arch=x86_64 ;; esac
+  appimage=$(ls -t dist/Mutiny-*"$arch"*.AppImage dist/Mutiny-*.AppImage 2>/dev/null | grep -v -- "$([[ $arch == arm64 ]] && echo x86_64 || echo arm64)" | head -1 || true)
+  [[ -n $appimage ]] || { echo "No AppImage in dist/ — run: npx electron-builder --linux AppImage --x64" >&2; exit 1; }
+  appimage=$(realpath "$appimage")
+fi
 
 dest="$HOME/.local/opt/mutiny"
 apps="$HOME/.local/share/applications"
@@ -14,7 +27,7 @@ icons="$HOME/.local/share/icons"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-(cd "$tmp" && "$OLDPWD/$appimage" --appimage-extract >/dev/null)
+(cd "$tmp" && "$appimage" --appimage-extract >/dev/null)
 rm -rf "$dest"
 mkdir -p "$(dirname "$dest")" "$apps" "$icons"
 mv "$tmp/squashfs-root" "$dest"
