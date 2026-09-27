@@ -290,7 +290,7 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 ### Fase 5c — Edición Omarchy ✅
 - [x] **Una sola app**: en Omarchy, la interfaz sigue el tema del sistema automáticamente. Ajustes → Apariencia permite "La de Mutiny"; el ajuste solo aparece en Linux.
 - [x] **Todo es Omarchy excepto la hoja.** Solo Borrador, Notas y Esquema conservan su papel, su tinta, su tipografía y su acento dorado. Fuentes, Para después y Reordenar se ven como Omarchy (ajuste del usuario, 2026-09-27). Las portadas no cambian.
-- [ ] Barra de menú con el tema de Omarchy: la nativa no admite colores de tema. Ocultarla (con Alt) se probó y el usuario lo descartó; buscar una alternativa después.
+- [x] **Barra de menú con el tema** (opción A, elegida por el usuario): la nativa no admite colores de tema, así que en Omarchy Mutiny dibuja la suya (`appmenu.js`). Tiene los mismos menús y atajos, porque el modelo y las acciones vienen de `main.js`; la barra nativa solo se aparta. No quita el foco ni la selección del editor. Alt más flechas para navegar. Ocultarla con Alt se probó antes y se descartó.
 - [x] La interfaz toma de Omarchy:
   - la paleta (`omarchy-theme-color`, con colores con nombre y modo claro u oscuro);
   - el borde de los controles (`shell.toml`);

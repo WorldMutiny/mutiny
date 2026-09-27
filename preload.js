@@ -55,6 +55,10 @@ contextBridge.exposeInMainWorld('neo', {
   openRelease: () => ipcRenderer.invoke('update:openRelease'),
 
   omarchyTheme: () => ipcRenderer.invoke('omarchy:theme'),
+  appMenu: () => ipcRenderer.invoke('appmenu:get'),
+  appMenuRun: (id) => ipcRenderer.invoke('appmenu:run', id),
+  appMenuNative: (visible) => ipcRenderer.invoke('appmenu:native', !!visible),
+  onAppMenuChanged: (cb) => ipcRenderer.on('appmenu:changed', () => cb()),
   onOmarchyChanged: (cb) => ipcRenderer.on('omarchy:changed', () => cb()),
 
   onMenu: (cb) => ipcRenderer.on('menu', (_e, msg) => cb(msg))

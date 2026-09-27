@@ -93,6 +93,7 @@ async function applyAppearance() {
     for (const k of THEME_TOKENS) style.removeProperty(k);
     style.removeProperty('color-scheme');
     document.body.classList.remove('omarchy', 'ui-light');
+    if (appearanceNow.mode === 'omarchy') setAppMenu(false); // the native bar comes back
     appearanceNow = { mode: 'mutiny', name: '' };
     return appearanceNow;
   }
@@ -103,6 +104,8 @@ async function applyAppearance() {
   style.setProperty('color-scheme', light ? 'light' : 'dark');
   document.body.classList.add('omarchy');
   document.body.classList.toggle('ui-light', light);
+  // the native menu bar can't take a theme: the page draws its own (appmenu.js)
+  if (appearanceNow.mode !== 'omarchy' && /Linux/.test(navigator.userAgent)) setAppMenu(true);
   appearanceNow = { mode: 'omarchy', name: th.name || '' };
   return appearanceNow;
 }

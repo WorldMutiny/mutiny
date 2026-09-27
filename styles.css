@@ -1185,3 +1185,33 @@ body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings
 body.omarchy #reorder-paper .ro-card { border-radius: 0; box-shadow: none; border-color: var(--line-soft); }
 body.omarchy #reorder-paper .ro-card:focus { border-color: var(--accent); }
 body.omarchy #reorder-paper .ro-meta { color: var(--muted); }
+
+/* ---- the menu bar drawn by the page (appmenu.js, Omarchy) ---- */
+#appmenu {
+  position: fixed; top: 0; left: 0; right: 0; height: 30px; z-index: 600;
+  display: flex; align-items: stretch; padding: 0 6px;
+  background: var(--bg); border-bottom: 1px solid var(--line-soft);
+  font-family: var(--ui-font); font-size: 13px; color: var(--fg-2);
+  -webkit-app-region: no-drag; user-select: none;
+}
+#appmenu .am-top { position: relative; display: flex; align-items: center; padding: 0 11px; cursor: default; }
+#appmenu .am-top:hover, #appmenu .am-top.open, #appmenu .am-top.cursor {
+  background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--accent);
+}
+#appmenu .am-drop {
+  position: absolute; top: 100%; left: 0; min-width: 250px; padding: 4px 0;
+  background: var(--bg); border: 1px solid var(--line-strong);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35); color: var(--fg); font-size: 13px;
+}
+#appmenu .am-item { position: relative; display: flex; justify-content: space-between; gap: 24px; padding: 6px 14px; white-space: nowrap; }
+#appmenu .am-item.sel { background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--accent); }
+#appmenu .am-item .am-accel { color: var(--muted); }
+#appmenu .am-item.sel .am-accel { color: inherit; }
+#appmenu .am-item > .am-drop { top: -5px; left: 100%; }
+#appmenu .am-sep { height: 1px; margin: 4px 0; background: var(--line-soft); }
+/* everything that started at the window's top edge moves below the bar */
+body.appmenu-on #bookshelf-view, body.appmenu-on #editor-view { top: 30px; }
+body.appmenu-on #nav-hotzone, body.appmenu-on #nav-pane,
+body.appmenu-on #side-hotzone, body.appmenu-on #side-pane { top: 30px; }
+body.appmenu-on #searchbar { top: 64px; }
+body.appmenu-on #dragstrip { display: none; }

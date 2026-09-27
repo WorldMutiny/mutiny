@@ -1071,7 +1071,70 @@ function buildMenu() {
     }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  // the same menu for a window that draws its own bar (a themed desktop)
+  appMenuActions = new Map();
+  appMenuModel = menuModel(template);
+  for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('appmenu:changed');
 }
+
+// ---------------------------------------------------------------------------
+// The menu as data, for a bar drawn by the page. On Omarchy the native bar
+// can't take the desktop's theme, so the page draws its own from this model;
+// every item still runs here, through the same click or role. Ids come from
+// this list only — the page can't name anything else.
+// ---------------------------------------------------------------------------
+let appMenuModel = [];
+let appMenuActions = new Map();
+const ROLE_ACCEL = {
+  undo: 'CmdOrCtrl+Z', redo: 'CmdOrCtrl+Shift+Z', cut: 'CmdOrCtrl+X', copy: 'CmdOrCtrl+C', paste: 'CmdOrCtrl+V',
+  pasteAndMatchStyle: 'CmdOrCtrl+Shift+V', selectAll: 'CmdOrCtrl+A', quit: 'CmdOrCtrl+Q', close: 'CmdOrCtrl+W'
+};
+const accelText = (a) => (a ? String(a).replace(/CmdOrCtrl|CommandOrControl/g, process.platform === 'darwin' ? '⌘' : 'Ctrl') : '');
+
+function menuModel(items) {
+  const out = [];
+  for (const it of items || []) {
+    if (it.role === 'appMenu') continue;
+    if (it.type === 'separator') { out.push({ sep: true }); continue; }
+    const label = String(it.label || '').replace(/&&/g, '&');
+    if (it.submenu) { out.push({ label, items: menuModel(it.submenu) }); continue; }
+    const id = 'm' + appMenuActions.size;
+    appMenuActions.set(id, it);
+    out.push({ id, label, accel: accelText(it.accelerator || ROLE_ACCEL[it.role]) });
+  }
+  return out;
+}
+
+ipcMain.handle('appmenu:get', () => appMenuModel);
+
+ipcMain.handle('appmenu:run', (e, id) => {
+  const it = appMenuActions.get(String(id));
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!it || !win) return false;
+  if (typeof it.click === 'function') { it.click(); return true; }
+  const wc = win.webContents;
+  switch (it.role) {
+    case 'undo': case 'redo': case 'cut': case 'copy': case 'paste': case 'pasteAndMatchStyle': case 'selectAll':
+      wc[it.role](); break;
+    case 'minimize': win.minimize(); break;
+    case 'zoom': if (win.isMaximized()) win.unmaximize(); else win.maximize(); break;
+    case 'close': win.close(); break;
+    case 'quit': app.quit(); break;
+    default: return false;
+  }
+  return true;
+});
+
+// the page draws the bar itself: the native one steps aside (the menu stays
+// attached, so every shortcut keeps working)
+ipcMain.handle('appmenu:native', (e, visible) => {
+  if (process.platform !== 'linux') return false;
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!win) return false;
+  win.setAutoHideMenuBar(false);
+  win.setMenuBarVisibility(!!visible);
+  return true;
+});
 
 // Manual update check (Help → Check for Update…): a direct GitHub Releases
 // lookup, separate from the silent auto-updater. Works in dev builds too.
