@@ -1253,7 +1253,11 @@ app.whenReady().then(() => {
     // the real Documents folder (handles OneDrive-redirected Windows setups)
     try {
       // MUTINY_LIBRARY_DIR points a development/test run at another library
-      LIBRARY_DIR = process.env.MUTINY_LIBRARY_DIR || path.join(app.getPath('documents'), 'Mutiny Library');
+      // without xdg-user-dirs, Linux reports the home folder itself as
+      // "documents" — keep the library in ~/Documents there too
+      let docs = app.getPath('documents');
+      if (path.resolve(docs) === path.resolve(os.homedir())) docs = path.join(os.homedir(), 'Documents');
+      LIBRARY_DIR = process.env.MUTINY_LIBRARY_DIR || path.join(docs, 'Mutiny Library');
       LIBRARY_FILE = path.join(LIBRARY_DIR, 'library.json');
     } catch (err) {
       logError('paths', err);

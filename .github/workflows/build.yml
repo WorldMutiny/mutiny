@@ -52,7 +52,7 @@ jobs:
           mkdir -p "$HOME/Documents"
           xvfb-run -a dist/linux-unpacked/mutiny --no-sandbox > "$RUNNER_TEMP/app.log" 2>&1 &
           for i in $(seq 1 45); do
-            lib=$(find "$HOME" -maxdepth 3 -path '*Mutiny Library/library.json' 2>/dev/null | head -1)
+            lib="$HOME/Documents/Mutiny Library/library.json"; [ -f "$lib" ] || lib=
             [ -n "$lib" ] && { echo "Mutiny booted on Linux ($lib)."; exit 0; }
             sleep 1
           done
