@@ -1941,6 +1941,8 @@ function focusSticky(sid) {
 /*  NAV PANE                                                           */
 /* ================================================================== */
 
+const navOpen = new Set(); // sections unfolded in the left pane
+
 function renderNav() {
   if (!book) return; // a refresh timer can outlive the book it was set for
   const list = $('#nav-list');
@@ -1953,7 +1955,7 @@ function renderNav() {
     const item = document.createElement('div');
     item.className = 'nav-item' + (chId === currentChapterId ? ' current' : '');
     item.dataset.id = chId;
-    item.innerHTML = `<div class="n-row" title="${t('nav.dragTitle')}"><span class="n-label"></span>
+    item.innerHTML = `<div class="n-row" title="${t('nav.dragTitle')}"><span class="n-caret" title="${t('nav.parasTitle')}">${navOpen.has(chId) ? '▾' : '▸'}</span><span class="n-label"></span>
       <span style="display:flex;align-items:center"><span class="n-words">${words.toLocaleString()}</span>${flagged ? `<span class="n-flag" title="${t('nav.flagTitle')}"></span>` : ''}</span></div>`;
     item.querySelector('.n-label').textContent = book.chapterOrder.length === 1
       ? displayTitle(book)
@@ -1989,6 +1991,27 @@ function renderNav() {
       scheduleMetaSave();
     });
     item.appendChild(note);
+
+    // the first sentence of each paragraph, folded per section: the skeleton
+    // of the argument, one click from any paragraph
+    item.querySelector('.n-caret').onclick = (e) => {
+      e.stopPropagation();
+      if (navOpen.has(chId)) navOpen.delete(chId); else navOpen.add(chId);
+      renderNav();
+    };
+    if (navOpen.has(chId) && typeof proseParagraphs === 'function') {
+      const paras = document.createElement('div');
+      paras.className = 'nav-paras';
+      for (const para of proseParagraphs(chId)) {
+        const line = document.createElement('div');
+        line.className = 'nav-para';
+        line.textContent = firstSentence(paragraphPlain(para), spellLang());
+        line.onclick = (e) => { e.stopPropagation(); gotoParagraph(para); };
+        paras.appendChild(line);
+      }
+      if (!paras.children.length) paras.innerHTML = `<div class="nav-para soft">${t('ro.emptySection')}</div>`;
+      item.appendChild(paras);
+    }
 
     item.onclick = () => {
       switchTab('manuscript');
@@ -2727,7 +2750,7 @@ function flushAux() {
 
 // where a kept passage came from — older ones carry a ready-made label
 function laterFrom(d) {
-  if (d.chapterNum) return t(d.deleted ? 'later.fromDeleted' : 'later.fromSection', { n: d.chapterNum });
+  if (d.chapterNum) return t(d.variant ? 'later.fromVariant' : d.deleted ? 'later.fromDeleted' : 'later.fromSection', { n: d.chapterNum });
   return d.chapterLabel || t('later.fromDraft');
 }
 

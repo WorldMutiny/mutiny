@@ -243,21 +243,19 @@ function renderReorder() {
 
 // go back to the draft with the caret at the start of paragraph p
 function gotoParagraph(p) {
-  toggleReorder(false);
+  if (reorderOn) toggleReorder(false);
   switchTab('manuscript');
-  requestAnimationFrame(() => {
-    p.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const body = p.closest('.chapter-body');
-    body.focus({ preventScroll: true });
-    const r = document.createRange();
-    r.setStart(p, 0);
-    r.collapse(true);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(r);
-    currentChapterId = chapterOfBody(body);
-    highlightNav();
-  });
+  const body = p.closest('.chapter-body');
+  body.focus({ preventScroll: true });
+  const r = document.createRange();
+  r.setStart(p, 0);
+  r.collapse(true);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(r);
+  currentChapterId = chapterOfBody(body);
+  highlightNav();
+  p.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // ---- paragraph cards

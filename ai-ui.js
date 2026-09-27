@@ -441,63 +441,6 @@ async function critique(scope) {
 
 // ---------------------------------------------------------------- rewrite
 
-async function rewriteSelection(mode) {
-  if (!book || currentTab !== 'manuscript') { toast(t('ai.selectFirst', { key: K('⌘⇧M', 'Ctrl+Shift+M') })); return; }
-  const sel = window.getSelection();
-  if (!sel.rangeCount || sel.isCollapsed) { toast(t('ai.selectFirst', { key: K('⌘⇧M', 'Ctrl+Shift+M') })); return; }
-  const range = sel.getRangeAt(0).cloneRange();
-  const node = (n) => (n.nodeType === Node.TEXT_NODE ? n.parentElement : n);
-  const p = node(range.startContainer).closest && node(range.startContainer).closest('.chapter-body p');
-  if (!p || p !== (node(range.endContainer).closest && node(range.endContainer).closest('.chapter-body p'))) {
-    toast(t('ai.oneParagraph'));
-    return;
-  }
-  const frag = range.cloneContents();
-  if (frag.querySelector && frag.querySelector('.cite, .cite-mark, .ph-mark')) { toast(t('ai.noMarksInside')); return; }
-  const passage = sel.toString().trim();
-  if (countWords(passage) < 3) { toast(t('ai.selectMore')); return; }
-  const ask = (m) => aiRun('rewrite', { passage, paragraph: p.innerText, lang: spellLang(), mode: m }, t('ai.rewriting'));
-  let data = await ask(mode);
-  if (!data) return;
-
-  const bd = document.createElement('div');
-  bd.className = 'modal-backdrop';
-  const draw = () => {
-    bd.innerHTML = `
-      <div class="modal rw-modal" style="width:620px">
-        <h2 style="font-size:16px">${t('ai.rewriteTitle')}</h2>
-        <div class="rw-orig"><div class="soft">${t('ai.original')}</div><div class="rw-text"></div></div>
-        <div class="rw-variants"></div>
-        <div class="rw-modes">${Object.keys(RW_MODES).map((m) => `<button data-m="${m}" class="btn-quiet">${t('ai.mode.' + m)}</button>`).join('')}</div>
-        <div style="text-align:right;margin-top:12px"><button class="m-cancel btn-quiet">${t('common.cancel')}</button></div>
-      </div>`;
-    bd.querySelector('.rw-orig .rw-text').textContent = passage;
-    const list = bd.querySelector('.rw-variants');
-    for (const v of data.variants || []) {
-      const b = document.createElement('button');
-      b.className = 'fr-choice rw-variant';
-      b.innerHTML = `<strong class="rw-text"></strong><span></span>`;
-      b.querySelector('strong').textContent = v.text;
-      b.querySelector('span').textContent = v.why;
-      b.onclick = () => { done(); applyRewrite(range, p, v.text); };
-      list.appendChild(b);
-    }
-    bd.querySelectorAll('.rw-modes button').forEach((b) => {
-      b.onclick = async () => {
-        bd.style.display = 'none';
-        const next = await ask(b.dataset.m);
-        bd.style.display = '';
-        if (next) { data = next; draw(); }
-      };
-    });
-    bd.querySelector('.m-cancel').onclick = done;
-  };
-  const done = () => bd.remove();
-  bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(); } });
-  document.body.appendChild(bd);
-  draw();
-}
-
 const RW_MODES = { clearer: 1, shorter: 1, stronger: 1, informal: 1 };
 
 // the original goes to Later (restorable, undoable); the variant takes its place
@@ -736,7 +679,7 @@ document.addEventListener('keydown', (e) => {
   if ($('#editor-view').hidden) return;
   if (document.querySelector('.modal-backdrop:not([hidden])')) return;
   const cmd = e.metaKey || e.ctrlKey;
-  if (cmd && e.shiftKey && e.code === 'KeyM') { e.preventDefault(); rewriteSelection(); }
+  if (cmd && e.shiftKey && e.code === 'KeyM') { e.preventDefault(); openVersions(); } // versions.js
   if (cmd && e.shiftKey && e.code === 'KeyC') { e.preventDefault(); critique('section'); } // the section the caret is in
   if (cmd && e.shiftKey && e.code === 'KeyA') { e.preventDefault(); openChat(); }
 });
@@ -746,6 +689,6 @@ window.neo.onMenu((msg) => {
   if (msg.action === 'settings') openAiSettings();
   else if (msg.action === 'critique-section') critique('section');
   else if (msg.action === 'critique-essay') critique('essay');
-  else if (msg.action === 'rewrite') rewriteSelection();
+  else if (msg.action === 'rewrite') openVersions();
   else if (msg.action === 'chat') openChat();
 });
