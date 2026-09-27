@@ -49,10 +49,11 @@ jobs:
       - name: Smoke test — the app boots and creates its library
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb >/dev/null
-          export HOME="$RUNNER_TEMP/home" && mkdir -p "$HOME/Documents"
+          mkdir -p "$HOME/Documents"
           xvfb-run -a dist/linux-unpacked/mutiny --no-sandbox > "$RUNNER_TEMP/app.log" 2>&1 &
           for i in $(seq 1 45); do
-            [ -f "$HOME/Documents/Mutiny Library/library.json" ] && { echo "Mutiny booted on Linux."; exit 0; }
+            lib=$(find "$HOME" -maxdepth 3 -path '*Mutiny Library/library.json' 2>/dev/null | head -1)
+            [ -n "$lib" ] && { echo "Mutiny booted on Linux ($lib)."; exit 0; }
             sleep 1
           done
           cat "$RUNNER_TEMP/app.log"; echo "Mutiny never created its library"; exit 1
