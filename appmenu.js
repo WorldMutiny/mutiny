@@ -34,33 +34,50 @@ async function setAppMenu(on) {
   drawAppMenu();
 }
 
-// labels come from the app's own strings; set as text all the same
+// The bar is built once per menu model, and a dropdown once per opening.
+// Moving the pointer only changes classes: a node replaced under the pointer
+// between press and release would never get its click.
 function drawAppMenu() {
   const m = appMenu;
-  m.el.textContent = '';
-  m.model.forEach((top, i) => {
-    const b = document.createElement('span');
-    b.className = 'am-top' + (m.open === i ? ' open' : '') + (m.keys && m.path.length === 0 && m.cursor === i ? ' cursor' : '');
-    b.textContent = top.label;
-    b.setAttribute('role', 'menuitem');
-    b.onclick = () => (m.open === i ? closeAppMenu() : openTop(i, false));
-    b.onmouseenter = () => { if (m.open !== -1 && m.open !== i) openTop(i, false); };
-    m.el.appendChild(b);
-    if (m.open === i) b.appendChild(drawDropdown(top.items, [i]));
-  });
+  if (m.builtModel !== m.model) {
+    m.builtModel = m.model;
+    m.builtOpen = null;
+    m.el.textContent = '';
+    m.tops = m.model.map((top, i) => {
+      const b = document.createElement('span');
+      b.className = 'am-top';
+      b.setAttribute('role', 'menuitem');
+      const label = document.createElement('span');
+      label.textContent = top.label; // the app's own strings, as text all the same
+      b.appendChild(label);
+      b.addEventListener('click', (e) => {
+        if (e.target.closest('.am-drop')) return; // a row's click, not the title's
+        if (m.open === i) closeAppMenu(); else openTop(i, false);
+      });
+      b.addEventListener('mouseenter', () => { if (m.open !== -1 && m.open !== i) openTop(i, false); });
+      m.el.appendChild(b);
+      return b;
+    });
+  }
+  if (m.builtOpen !== m.open) {
+    m.el.querySelectorAll('.am-drop').forEach((d) => d.remove());
+    if (m.open !== -1) m.tops[m.open].appendChild(buildDropdown(m.model[m.open].items, 1));
+    m.builtOpen = m.open;
+  }
+  markAppMenu();
 }
 
-function drawDropdown(items, at) {
+// the whole tree of the open menu; submenus show when their row is selected
+function buildDropdown(items, depth) {
   const m = appMenu;
   const box = document.createElement('div');
   box.className = 'am-drop';
   box.setAttribute('role', 'menu');
-  const depth = at.length; // 1 = the top menu's list
-  const sel = m.path[depth - 1];
   items.forEach((it, j) => {
     if (it.sep) { const hr = document.createElement('div'); hr.className = 'am-sep'; box.appendChild(hr); return; }
     const row = document.createElement('div');
-    row.className = 'am-item' + (sel === j ? ' sel' : '') + (it.items ? ' has-sub' : '');
+    row.className = 'am-item' + (it.items ? ' has-sub' : '');
+    row.dataset.j = j;
     row.setAttribute('role', 'menuitem');
     const label = document.createElement('span');
     label.textContent = it.label;
@@ -69,20 +86,40 @@ function drawDropdown(items, at) {
     right.textContent = it.items ? '›' : (it.accel || '');
     row.append(label, right);
     // hovering a row selects it; one with a submenu opens it
-    row.onmouseenter = () => {
+    row.addEventListener('mouseenter', () => {
       m.path = [...m.path.slice(0, depth - 1), j];
       if (it.items) m.path.push(-1);
-      drawAppMenu();
-    };
-    row.onclick = (e) => {
+      markAppMenu();
+    });
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.am-drop') !== box) return; // bubbled up from a submenu row
       e.stopPropagation();
-      if (it.items) { m.path = [...m.path.slice(0, depth - 1), j, 0]; drawAppMenu(); return; }
+      if (it.items) { m.path = [...m.path.slice(0, depth - 1), j, firstItem(it.items, -1, 1)]; markAppMenu(); return; }
       runAppMenu(it.id);
-    };
-    if (it.items && sel === j && m.path.length > depth) row.appendChild(drawDropdown(it.items, at.concat(j)));
+    });
+    if (it.items) row.appendChild(buildDropdown(it.items, depth + 1));
     box.appendChild(row);
   });
   return box;
+}
+
+// selection and open submenus follow m.path; the bar's cursor follows m.cursor
+function markAppMenu() {
+  const m = appMenu;
+  m.tops.forEach((b, i) => {
+    b.classList.toggle('open', m.open === i);
+    b.classList.toggle('cursor', m.keys && m.open === -1 && m.cursor === i);
+  });
+  const mark = (box, d) => {
+    for (const row of box.querySelectorAll(':scope > .am-item')) {
+      const sel = Number(row.dataset.j) === m.path[d];
+      row.classList.toggle('sel', sel);
+      const sub = row.querySelector(':scope > .am-drop');
+      if (sub) { sub.hidden = !sel || m.path.length <= d + 1; if (!sub.hidden) mark(sub, d + 1); }
+    }
+  };
+  const drop = m.open !== -1 && m.tops[m.open].querySelector(':scope > .am-drop');
+  if (drop) mark(drop, 0);
 }
 
 function openTop(i, keys) {
