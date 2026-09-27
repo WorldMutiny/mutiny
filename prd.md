@@ -274,7 +274,8 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] Paso "Tu voz" en el onboarding.
 - **Aceptación:** con 4 textos (unas 1,500 palabras) genera un perfil en segundos, y las versiones del asistente adoptan la voz sin caricaturizarla.
 
-### Fase 5b — Verificar fuentes
+### Fase 5b — Verificar fuentes + progreso visible de la IA
+- [ ] **Progreso visible de la IA en todas sus tareas** (pedido 2026-09-27, movido de la fase final): sugerencias/Versiones, crítica, investigación y chat. Hoy solo aparece el chip de la barra inferior del editor. Usar el modelo de "Escribiendo tu estilo" (`styleProgress` en `voice.js`): una ventana con qué hace, sobre cuánto texto, los segundos y un botón Detener, y **conservar también el chip** de abajo. El usuario quiere las dos cosas.
 ### Fase 6 — Multiplataforma y publicación
 - [ ] Builds de Mac (dmg) y Windows (exe) con GitHub Actions. NEO ya tiene la configuración de electron-builder para las tres plataformas.
 - [ ] Notarización de Mac: requiere una cuenta de Apple Developer (99 USD/año). Sin ella, el usuario tiene que autorizar la app a mano en macOS.
@@ -294,7 +295,6 @@ Decisiones tomadas en el camino que no estaban en el plan:
 
 ### Fase final — Pulido de la experiencia de usuario
 - [ ] Revisión completa de la UX una vez que todas las funciones estén en su lugar (pedido 2026-09-26).
-- [ ] **Progreso visible de la IA en todas sus tareas** (pedido 2026-09-27): sugerencias/Versiones, crítica, investigación y chat. Hoy solo aparece el chip de la barra inferior del editor. Usar el modelo de "Escribiendo tu estilo" (`styleProgress` en `voice.js`): una ventana con qué hace, sobre cuánto texto, los segundos y un botón Detener, y **conservar también el chip** de abajo. El usuario quiere las dos cosas.
 
 ## 8. Riesgos
 
