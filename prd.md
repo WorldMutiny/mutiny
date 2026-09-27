@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** v0.8 — fases 0 a 5a completas (en main) · 2026-09-27
+**Estado:** v0.9 — fases 0 a 5b completas · 2026-09-27
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx
 
@@ -274,8 +274,26 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] Paso "Tu voz" en el onboarding.
 - **Aceptación:** con 4 textos (unas 1,500 palabras) genera un perfil en segundos, y las versiones del asistente adoptan la voz sin caricaturizarla.
 
-### Fase 5b — Verificar fuentes + progreso visible de la IA
-- [ ] **Progreso visible de la IA en todas sus tareas** (pedido 2026-09-27, movido de la fase final): sugerencias/Versiones, crítica, investigación y chat. Hoy solo aparece el chip de la barra inferior del editor. Usar el modelo de "Escribiendo tu estilo" (`styleProgress` en `voice.js`): una ventana con qué hace, sobre cuánto texto, los segundos y un botón Detener, y **conservar también el chip** de abajo. El usuario quiere las dos cosas.
+### Fase 5b — Progreso visible de la IA ✅
+- [x] **Progreso visible de la IA en todas sus tareas** (pedido 2026-09-27): Versiones, Criticar, Investigar y Generar mi estilo abren una ventana (`aiDialog` en `ai-ui.js`) con:
+  - qué hace y sobre cuánto texto;
+  - con qué proveedor y modelo;
+  - lo que está haciendo en vivo (búsquedas y páginas que lee);
+  - los segundos que lleva y cuánto suele tardar;
+  - el botón **Detener**.
+
+  El chip de la barra inferior se conserva.
+- [x] **"Seguir escribiendo"** solo en las tareas cuyo resultado se guarda solo (Criticar, Investigar, Generar mi estilo). Al terminar en segundo plano, los comentarios o la investigación llegan con un aviso. El estilo no se abre de golpe: el chip cambia a "✦ Tu estilo está listo — verlo". Versiones no lleva este botón, porque ahí estás esperando para elegir.
+- [x] Si el ensayo se cierra mientras una tarea corre en segundo plano, el resultado no se aplica a otro ensayo: se avisa.
+- [x] **Chat**: sin ventana. Tiene un indicador dentro de su panel (qué hace, proveedor, segundos, Detener) y conserva el chip.
+
+### Versión futura — Verificar fuentes
+- [ ] Pospuesto por decisión del usuario (2026-09-27). El plan discutido tiene dos niveles:
+  - sin IA: citas huérfanas, fuentes sin citar, enlaces caídos con Internet Archive, duplicados;
+  - con IA: Mutiny descarga la página y el asistente juzga cada frase citada (✓/⚠/✗) con la cita textual como prueba.
+
+  Además: insignias en Fuentes, comentario ✦ en el texto, solo verifica lo nuevo, y aviso no bloqueante al exportar.
+
 ### Fase 6 — Multiplataforma y publicación
 - [ ] Builds de Mac (dmg) y Windows (exe) con GitHub Actions. NEO ya tiene la configuración de electron-builder para las tres plataformas.
 - [ ] Notarización de Mac: requiere una cuenta de Apple Developer (99 USD/año). Sin ella, el usuario tiene que autorizar la app a mano en macOS.

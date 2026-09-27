@@ -1087,3 +1087,24 @@ body.night .ro-card:focus { border-color: var(--accent); }
 
 .sp-line { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 4px 0 14px; }
 .sp-line .sp-time { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* the assistant at work: the dialog every task shows (ai-ui.js aiDialog) */
+.ap-modal .ap-detail { font-size: 14px !important; margin-bottom: 14px !important; overflow-wrap: anywhere; }
+.ap-modal .ap-stage { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ap-modal .ap-meta { margin-bottom: 10px !important; }
+.ap-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.ap-actions .ap-bg { color: var(--accent); }
+/* the chip, once a background task is done: a link to its result */
+#ai-status.ready { cursor: pointer; background: #2c3326; border-color: #56704a; color: #b9d6a4; }
+#ai-status.ready .ai-spin, #ai-status.ready .ai-x { display: none; }
+/* the chat's own progress line, inside its pane */
+.chat-status {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  padding: 7px 14px; border-top: 1px solid #2c2c2c; font-size: 12px; color: var(--accent);
+}
+.chat-status[hidden] { display: none; }
+.chat-status .cs-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.chat-status .cs-stage { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-status .cs-who { font-size: 11px; }
+.chat-status .cs-time { font-variant-numeric: tabular-nums; }
+.chat-status .cs-stop { font-size: 12px; padding: 3px 6px; }

@@ -6,7 +6,9 @@
 
 'use strict';
 
-let aiJob = null; // { id, label }
+let aiJob = null; // { id, label, dialog?, background? }
+let aiLastBackground = false; // the last task finished after "Keep writing"
+let aiReadyAction = null; // the chip, turned into "ready — see", runs this
 const aiConf = () => (library && library.ai) || {};
 const aiEnabled = () => !!aiConf().enabled;
 // what the main process needs to pick and configure a provider
@@ -25,12 +27,95 @@ function aiChip(text) {
 
 window.neo.onAiProgress((m) => {
   if (!aiJob || m.jobId !== aiJob.id) return;
-  if (m.stage === 'search') aiChip(t('ai.progress.search', { q: m.detail }));
-  else if (m.stage === 'read') aiChip(t('ai.progress.read', { site: m.detail }));
-  else aiChip(aiJob.label);
+  const text = m.stage === 'search' && m.detail ? t('ai.progress.search', { q: m.detail })
+    : m.stage === 'read' && m.detail ? t('ai.progress.read', { site: m.detail })
+    : m.stage === 'search' ? t('chat.searching')
+    : aiJob.label;
+  aiChip(text);
+  if (aiJob.dialog) aiJob.dialog.stage(text);
+  if (typeof chatStatus === 'function' && chatLive) chatStatus(text);
 });
 
-$('#ai-status').onclick = () => aiCancel();
+// the chip stops a running task, or — once a task sent to the background is
+// done — opens what it produced
+$('#ai-status').onclick = () => {
+  if (aiReadyAction) {
+    const run = aiReadyAction;
+    aiReadyAction = null;
+    $('#ai-status').classList.remove('ready');
+    aiChip(null);
+    run();
+    return;
+  }
+  aiCancel();
+};
+
+function aiReady(text, run) {
+  aiReadyAction = run;
+  aiChip(text);
+  $('#ai-status').classList.add('ready');
+}
+
+// ---------------------------------------------------------------- progress dialog
+
+const clipText = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+
+// who is doing the work, as the writer set it up
+function aiWho() {
+  const c = aiConf();
+  const p = c.provider || 'claude-code';
+  if (p === 'compat') return [t('ai.preset.' + (c.compatPreset || 'custom')), c.compatModel].filter(Boolean).join(' · ');
+  const name = { 'claude-code': 'Claude Code', codex: 'Codex', anthropic: t('ai.who.api') }[p] || p;
+  const model = p === 'anthropic' ? c.apiModel : c.model;
+  return name + ' · ' + (model || t('ai.who.defaultModel'));
+}
+
+// Every task shows itself where the writer is looking: what it does, on how
+// much text, with whom, for how long, and Stop — the chip below stays too.
+// d: { title, detail, wait, background } — background adds "Keep writing",
+// for tasks whose results keep on their own (critique, research, style).
+function aiDialog(d) {
+  const bd = document.createElement('div');
+  bd.className = 'modal-backdrop ap-backdrop';
+  bd.innerHTML = `
+    <div class="modal ap-modal" style="width:470px">
+      <h2 style="font-size:16px"></h2>
+      <p class="ap-detail"></p>
+      <div class="sp-line"><span class="ai-spin"></span><span class="ap-stage"></span><span class="ap-time soft"></span></div>
+      <p class="soft ap-meta" style="font-size:12px"></p>
+      <div class="ap-actions">
+        ${d.background ? `<button class="ap-bg btn-quiet" title="${t('ai.keepWritingTitle')}">${t('ai.keepWriting')}</button>` : ''}
+        <button class="ap-stop btn-quiet">${t('ai.stop')}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(bd);
+  // titles and details can carry the writer's words: text, never markup
+  bd.querySelector('h2').textContent = d.title || '';
+  const detail = bd.querySelector('.ap-detail');
+  if (d.detail) detail.textContent = d.detail; else detail.remove();
+  bd.querySelector('.ap-meta').textContent = [aiWho(), d.wait].filter(Boolean).join(' · ');
+  const stageEl = bd.querySelector('.ap-stage');
+  const t0 = Date.now();
+  const tick = () => { bd.querySelector('.ap-time').textContent = t('ai.secs', { n: Math.round((Date.now() - t0) / 1000) }); };
+  tick();
+  const timer = setInterval(tick, 1000);
+  const api = {
+    open: true,
+    stage(text) { if (api.open) stageEl.textContent = text; },
+    close() { clearInterval(timer); api.open = false; bd.remove(); }
+  };
+  const stop = () => { stageEl.textContent = t('ai.stopping'); aiCancel(); };
+  bd.querySelector('.ap-stop').onclick = stop;
+  const bg = bd.querySelector('.ap-bg');
+  if (bg) bg.onclick = () => {
+    if (aiJob) aiJob.background = true;
+    api.close();
+    toast(t('ai.inBackground'), 5000);
+  };
+  bd.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') stop(); });
+  (bg || bd.querySelector('.ap-stop')).focus();
+  return api;
+}
 
 function aiCancel() {
   if (!aiJob) return false;
@@ -39,7 +124,9 @@ function aiCancel() {
 }
 
 // Run a task with the chip up; resolves to its data, or null (and a toast)
-async function aiRun(task, input, label) {
+// dialog: what aiDialog shows (see above); false for none
+async function aiRun(task, input, label, dialog) {
+  aiLastBackground = false;
   if (!aiEnabled()) {
     toast(t('ai.off'), 6000);
     openAiSettings();
@@ -48,14 +135,21 @@ async function aiRun(task, input, label) {
   if (aiJob) { toast(t('ai.busy')); return null; }
   const id = 'job-' + Date.now().toString(36);
   aiJob = { id, label };
+  aiReadyAction = null;
+  $('#ai-status').classList.remove('ready');
   aiChip(label);
+  if (dialog !== false) {
+    aiJob.dialog = aiDialog(dialog || { title: label });
+    aiJob.dialog.stage(label);
+  }
   let res;
   try {
-    const c = aiConf();
     res = await window.neo.aiRun(id, task, input, aiSettings());
   } catch (err) {
     res = { ok: false, error: 'failed', detail: String(err) };
   } finally {
+    if (aiJob.dialog) aiJob.dialog.close();
+    aiLastBackground = !!aiJob.background;
     aiJob = null;
     aiChip(null);
     if (typeof renderStickies === 'function' && book) renderStickies();
@@ -316,13 +410,20 @@ async function researchSticky(s) {
   const mark = document.querySelector(`.ph-mark[data-sid="${s.id}"]`);
   if (!(s.text || '').trim()) { toast(t('ai.needNote')); return; }
   const para = mark && mark.closest('p');
+  const bookId = book.id;
   const data = await aiRun('research', {
     note: s.text,
     paragraph: para ? para.innerText : '',
     title: displayTitle(book),
     lang: spellLang()
-  }, t('ai.researching'));
+  }, t('ai.researching'), {
+    title: t('ai.t.research'),
+    detail: t('ai.d.research', { note: clipText(s.text, 140) }),
+    wait: t('ai.wait.research'),
+    background: true
+  });
   if (!data) return;
+  if (!book || book.id !== bookId) { toast(t('ai.bookClosed'), 7000); return; } // the essay was closed meanwhile
   // found sources join the list as candidates, merging with known ones
   const ids = [];
   for (const f of data.sources || []) {
@@ -397,9 +498,21 @@ async function critique(scope) {
     }
   }
   if (paragraphs.length < 2) { toast(t('ai.tooShort')); return; }
+  const words = paragraphs.reduce((a, x) => a + countWords(x.text), 0);
+  const bookId = book.id;
   const data = await aiRun('critique', { paragraphs, title: displayTitle(book), lang: spellLang(), scope },
-    t(scope === 'section' ? 'ai.critiquingSection' : 'ai.critiquingEssay'));
+    t(scope === 'section' ? 'ai.critiquingSection' : 'ai.critiquingEssay'), {
+      title: t('ai.t.critique'),
+      detail: scope === 'section'
+        ? (paragraphs[0].section
+          ? t('ai.d.critiqueSection', { name: paragraphs[0].section, paras: fmtN(paragraphs.length), words: fmtN(words) })
+          : t('ai.d.critiqueSectionN', { n: book.chapterOrder.indexOf(chIds[0]) + 1, paras: fmtN(paragraphs.length), words: fmtN(words) }))
+        : t('ai.d.critiqueEssay', { sections: fmtN(chIds.length), paras: fmtN(paragraphs.length), words: fmtN(words) }),
+      wait: t(scope === 'section' ? 'ai.wait.critiqueSection' : 'ai.wait.critiqueEssay'),
+      background: true
+    });
   if (!data) return;
+  if (!book || book.id !== bookId) { toast(t('ai.bookClosed'), 7000); return; } // the essay was closed meanwhile
   const comments = (data.comments || []).slice(0, 7);
   if (!comments.length) { toast(t('ai.noIssues'), 6000); return; }
   snapshotStructure('critique');
@@ -600,6 +713,30 @@ async function chatContext(scope) {
 }
 
 let chatLive = null; // the assistant message being streamed into
+
+// The chat shows its progress inside its own pane (a dialog would cover the
+// answer as it arrives): what it's doing, for how long, and Stop.
+let chatTimer = null;
+function chatStatus(text) {
+  const box = $('#chat-view .chat-status');
+  if (!box) return;
+  if (text === null) {
+    clearInterval(chatTimer);
+    chatTimer = null;
+    box.hidden = true;
+    return;
+  }
+  box.querySelector('.cs-stage').textContent = text;
+  if (!chatTimer) {
+    const t0 = Date.now();
+    const tick = () => { box.querySelector('.cs-time').textContent = t('ai.secs', { n: Math.round((Date.now() - t0) / 1000) }); };
+    tick();
+    chatTimer = setInterval(tick, 1000);
+    box.querySelector('.cs-who').textContent = aiWho();
+  }
+  box.hidden = false;
+}
+$('#chat-view .cs-stop').onclick = () => { if (chatLive) { chatStatus(t('ai.stopping')); aiCancel(); } };
 window.neo.onAiDelta((m) => {
   if (!aiJob || m.jobId !== aiJob.id || !chatLive) return;
   chatLive.msg.text += m.text;
@@ -629,6 +766,7 @@ async function sendChat() {
   const id = 'chat-' + Date.now().toString(36);
   aiJob = { id, label: t('chat.thinking') };
   aiChip(t(web ? 'chat.searching' : 'chat.thinking'));
+  chatStatus(t(web ? 'chat.searching' : 'chat.thinking'));
   let res;
   try {
     res = await window.neo.aiChat(id, { ctx, history, web }, aiSettings());
@@ -637,6 +775,7 @@ async function sendChat() {
   } finally {
     aiJob = null;
     aiChip(null);
+    chatStatus(null);
     chatLive = null;
   }
   if (res.ok) {

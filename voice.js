@@ -452,35 +452,8 @@ function sampleVoice(docs) {
   });
 }
 
-// The editor's progress chip isn't on the shelf, so generating shows its own
-// dialog: what's happening, for how long, and a way to stop it.
-let styleJob = null;
-function styleProgress(words, texts) {
-  const bd = document.createElement('div');
-  bd.className = 'modal-backdrop';
-  bd.innerHTML = `
-    <div class="modal sp-modal" style="width:440px">
-      <h2 style="font-size:16px">${t('voice.genTitle')}</h2>
-      <p>${t('voice.genMsg', { n: fmtN(words), texts })}</p>
-      <div class="sp-line"><span class="ai-spin"></span><span class="sp-stage">${t('voice.generating')}</span><span class="sp-time soft"></span></div>
-      <p class="soft" style="font-size:12px">${t('voice.genWait')}</p>
-      <div style="text-align:right"><button class="m-cancel btn-quiet">${t('voice.genStop')}</button></div>
-    </div>`;
-  document.body.appendChild(bd);
-  const t0 = Date.now();
-  const tick = () => { bd.querySelector('.sp-time').textContent = t('voice.genSecs', { n: Math.round((Date.now() - t0) / 1000) }); };
-  tick();
-  const timer = setInterval(tick, 1000);
-  const stop = () => { bd.querySelector('.sp-stage').textContent = t('voice.genStopping'); aiCancel(); };
-  bd.querySelector('.m-cancel').onclick = stop;
-  bd.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') stop(); });
-  bd.querySelector('.m-cancel').focus();
-  return { close() { clearInterval(timer); bd.remove(); } };
-}
-
 async function generateStyle() {
-  if (styleJob) { toast(t('voice.genRunning')); return; }
-  if (typeof aiJob !== 'undefined' && aiJob) { toast(t('ai.busy')); return; }
+  if (aiJob) { toast(t(aiJob.style ? 'voice.genRunning' : 'ai.busy')); return; }
   const docs = await voiceCorpus();
   const words = docs.reduce((a, d) => a + d.words, 0);
   if (words < VOICE_MIN) { toast(t('voice.tooLittle', { n: fmtN(VOICE_MIN) }), 6000); return; }
@@ -504,22 +477,28 @@ async function generateStyle() {
     if (how === 'keep') previous = current;
   }
   const m = measureVoice(docs);
-  styleJob = styleProgress(words, docs.length);
-  let data = null;
-  try {
-    data = await aiRun('styleProfile', {
-      texts: sampleVoice(docs),
-      stats: measuresForModel(m),
-      lang: m.lang,
-      previous
-    }, t('voice.generating'));
-  } finally {
-    styleJob.close();
-    styleJob = null;
-  }
+  const run = aiRun('styleProfile', {
+    texts: sampleVoice(docs),
+    stats: measuresForModel(m),
+    lang: m.lang,
+    previous
+  }, t('voice.generating'), {
+    title: t('voice.genTitle'),
+    detail: t('voice.genMsg', { n: fmtN(words), texts: docs.length }),
+    wait: t('voice.genWaitShort'),
+    background: true
+  });
+  if (aiJob) aiJob.style = true;
+  const data = await run;
   const md = data && typeof data.markdown === 'string' ? data.markdown.trim() : '';
   if (!md) return;
-  openStyle({ draft: md, words, texts: docs.length, before: current });
+  const review = () => openStyle({ draft: md, words, texts: docs.length, before: current });
+  // sent to the background while the writer went on writing: don't pop the
+  // review over their page — the chip says it's ready, they open it
+  if (aiLastBackground && $('#bookshelf-view').hidden) {
+    aiReady(t('voice.ready'), review);
+    toast(t('voice.ready'), 6000);
+  } else review();
 }
 
 // ---------------------------------------------------------------- estilo.md

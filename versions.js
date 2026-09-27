@@ -88,7 +88,12 @@ async function openVersions() {
 
   const ask = async (mode) => {
     bd.style.display = 'none';
-    const data = await aiRun('rewrite', { passage: original, paragraph: p.innerText, lang: spellLang(), mode }, t('ai.rewriting'));
+    const data = await aiRun('rewrite', { passage: original, paragraph: p.innerText, lang: spellLang(), mode }, t('ai.rewriting'), {
+      title: t('ai.t.rewrite'),
+      detail: t('ai.d.rewrite', { text: clipText(original, 120), n: tn('count.words', countWords(original)) }) +
+        (mode ? ' · ' + t('ai.mode.' + mode) : ''),
+      wait: t('ai.wait.rewrite')
+    });
     bd.style.display = '';
     if (!data) return;
     for (const v of data.variants || []) if (v && v.text) { const tx = String(v.text).trim(); versions.push({ text: tx, orig: tx, why: String(v.why || ''), by: 'ai' }); }
