@@ -1215,3 +1215,36 @@ body.appmenu-on #nav-hotzone, body.appmenu-on #nav-pane,
 body.appmenu-on #side-hotzone, body.appmenu-on #side-pane { top: 30px; }
 body.appmenu-on #searchbar { top: 64px; }
 body.appmenu-on #dragstrip { display: none; }
+
+/* ---- Omarchy: the writing pages take the theme's colours too ----
+   Draft, Notes and Outline are dressed like Sources and Later — the theme's
+   surface, text and accent — but keep their typefaces (--body-font is left
+   alone here). The night/paper page choice applies to Mutiny's own look. */
+body.omarchy :is(#paper, #aux-paper, #fr-sample) {
+  --paper: var(--pane);
+  --ink: var(--fg);
+  --page-accent: var(--accent);
+  --page-muted: var(--muted);
+  --page-red: var(--red);
+}
+body.omarchy :is(#paper, #aux-paper) { box-shadow: none; border: 1px solid var(--line-soft); }
+body.omarchy #fr-sample { border: 1px solid var(--line-soft); border-radius: 0; }
+body.omarchy #paper ::selection, body.omarchy #aux-paper ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+body.omarchy #tp-subtitle { color: var(--fg-2); }
+body.omarchy #tp-author { color: var(--muted); }
+body.omarchy :is(#paper, #aux-paper) [contenteditable][data-ph]:empty::before,
+body.omarchy #aux-editor:empty::before,
+body.omarchy .ol-text:empty::before { color: var(--fainter); }
+body.omarchy .chapter-head .ch-num { color: var(--faint); }
+body.omarchy .chapter-head .ch-title:empty::before { color: var(--fainter); }
+body.omarchy .chapter-body p.scene-break { color: var(--muted); }
+body.omarchy .chapter-body p.ghost { color: var(--faint); }
+body.omarchy .ph-mark { background: color-mix(in srgb, var(--accent) 22%, transparent); border-bottom-color: var(--accent); }
+body.omarchy .chapter-body .ph-mark.ai { background: none; color: var(--ai); }
+body.omarchy #aux-paper h2 { color: var(--muted); }
+body.omarchy .ol-num { color: var(--muted); }
+body.omarchy .ol-chapter .ol-num { color: var(--fg-2); }
+body.omarchy .ol-text:focus { border-bottom-color: var(--line); }
+body.omarchy .ol-hint { color: var(--faint); }
+body.omarchy .chapter-body :is(.cite.orphan, .cite-mark.orphan) { text-decoration-color: var(--red); }
+body.omarchy .chapter-body .cite-mark.orphan { color: var(--red); }
