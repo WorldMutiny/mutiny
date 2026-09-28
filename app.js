@@ -1711,6 +1711,7 @@ document.addEventListener('keydown', (e) => {
       return;
     }
     if (closeSidePane()) return;
+    if ($('#nav-pane').classList.contains('open')) { $('#nav-pane').classList.remove('open'); return; }
     if (!$('#searchbar').hidden) closeSearch();
     else window.neo.fullscreenEscape().then((exited) => { if (!exited) backToShelf(); });
   }
@@ -1842,6 +1843,7 @@ function growNote(ta) {
 }
 
 function renderStickies() {
+  updateEdgeTabs();
   const wrap = $('#sticky-list');
   wrap.innerHTML = '';
   const where = new Map();
@@ -2297,6 +2299,41 @@ $('#editor-view').addEventListener('wheel', (e) => {
   if ($('#nav-pane').contains(e.target) || $('#side-pane').contains(e.target)) return;
   scroller.scrollTop += e.deltaY;
 }, { passive: true });
+
+// The pull tabs and Ctrl+[ / Ctrl+] open and close the panes without the
+// mouse at the edge. The notes tab counts what's still open in the pane.
+function togglePane(which) {
+  if (!book || $('#editor-view').hidden) return;
+  if (which === 'nav') {
+    $('#nav-pane').classList.toggle('open');
+    return;
+  }
+  const pane = $('#side-pane');
+  if (pane.classList.contains('open')) {
+    if (pane.dataset.pinned === '1') $('#side-pin').click(); // unpin, then close
+    pane.classList.remove('open');
+  } else {
+    pane.classList.add('open');
+  }
+}
+$('#nav-tab').onclick = () => togglePane('nav');
+$('#side-tab').onclick = () => togglePane('side');
+// a pane opened by its tab or shortcut closes with a click back on the page
+document.addEventListener('mousedown', (e) => {
+  const nav = $('#nav-pane');
+  if (!nav.classList.contains('open')) return;
+  const t = e.target;
+  if (nav.contains(t) || $('#nav-tab').contains(t) || $('#nav-hotzone').contains(t) || (t.closest && t.closest('.modal-backdrop'))) return;
+  nav.classList.remove('open');
+}, true);
+
+function updateEdgeTabs() {
+  const open = book ? stickies.filter((s) => !s.resolved).length : 0;
+  const c = $('#side-tab .et-count');
+  c.hidden = !open;
+  c.textContent = open > 99 ? '99+' : String(open);
+  $('#side-tab').classList.toggle('has-notes', open > 0);
+}
 
 $('#side-pin').onclick = () => {
   const pane = $('#side-pane');
@@ -4532,6 +4569,8 @@ function showHelp() {
         ${row(K('⌘⇧C', 'Ctrl+Shift+C'), t('help.critique'))}
         ${row(K('⌘⇧A', 'Ctrl+Shift+A'), t('help.chat'))}
         ${row(K('⌘⇧O', 'Ctrl+Shift+O'), t('help.reorder'))}
+        ${row(K('⌘[', 'Ctrl+['), t('help.navPane'))}
+        ${row(K('⌘]', 'Ctrl+]'), t('help.sidePane'))}
         ${row(KZ, t('help.undo'))}
         ${row(t('help.dashesKey'), t('help.dashes'))}
         ${row(K('⌘B · ⌘I', 'Ctrl+B · Ctrl+I'), t('help.bold'))}
@@ -5150,6 +5189,7 @@ window.neo.onMenu(async (msg) => {
   if (msg.type === 'align') {
     applyAlign(msg.value);
   }
+  if (msg.type === 'togglePane') togglePane(msg.value);
   if (msg.type === 'uiBright') {
     library.uiBright = !library.uiBright;
     await window.neo.writeLibrary(library);

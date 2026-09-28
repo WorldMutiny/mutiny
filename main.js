@@ -1035,6 +1035,10 @@ function buildMenu() {
             { label: T('menu.page.paper'), click: () => sendToWindow({ type: 'pageTheme', value: 'paper' }) }
           ]
         },
+        { type: 'separator' },
+        { label: T('menu.navPane'), accelerator: 'CmdOrCtrl+[', click: () => sendToWindow({ type: 'togglePane', value: 'nav' }) },
+        { label: T('menu.sidePane'), accelerator: 'CmdOrCtrl+]', click: () => sendToWindow({ type: 'togglePane', value: 'side' }) },
+        { type: 'separator' },
         {
           label: T('menu.brighter'),
           click: () => sendToWindow({ type: 'uiBright' })
