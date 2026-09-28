@@ -372,15 +372,25 @@ async function openAiSettings() {
 // the answer and sources under a note, or the button that asks for them
 function renderResearch(s, el) {
   const ask = el.querySelector('.s-ask');
-  if (ask && aiEnabled() && aiHasWeb()) {
+  if (ask && aiEnabled()) {
     ask.hidden = false;
     ask.textContent = t(s.research ? 'ai.researchAgain' : 'ai.research');
-    ask.onclick = () => researchSticky(s);
+    if (aiHasWeb()) ask.onclick = () => researchSticky(s);
+    else {
+      // a provider without the web can't research: say so where the button is
+      ask.disabled = true;
+      ask.title = t('ai.researchNeedsWeb');
+      const why = document.createElement('div');
+      why.className = 's-why soft';
+      why.textContent = t('ai.researchNeedsWeb');
+      el.querySelector('.s-actions').before(why);
+    }
   }
   const box = el.querySelector('.s-research');
   if (!box || !s.research) return;
-  box.innerHTML = `<div class="r-answer"></div><div class="r-sources"></div>`;
-  const ans = box.querySelector('.r-answer');
+  // the text sits inside the padded box, so a folded answer ends on a whole line
+  box.innerHTML = `<div class="r-answer"><div class="r-answer-text"></div></div><div class="r-sources"></div>`;
+  const ans = box.querySelector('.r-answer-text');
   ans.textContent = s.research.answer;
   // long answers fold to a few lines; a click unfolds them
   if (s.research.answer.length > 320) {
@@ -391,7 +401,7 @@ function renderResearch(s, el) {
     const toggle = () => { const c = ans.classList.toggle('clamped'); more.textContent = t(c ? 'ai.more' : 'ai.less'); };
     ans.onclick = toggle;
     more.onclick = toggle;
-    ans.after(more);
+    box.querySelector('.r-answer').after(more);
   }
   const list = box.querySelector('.r-sources');
   for (const id of s.research.sourceIds || []) {
@@ -400,7 +410,7 @@ function renderResearch(s, el) {
     const row = document.createElement('div');
     row.className = 'r-src' + (src.status === 'candidate' ? ' candidate' : '');
     row.innerHTML = `<a href="#" class="r-title"></a><div class="r-quote"></div>
-      <div class="r-actions"><button class="r-cite">${t('ai.citeHere')}</button>${src.status === 'candidate' ? ` <button class="r-accept">${t('src.accept')}</button>` : ''}</div>`;
+      <div class="r-actions"><button class="r-cite" title="${t('ai.citeHereTitle')}">${t('ai.citeHere')}</button>${src.status === 'candidate' ? ` <button class="r-accept" title="${t('ai.keepSourceTitle')}">${t('ai.keepSource')}</button>` : ''}</div>`;
     const a = row.querySelector('.r-title');
     a.textContent = (src.title || src.url) + (src.site ? ' — ' + src.site : '');
     a.onclick = (e) => { e.preventDefault(); if (src.url) window.neo.openLink(src.url); };
@@ -677,7 +687,15 @@ function chatBubble(m) {
     const bar = document.createElement('div');
     bar.className = 'chat-actions';
     const cost = m.costUsd != null && !m.plan ? `<span class="soft">≈ $${m.costUsd < 0.01 ? m.costUsd.toFixed(4) : m.costUsd.toFixed(3)}</span>` : '';
-    bar.innerHTML = `${m.stopped ? `<span class="soft">${t('chat.stopped')}</span>` : ''}${cost}<button class="c-note">${t('side.toNotes')}</button><button class="c-copy">${t('chat.copy')}</button>`;
+    bar.innerHTML = `${m.stopped ? `<span class="soft">${t('chat.stopped')}</span>` : ''}${cost}<button class="c-insert" title="${t('chat.insertTitle')}">${t('chat.insert')}</button><button class="c-note">${t('side.toNotes')}</button><button class="c-copy">${t('chat.copy')}</button>`;
+    // what's selected inside this answer, or all of it, goes where the caret was in the draft
+    const insertBtn = bar.querySelector('.c-insert');
+    insertBtn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the selection in the bubble
+    insertBtn.onclick = () => {
+      const sel = window.getSelection();
+      const picked = sel.rangeCount && body.contains(sel.anchorNode) && !sel.isCollapsed ? sel.toString() : m.text;
+      insertFromChat(picked);
+    };
     bar.querySelector('.c-note').onclick = async () => {
       flushAux();
       const html = await window.neo.readAux(book.id, 'notes');
@@ -688,6 +706,40 @@ function chatBubble(m) {
     el.appendChild(bar);
   }
   return el;
+}
+
+// the last caret in the draft, so a chat answer can go back to it
+let lastDraftRange = null;
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const n = sel.anchorNode;
+  const el = n && (n.nodeType === Node.TEXT_NODE ? n.parentElement : n);
+  if (el && el.closest && el.closest('.chapter-body')) lastDraftRange = sel.getRangeAt(0).cloneRange();
+});
+
+function insertFromChat(text) {
+  const clean = String(text || '').replace(/\*\*|__|`/g, '').replace(/^["“]|["”]$/g, '').trim();
+  if (!clean) return;
+  const r = lastDraftRange;
+  const body = r && r.startContainer.isConnected && (r.startContainer.nodeType === Node.TEXT_NODE ? r.startContainer.parentElement : r.startContainer).closest('.chapter-body');
+  if (!body) { toast(t('chat.insertWhere'), 5000); return; }
+  switchTab('manuscript');
+  snapshotStructure('chat insert');
+  const at = r.cloneRange();
+  at.deleteContents();
+  const node = document.createTextNode(clean);
+  at.insertNode(node);
+  const after = document.createRange();
+  after.setStartAfter(node);
+  after.collapse(true);
+  body.focus();
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(after);
+  syncChapter(body, body.closest('.chapter').dataset.id);
+  if (typeof resetNativeUndo === 'function') resetNativeUndo();
+  toast(t('chat.inserted', { undo: KZ }), 5000);
 }
 
 // the essay as the assistant sees it: current text, outline, notes, sources

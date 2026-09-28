@@ -6,6 +6,25 @@
 
 'use strict';
 
+// A version with the words that aren't in the original marked: a word-level
+// longest-common-subsequence, as escaped HTML.
+function diffWords(original, text) {
+  const a = String(original).split(/(\s+)/).filter((x) => x !== '');
+  const b = String(text).split(/(\s+)/).filter((x) => x !== '');
+  const norm = (w) => w.toLowerCase().replace(/[.,;:¡!¿?«»“”"()]/g, '');
+  const n = a.length, m = b.length;
+  if (n * m > 40000) return escHtml(text); // very long passages: no marking
+  const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) {
+    L[i][j] = norm(a[i]) === norm(b[j]) ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  }
+  const keep = new Array(m).fill(false);
+  for (let i = 0, j = 0; i < n && j < m;) {
+    if (norm(a[i]) === norm(b[j])) { keep[j] = true; i++; j++; } else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
+  }
+  return b.map((w, j) => (keep[j] || /^\s+$/.test(w) ? escHtml(w) : `<mark class="vs-diff">${escHtml(w)}</mark>`)).join('');
+}
+
 async function openVersions() {
   if (!book || currentTab !== 'manuscript') { toast(t('ai.selectFirst', { key: K('⌘⇧M', 'Ctrl+Shift+M') })); return; }
   const sel = window.getSelection();
@@ -57,9 +76,13 @@ async function openVersions() {
       const row = document.createElement('div');
       row.className = 'vs-row' + (v.by === 'ai' ? ' ai' : '');
       row.innerHTML = `<div class="vs-body"><div class="vs-text" contenteditable="true" spellcheck="false"></div><div class="vs-why soft"></div></div>
-        <div class="vs-actions"><button class="vs-use btn-gold">${t('vs.use')}</button><button class="vs-del btn-quiet" title="${t('vs.remove')}">✕</button></div>`;
+        <div class="vs-actions"><button class="vs-use">${t('vs.use')}</button><button class="vs-del btn-quiet" title="${t('vs.remove')}">✕</button></div>`;
       const tx = row.querySelector('.vs-text');
-      tx.textContent = v.text;
+      // at rest, the words that differ from the original are marked; editing shows it plain
+      const showDiff = () => { tx.innerHTML = diffWords(original, v.text); };
+      showDiff();
+      tx.addEventListener('focus', () => { tx.textContent = v.text; });
+      tx.addEventListener('blur', showDiff);
       tx.addEventListener('input', () => { v.text = tx.textContent; });
       tx.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); e.stopPropagation(); });
       const why = row.querySelector('.vs-why');

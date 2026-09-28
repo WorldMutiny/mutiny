@@ -1827,6 +1827,20 @@ function insertPlaceholder() {
 //   category?, severity?, research?: { answer, sourceIds, at } }
 let sideFilter = 'all';
 
+// where a note belongs, in words: its section's title, else "Section n"
+function stickyPlace(s) {
+  const chIdx = book.chapterOrder.indexOf(s.chapterId);
+  if (chIdx < 0) return t('side.unplaced');
+  const title = ((book.chapterTitles || {})[s.chapterId] || '').trim();
+  return title || t('side.section', { n: chIdx + 1 });
+}
+
+// a note's textarea grows with what's written in it
+function growNote(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = Math.max(ta.scrollHeight, 34) + 'px';
+}
+
 function renderStickies() {
   const wrap = $('#sticky-list');
   wrap.innerHTML = '';
@@ -1834,62 +1848,124 @@ function renderStickies() {
   $$('.chapter-body .ph-mark').forEach((m, i) => where.set(m.dataset.sid, i));
   const open = stickies.filter((s) => !s.resolved)
     .sort((a, b) => (where.has(a.id) ? where.get(a.id) : 1e9) - (where.has(b.id) ? where.get(b.id) : 1e9));
-  const fromAi = (s) => s.author === 'ai';
-  if (open.some(fromAi)) {
-    const bar = document.createElement('div');
-    bar.className = 'side-filter';
-    for (const f of ['all', 'me', 'ai']) {
-      const b = document.createElement('button');
-      b.textContent = t('side.filter.' + f);
-      b.classList.toggle('on', sideFilter === f);
-      b.onclick = () => { sideFilter = f; renderStickies(); };
-      bar.appendChild(b);
-    }
-    wrap.appendChild(bar);
-  } else {
+  const done = stickies.filter((s) => s.resolved)
+    .sort((a, b) => String(b.resolvedAt || '').localeCompare(String(a.resolvedAt || '')));
+  const fromAi = (s) => s.author === 'ai' || s.kind === 'critique';
+  if (!open.length && !done.length) {
     sideFilter = 'all';
-  }
-  const shown = open.filter((s) => sideFilter === 'all' || (sideFilter === 'ai') === fromAi(s));
-  if (open.length === 0) {
     wrap.innerHTML = `<div class="stickies-empty">${t('side.empty', { key: KPH })}</div>`;
     return;
   }
+  if (sideFilter === 'done' && !done.length) sideFilter = 'all';
+  // the filters show whenever there are notes: all · mine · the assistant's · resolved
+  const bar = document.createElement('div');
+  bar.className = 'side-filter';
+  const filters = [['all', t('side.filter.all')], ['me', t('side.filter.me')]];
+  if (open.some(fromAi)) filters.push(['ai', t('side.filter.ai')]);
+  if (done.length) filters.push(['done', t('side.filter.done', { n: done.length })]);
+  for (const [f, label] of filters) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.classList.toggle('on', sideFilter === f);
+    b.onclick = () => { sideFilter = f; renderStickies(); };
+    bar.appendChild(b);
+  }
+  wrap.appendChild(bar);
+
+  if (sideFilter === 'done') {
+    for (const s of done) wrap.appendChild(resolvedSticky(s));
+    return;
+  }
+  const shown = open.filter((s) => sideFilter === 'all' || (sideFilter === 'ai') === fromAi(s));
+  if (!shown.length) {
+    const empty = document.createElement('div');
+    empty.className = 'stickies-empty';
+    empty.textContent = t('side.noneHere');
+    wrap.appendChild(empty);
+  }
   for (const s of shown) {
-    const chIdx = book.chapterOrder.indexOf(s.chapterId);
     const el = document.createElement('div');
     el.className = 'sticky unresolved' + (fromAi(s) ? ' ai' : '');
     el.dataset.sid = s.id;
-    const place = chIdx >= 0 ? t('side.section', { n: chIdx + 1 }) : t('side.unplaced');
+    const place = escHtml(stickyPlace(s));
+    const hasMark = where.has(s.id);
     if (s.kind === 'critique') {
       el.innerHTML = `
         <div class="s-ch"><span class="s-kind sev-${['high', 'medium', 'low'].includes(s.severity) ? s.severity : 'medium'}">✦ ${escHtml(t('crit.cat.' + (s.category || 'clarity')))}</span> · ${place}</div>
         <div class="s-text"></div>
         <div class="s-actions"><button class="s-go">${t('side.goTo')}</button> <button class="s-note">${t('side.toNotes')}</button> <button class="s-done">${t('side.done')}</button></div>`;
-      el.querySelector('.s-text').textContent = s.text;
+      const txt = el.querySelector('.s-text');
+      txt.textContent = s.text;
+      // long remarks fold to a few lines; a click unfolds them
+      if ((s.text || '').length > 180) {
+        txt.classList.add('clamped');
+        txt.title = t('side.unfold');
+        txt.onclick = () => txt.classList.toggle('clamped');
+      }
       el.querySelector('.s-note').onclick = () => stickyToNotes(s);
     } else {
       el.innerHTML = `
         <div class="s-ch">${place}</div>
-        <textarea placeholder="${t('side.notePh')}" spellcheck="false"></textarea>
+        <textarea rows="1" placeholder="${t('side.notePh')}" spellcheck="false"></textarea>
         <div class="s-research"></div>
         <div class="s-actions"><button class="s-go">${t('side.goTo')}</button> <button class="s-ask" hidden>${t('ai.research')}</button> <button class="s-done">${t('side.resolve')}</button></div>`;
       const ta = el.querySelector('textarea');
       ta.value = s.text;
       ta.addEventListener('input', () => {
         s.text = ta.value;
+        growNote(ta);
         clearTimeout(saveTimers.stickies);
         saveTimers.stickies = setTimeout(() => { if (book) window.neo.writeJSON(book.id, 'stickies', stickies); }, 600);
       });
       if (typeof renderResearch === 'function') renderResearch(s, el);
     }
-    el.querySelector('.s-go').onclick = () => {
-      switchTab('manuscript');
-      const mark = document.querySelector(`.ph-mark[data-sid="${s.id}"]`);
-      if (mark) mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    };
+    const go = el.querySelector('.s-go');
+    if (hasMark) go.onclick = () => flashMark(s.id); else go.remove();
     el.querySelector('.s-done').onclick = () => resolveSticky(s.id);
     wrap.appendChild(el);
+    const ta = el.querySelector('textarea');
+    if (ta) growNote(ta);
   }
+}
+
+// a resolved note, kept: read it, reopen it, or delete it for good
+function resolvedSticky(s) {
+  const el = document.createElement('div');
+  el.className = 'sticky resolved' + (s.kind === 'critique' ? ' ai' : '');
+  el.dataset.sid = s.id;
+  const when = s.resolvedAt ? new Date(s.resolvedAt).toLocaleDateString(I18N.lang, { day: 'numeric', month: 'short' }) : '';
+  el.innerHTML = `
+    <div class="s-ch">${escHtml(stickyPlace(s))}${when ? ' · ' + escHtml(t('side.resolvedOn', { date: when })) : ''}</div>
+    <div class="s-text"></div>
+    <div class="s-research"></div>
+    <div class="s-actions"><button class="s-reopen">${t('side.reopen')}</button> <button class="s-forget">${t('side.forget')}</button></div>`;
+  el.querySelector('.s-text').textContent = s.text || '';
+  if (s.research && s.research.answer) el.querySelector('.s-research').textContent = s.research.answer;
+  el.querySelector('.s-reopen').onclick = () => {
+    s.resolved = false;
+    delete s.resolvedAt;
+    window.neo.writeJSON(book.id, 'stickies', stickies);
+    sideFilter = 'all';
+    renderStickies();
+  };
+  el.querySelector('.s-forget').onclick = () => {
+    snapshotStructure('forget note');
+    stickies = stickies.filter((x) => x.id !== s.id);
+    window.neo.writeJSON(book.id, 'stickies', stickies);
+    renderStickies();
+  };
+  return el;
+}
+
+// scroll the draft to a note's mark and make it blink once
+function flashMark(sid) {
+  switchTab('manuscript');
+  const mark = document.querySelector(`.ph-mark[data-sid="${sid}"]`);
+  if (!mark) return;
+  mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  mark.classList.remove('flash');
+  void mark.offsetWidth;
+  mark.classList.add('flash');
 }
 
 // keep an assistant's comment by moving it into the Notes tab
@@ -1942,6 +2018,12 @@ function reconcileMarks() {
 
 function resolveSticky(sid) {
   const mark = document.querySelector(`.ph-mark[data-sid="${sid}"]`);
+  // Ctrl+Z brings it back, mark and all
+  if (mark) {
+    const body0 = mark.closest('.chapter-body');
+    chapterHTML[body0.closest('.chapter').dataset.id] = captureBody(body0);
+  }
+  snapshotStructure('resolve note');
   if (mark) {
     const chId = mark.closest('.chapter').dataset.id;
     const prev = mark.previousSibling;
@@ -1960,16 +2042,32 @@ function resolveSticky(sid) {
     chapterHTML[chId] = captureBody(body);
     scheduleChapterSave(chId);
   }
-  stickies = stickies.filter((s) => s.id !== sid);
+  // kept, under "Resolved": its text and any research survive
+  const note = stickies.find((s) => s.id === sid);
+  if (note) { note.resolved = true; note.resolvedAt = new Date().toISOString(); }
   window.neo.writeJSON(book.id, 'stickies', stickies);
   renderStickies();
   scheduleNavRefresh();
 }
 
+// a click on a ⚑ or ✦ in the text: open the pane on its note and point it out
 function focusSticky(sid) {
-  $('#side-pane').classList.add('open');
-  const el = document.querySelector(`.sticky[data-sid="${sid}"] textarea`);
-  if (el) el.focus();
+  const pane = $('#side-pane');
+  pane.classList.add('open');
+  if (typeof setSideView === 'function' && pane.classList.contains('chat-mode')) setSideView('notes');
+  const note = stickies.find((s) => s.id === sid);
+  if (note && sideFilter !== 'all') {
+    const mineOrAi = note.kind === 'critique' || note.author === 'ai' ? 'ai' : 'me';
+    if (sideFilter !== mineOrAi) { sideFilter = 'all'; renderStickies(); }
+  }
+  const card = document.querySelector(`.sticky[data-sid="${sid}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  card.classList.remove('flash');
+  void card.offsetWidth;
+  card.classList.add('flash');
+  const ta = card.querySelector('textarea');
+  if (ta) ta.focus({ preventScroll: true });
 }
 
 /* ================================================================== */
@@ -2129,11 +2227,15 @@ function scheduleNavRefresh() {
 // Hover behavior for both side panes:
 function wireHoverPane(hotzone, pane, isPinnable) {
   const pinned = () => isPinnable && pane.dataset.pinned === '1';
+  // a short wait before opening, so brushing the window's edge doesn't
+  let wait = null;
   hotzone.addEventListener('mouseenter', (e) => {
     if (e.buttons) return; // dragging something — stand down
-    pane.classList.add('open');
+    clearTimeout(wait);
+    wait = setTimeout(() => pane.classList.add('open'), 220);
   });
   hotzone.addEventListener('mouseleave', (e) => {
+    clearTimeout(wait);
     if (pinned()) return;
     if (e.relatedTarget && pane.contains(e.relatedTarget)) return;
     pane.classList.remove('open');
@@ -2147,6 +2249,14 @@ function wireHoverPane(hotzone, pane, isPinnable) {
   });
 }
 wireHoverPane($('#nav-hotzone'), $('#nav-pane'), false);
+
+// the page follows the right pane: while it's open the column moves over
+// (styles.css, #editor-view.side-open), wider for the chat
+new MutationObserver(() => {
+  const pane = $('#side-pane');
+  $('#editor-view').classList.toggle('side-open', pane.classList.contains('open'));
+  $('#editor-view').classList.toggle('side-chat', pane.classList.contains('chat-mode'));
+}).observe($('#side-pane'), { attributes: true, attributeFilter: ['class'] });
 wireHoverPane($('#side-hotzone'), $('#side-pane'), true);
 
 // leaving the window closes unpinned panes (they used to stick open)
@@ -4404,7 +4514,7 @@ function showHelp() {
   const bd = document.createElement('div');
   bd.className = 'modal-backdrop';
   bd.innerHTML = `
-    <div class="modal" style="width:560px">
+    <div class="modal help-modal" style="width:min(640px, 94vw)">
       <h2>${t('help.title')}</h2>
 
       <div class="help-sec">${t('help.writing')}</div>
@@ -4463,7 +4573,7 @@ function showHelp() {
   const close = () => bd.remove();
   bd.querySelector('.m-ok').onclick = close;
   bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
-  bd.querySelector('.m-ok').focus();
+  bd.querySelector('.m-ok').focus({ preventScroll: true }); // open at the top of the list
 }
 
 /* ================================================================== */
