@@ -35,10 +35,10 @@
   --accent-line: #541f31;
   --accent-fg: #14B9B5;
   --note-bg: #0e1426;
-  --ai: #b07cc6;
-  --ai-dim: #77548b;
-  --ai-line: #5f4272;
-  --ai-bg: #1e142e;
+  --ai: #BE3F50;          /* the assistant's marks, red like Aetheria's */
+  --ai-dim: #7e2d40;
+  --ai-line: #662437;
+  --ai-bg: #1d0d22;
   --danger-soft: #FD3E6A;
   --warn: #ffbe74;
   --ok: #7cd699;
@@ -446,7 +446,7 @@ body.night #aux-editor * { color: inherit; }
 body.typewriter #paper { margin-bottom: 60vh; }
 .sheet {
   background: var(--paper); color: var(--ink);
-  padding: 70px 72px 90px;
+  padding: 70px clamp(18px, 9%, 72px) 90px;
   box-shadow: 0 4px 30px rgba(0,0,0,0.5);
   min-height: 88vh;
   margin-bottom: 44px;
@@ -455,7 +455,7 @@ body.typewriter #paper { margin-bottom: 60vh; }
   width: calc(680px * var(--page-zoom, 1)); max-width: 92%;
   background: var(--paper); color: var(--ink);
   margin: 40px auto 120px;
-  padding: 70px 72px 90px;
+  padding: 70px clamp(18px, 9%, 72px) 90px;
   box-shadow: 0 4px 30px rgba(0,0,0,0.5);
   min-height: 85vh;
 }
@@ -823,11 +823,13 @@ body.bright .show-scrollbar::-webkit-scrollbar-thumb:hover { background: color-m
 /* the right pane makes room instead of covering the page: open (notes or
    chat) or pinned, the page column slides left and narrows to fit */
 #paper-scroll { transition: left 0.18s ease, width 0.18s ease; }
+#editor-view { --pane-l: 0px; --pane-r: 0px; }
 #editor-view.side-open { --pane-r: 250px; }
 #editor-view.side-open.side-chat { --pane-r: 380px; }
-#editor-view.side-open #paper-scroll {
-  left: calc(50% - var(--pane-r) / 2);
-  width: min(calc(760px * var(--page-zoom, 1)), calc(94% - var(--pane-r)));
+#editor-view.nav-open { --pane-l: 248px; }
+#editor-view:is(.side-open, .nav-open) #paper-scroll {
+  left: calc(50% + (var(--pane-l) - var(--pane-r)) / 2);
+  width: min(calc(760px * var(--page-zoom, 1)), calc(94% - var(--pane-l) - var(--pane-r)));
 }
 
 /* ============================ MUTINY ============================ */
@@ -842,7 +844,8 @@ body.bright .show-scrollbar::-webkit-scrollbar-thumb:hover { background: color-m
 }
 .sheet {
   background: none; box-shadow: none; border: none;
-  padding: 0 72px; min-height: 0; margin: 0;
+  /* the side margin shrinks with the page, so a narrow column keeps its text */
+  padding: 0 clamp(18px, 9%, 72px); min-height: 0; margin: 0;
 }
 body.night .sheet { box-shadow: none; border: none; }
 body.night #paper { box-shadow: 0 4px 30px rgba(0,0,0,0.7); border: 1px solid #2a2436; }
@@ -1234,38 +1237,39 @@ body.appmenu-on #side-hotzone, body.appmenu-on #side-pane { top: 30px; }
 body.appmenu-on #searchbar { top: 64px; }
 body.appmenu-on #dragstrip { display: none; }
 
-/* ---- Omarchy: the writing pages take the theme's colours too ----
-   Draft, Notes and Outline are dressed like Sources and Later — the theme's
+/* ---- Night: the writing pages wear the interface's colours ----
+   In Mutiny's own look and on Omarchy alike: Draft, Notes and Outline take the
+   theme's surface, text and accent (titles stay a soft grey, set above) —
    surface, text and accent — but keep their typefaces (--body-font is left
    alone here). This is the "Night" page; "Paper" keeps the white sheet. */
-body.omarchy.night :is(#paper, #aux-paper, #fr-sample) {
+body.night :is(#paper, #aux-paper, #fr-sample) {
   --paper: var(--pane);
   --ink: var(--fg);
   --page-accent: var(--accent);
   --page-muted: var(--muted);
   --page-red: var(--red);
 }
-body.omarchy.night :is(#paper, #aux-paper) { box-shadow: none; border: 1px solid var(--line-soft); }
-body.omarchy.night #fr-sample { border: 1px solid var(--line-soft); border-radius: 0; }
-body.omarchy.night #paper ::selection, body.omarchy.night #aux-paper ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
-body.omarchy.night #tp-subtitle { color: var(--fg-2); }
-body.omarchy.night #tp-author { color: var(--muted); }
-body.omarchy.night :is(#paper, #aux-paper) [contenteditable][data-ph]:empty::before,
-body.omarchy.night #aux-editor:empty::before,
-body.omarchy.night .ol-text:empty::before { color: var(--fainter); }
-body.omarchy.night .chapter-head .ch-num { color: var(--faint); }
-body.omarchy.night .chapter-head .ch-title:empty::before { color: var(--fainter); }
-body.omarchy.night .chapter-body p.scene-break { color: var(--muted); }
-body.omarchy.night .chapter-body p.ghost { color: var(--faint); }
-body.omarchy.night .ph-mark { background: color-mix(in srgb, var(--accent) 22%, transparent); border-bottom-color: var(--accent); }
-body.omarchy.night .chapter-body .ph-mark.ai { background: none; color: var(--ai); }
-body.omarchy.night #aux-paper h2 { color: var(--muted); }
-body.omarchy.night .ol-num { color: var(--muted); }
-body.omarchy.night .ol-chapter .ol-num { color: var(--fg-2); }
-body.omarchy.night .ol-text:focus { border-bottom-color: var(--line); }
-body.omarchy.night .ol-hint { color: var(--faint); }
-body.omarchy.night .chapter-body :is(.cite.orphan, .cite-mark.orphan) { text-decoration-color: var(--red); }
-body.omarchy.night .chapter-body .cite-mark.orphan { color: var(--red); }
+body.night :is(#paper, #aux-paper) { box-shadow: none; border: 1px solid var(--line-soft); }
+body.night #fr-sample { border: 1px solid var(--line-soft); border-radius: 0; }
+body.night #paper ::selection, body.night #aux-paper ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+body.night #tp-subtitle { color: var(--fg-2); }
+body.night #tp-author { color: var(--muted); }
+body.night :is(#paper, #aux-paper) [contenteditable][data-ph]:empty::before,
+body.night #aux-editor:empty::before,
+body.night .ol-text:empty::before { color: var(--fainter); }
+body.night .chapter-head .ch-num { color: var(--faint); }
+body.night .chapter-head .ch-title:empty::before { color: var(--fainter); }
+body.night .chapter-body p.scene-break { color: var(--muted); }
+body.night .chapter-body p.ghost { color: var(--faint); }
+body.night .ph-mark { background: color-mix(in srgb, var(--accent) 22%, transparent); border-bottom-color: var(--accent); }
+body.night .chapter-body .ph-mark.ai { background: none; color: var(--ai); }
+body.night #aux-paper h2 { color: var(--muted); }
+body.night .ol-num { color: var(--muted); }
+body.night .ol-chapter .ol-num { color: var(--fg-2); }
+body.night .ol-text:focus { border-bottom-color: var(--line); }
+body.night .ol-hint { color: var(--faint); }
+body.night .chapter-body :is(.cite.orphan, .cite-mark.orphan) { text-decoration-color: var(--red); }
+body.night .chapter-body .cite-mark.orphan { color: var(--red); }
 .stats-row .st-check input { width: auto; display: inline; margin: 0; }
 
 /* ---- settings windows: titled sections, labels above their fields ---- */
@@ -1352,3 +1356,11 @@ body.omarchy #counters { gap: 10px; }
 .chat-input:focus, .sticky textarea:focus, .vs-input:focus, .st-md:focus { outline: none; border-color: var(--accent); }
 .sticky textarea:focus { box-shadow: inset 0 -1px 0 var(--accent-line); }
 :focus-visible { outline-color: var(--accent); }
+
+/* the right pane never scrolls sideways: its rows wrap to its width */
+#side-pane { overflow-x: hidden; }
+#side-pane .side-filter { flex-wrap: wrap; padding-right: 16px; }
+#side-pane .side-filter button { white-space: nowrap; }
+#side-pane .sticky { min-width: 0; overflow-wrap: anywhere; }
+#side-pin:focus { outline: none; }
+#side-pin:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }

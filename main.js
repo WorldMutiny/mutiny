@@ -1128,7 +1128,7 @@ ipcMain.handle('appmenu:run', (e, id) => {
 // the page draws the bar itself: the native one steps aside (the menu stays
 // attached, so every shortcut keeps working)
 ipcMain.handle('appmenu:native', (e, visible) => {
-  if (process.platform !== 'linux') return false;
+  if (process.platform === 'darwin') return false;
   const win = BrowserWindow.fromWebContents(e.sender);
   if (!win) return false;
   win.setAutoHideMenuBar(false);

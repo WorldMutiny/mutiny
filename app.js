@@ -2250,13 +2250,17 @@ function wireHoverPane(hotzone, pane, isPinnable) {
 }
 wireHoverPane($('#nav-hotzone'), $('#nav-pane'), false);
 
-// the page follows the right pane: while it's open the column moves over
-// (styles.css, #editor-view.side-open), wider for the chat
+// the page follows the side panes: while one is open the column moves over
+// (styles.css, #editor-view.side-open / .nav-open), wider for the chat
 new MutationObserver(() => {
   const pane = $('#side-pane');
   $('#editor-view').classList.toggle('side-open', pane.classList.contains('open'));
   $('#editor-view').classList.toggle('side-chat', pane.classList.contains('chat-mode'));
 }).observe($('#side-pane'), { attributes: true, attributeFilter: ['class'] });
+// and the left one too: the sections pane moves the page right while it's open
+new MutationObserver(() => {
+  $('#editor-view').classList.toggle('nav-open', $('#nav-pane').classList.contains('open'));
+}).observe($('#nav-pane'), { attributes: true, attributeFilter: ['class'] });
 wireHoverPane($('#side-hotzone'), $('#side-pane'), true);
 
 // leaving the window closes unpinned panes (they used to stick open)
