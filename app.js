@@ -4078,7 +4078,7 @@ document.addEventListener('selectionchange', () => {
 let sprint = null;
 
 function statsChartSvg() {
-  const W = 520, H = 200, PAD = 6;
+  const W = 520, H = 140, PAD = 6;
   const days = [];
   for (let i = 29; i >= 0; i--) {
     const d = new Date();
@@ -4112,7 +4112,7 @@ function statsChartSvg() {
   const goalLine = goal
     ? `<line x1="${PAD}" x2="${W - PAD}" y1="${(H - PAD - (goal / maxC) * (H - PAD * 2 - 20)).toFixed(1)}" y2="${(H - PAD - (goal / maxC) * (H - PAD * 2 - 20)).toFixed(1)}" style="stroke:var(--accent)" stroke-dasharray="5,4" stroke-width="1" opacity="0.7"/>`
     : '';
-  return `<svg id="stats-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `<svg id="stats-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     ${bars}
     <path d="${line}" fill="none" style="stroke:var(--accent)" stroke-width="2"/>
     ${goalLine}
@@ -4132,69 +4132,49 @@ function openStats() {
   const total = hasBook ? bookWordCount() : 0;
   const bd = document.createElement('div');
   bd.className = 'modal-backdrop';
+  const field = (label, control, extra = '') => `<label class="st-field"${extra}><span>${label}</span>${control}</label>`;
+  const langSel = (id, cur) => `<select id="${id}"><option value="es"${cur === 'es' ? ' selected' : ''}>Español</option><option value="en"${cur === 'en' ? ' selected' : ''}>English</option></select>`;
   bd.innerHTML = `
-    <div class="modal" style="width:580px">
+    <div class="modal settings-modal">
       <h2 style="font-size:17px">${hasBook ? escHtml(t('stats.progress', { title: displayTitle(book) })) : t('stats.title')}</h2>
       ${hasBook ? `
-      <div class="stats-nums">
-        <div><div class="big">${total.toLocaleString()}</div><div class="lbl">${t('stats.total')}</div></div>
-        <div><div class="big">${wordsToday.toLocaleString()}</div><div class="lbl">${t('stats.today')}</div></div>
-        <div><div class="big">${book.wordGoal ? Math.min(100, Math.round(total / book.wordGoal * 100)) + '%' : '—'}</div><div class="lbl">${t('stats.ofGoal')}</div></div>
-      </div>
-      ${statsChartSvg()}` : ''}
-      <div class="stats-row" style="margin-top:18px">
-        <label>${t('stats.daily')} <input id="st-daily" type="number" min="0" value="${library.dailyGoal || ''}" placeholder="500"/></label>
-        ${hasBook ? `<label>${t('stats.essayGoal')} <input id="st-book" type="number" min="0" value="${book.wordGoal || ''}" placeholder="1500"/></label>` : ''}
-      </div>
-      <div class="stats-row">
-        <label>${t('stats.dayEnds')}
-          <select id="st-dayends">
-            ${[0, 1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${(library.dayEndsAt || 0) === h ? ' selected' : ''}>${h ? t('stats.am', { h }) : t('stats.midnight')}</option>`).join('')}
-          </select>
-        </label>
-      </div>
-      <div class="stats-row">
-        ${hasBook ? `<label title="${t('stats.langNote')}">${t('stats.lang')}
-          <select id="st-lang">
-            <option value="es"${spellLang() === 'es' ? ' selected' : ''}>Español</option>
-            <option value="en"${spellLang() === 'en' ? ' selected' : ''}>English</option>
-          </select>
-        </label>` : ''}
-        <label>${t('stats.uiLang')}
-          <select id="st-uilang">
-            <option value="es"${I18N.lang === 'es' ? ' selected' : ''}>Español</option>
-            <option value="en"${I18N.lang === 'en' ? ' selected' : ''}>English</option>
-          </select>
-        </label>
-      </div>
-      <div class="stats-row"${/Linux/.test(navigator.userAgent) ? '' : ' hidden'}>
-        <label title="${t('stats.appearanceNote')}">${t('stats.appearance')}
-          <select id="st-appearance">
-            <option value="auto"${(library.appearance || 'auto') === 'auto' ? ' selected' : ''}>${t('stats.appearanceAuto')}</option>
-            <option value="mutiny"${library.appearance === 'mutiny' ? ' selected' : ''}>${t('stats.appearanceMutiny')}</option>
-          </select>
-        </label>
-        <span class="soft st-appearance-now">${appearanceNow.mode === 'omarchy' ? t('stats.appearanceUsing', { name: escHtml(appearanceNow.name || 'Omarchy') }) : ''}</span>
-      </div>
-      <div class="stats-row">
+      <section class="st-sec st-progress">
+        <div class="stats-nums">
+          <div><div class="big">${fmtN(total)}</div><div class="lbl">${t('stats.total')}</div></div>
+          <div><div class="big">${fmtN(wordsToday)}</div><div class="lbl">${t('stats.today')}</div></div>
+          <div><div class="big">${book.wordGoal ? Math.min(100, Math.round(total / book.wordGoal * 100)) + '%' : '—'}</div><div class="lbl">${t('stats.ofGoal')}</div></div>
+        </div>
+        ${statsChartSvg()}
+      </section>` : ''}
+      <section class="st-sec">
+        <h3>${t('stats.secGoals')}</h3>
+        <div class="st-grid">
+          ${field(t('stats.daily'), `<input id="st-daily" type="number" min="0" value="${library.dailyGoal || ''}" placeholder="500"/>`)}
+          ${hasBook ? field(t('stats.essayGoal'), `<input id="st-book" type="number" min="0" value="${book.wordGoal || ''}" placeholder="1500"/>`) : ''}
+          ${field(t('stats.dayEnds'), `<select id="st-dayends">${[0, 1, 2, 3, 4, 5, 6].map((h) => `<option value="${h}"${(library.dayEndsAt || 0) === h ? ' selected' : ''}>${h ? t('stats.am', { h }) : t('stats.midnight')}</option>`).join('')}</select>`)}
+        </div>
+        ${hasBook ? `
+        <div class="st-sprint">
+          ${field(t('stats.sprint'), `<span class="st-inline"><input id="st-sprint" type="number" min="50" value="${sprint ? sprint.target : 500}"/><span class="soft">${t('stats.words')}</span><button id="st-sprint-btn" class="btn-quiet st-btn">${t(sprint && !sprint.done ? 'stats.endSprint' : 'stats.startSprint')}</button></span>`)}
+          <span id="st-sprint-info" class="soft">${t(sprint && !sprint.done ? 'stats.sprintRunning' : 'stats.sprintIdle')}</span>
+        </div>` : ''}
+      </section>
+      <section class="st-sec">
+        <h3>${t('stats.secWriting')}</h3>
+        <div class="st-grid">
+          ${hasBook ? field(t('stats.lang'), langSel('st-lang', spellLang()), ` title="${t('stats.langNote')}"`) : ''}
+          ${field(t('stats.newEssays'), `<select id="st-style"><option value="pantser"${library.writingStyle !== 'plotter' ? ' selected' : ''}>${t('stats.pantser')}</option><option value="plotter"${library.writingStyle === 'plotter' ? ' selected' : ''}>${t('stats.plotter')}</option></select>`)}
+        </div>
+      </section>
+      <section class="st-sec">
+        <h3>${t('stats.secApp')}</h3>
+        <div class="st-grid">
+          ${field(t('stats.uiLang'), langSel('st-uilang', I18N.lang))}
+          ${field(t('stats.appearance'), `<select id="st-appearance"><option value="auto"${(library.appearance || 'auto') === 'auto' ? ' selected' : ''}>${t('stats.appearanceAuto')}</option><option value="mutiny"${library.appearance === 'mutiny' ? ' selected' : ''}>${t('stats.appearanceMutiny')}</option></select><span class="soft st-appearance-now">${appearanceNow.mode === 'omarchy' ? t('stats.appearanceUsing', { name: escHtml(appearanceNow.name || 'Omarchy') }) : ''}</span>`, ` title="${t('stats.appearanceNote')}"${/Linux/.test(navigator.userAgent) ? '' : ' hidden'}`)}
+        </div>
         <label class="st-check" title="${t('stats.updatesNote')}"><input type="checkbox" id="st-updates"${library.updateChecks === false ? '' : ' checked'}/> ${t('stats.updates')}</label>
-      </div>
-      ${hasBook ? `
-      <div class="stats-row">
-        <label>${t('stats.sprint')} <input id="st-sprint" type="number" min="50" value="${sprint ? sprint.target : 500}"/> ${t('stats.words')}</label>
-        <button id="st-sprint-btn">${t(sprint && !sprint.done ? 'stats.endSprint' : 'stats.startSprint')}</button>
-        <span id="st-sprint-info" class="soft">${t(sprint && !sprint.done ? 'stats.sprintRunning' : 'stats.sprintIdle')}</span>
-      </div>` : ''}
-      <div class="stats-row">
-        <label>${t('stats.newEssays')}
-          <select id="st-style">
-            <option value="pantser"${library.writingStyle !== 'plotter' ? ' selected' : ''}>${t('stats.pantser')}</option>
-            <option value="plotter"${library.writingStyle === 'plotter' ? ' selected' : ''}>${t('stats.plotter')}</option>
-          </select>
-        </label>
-      </div>
-
-      <div style="text-align:right;margin-top:14px">
+      </section>
+      <div class="st-foot-bar">
         <button class="m-ok btn-gold">${t('common.done')}</button>
       </div>
     </div>`;

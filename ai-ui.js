@@ -186,59 +186,62 @@ async function openAiSettings() {
   const c = { provider: 'claude-code', compatPreset: 'openai', ...aiConf() };
   const bd = document.createElement('div');
   bd.className = 'modal-backdrop';
+  const field = (label, control, extra = '') => `<label class="st-field"${extra}><span>${label}</span>${control}</label>`;
   bd.innerHTML = `
-    <div class="modal ai-settings" style="width:580px">
+    <div class="modal ai-settings settings-modal">
       <h2 style="font-size:17px">${t('ai.settings')}</h2>
-      <p>${t('ai.intro2')}</p>
-      <label class="st-check" style="margin:4px 0 14px"><input id="ai-on" type="checkbox"${c.enabled ? ' checked' : ''}/> ${t('ai.enable')}</label>
-      <label>${t('ai.provider')}
-        <select id="ai-provider">${AI_PROVIDERS.map((p) => opt(p, t('ai.prov.' + p), c.provider)).join('')}</select>
-      </label>
-      <p class="soft ai-prov-note" style="font-size:12px;margin:-8px 0 12px"></p>
+      <p class="soft" style="font-size:13px;margin-bottom:12px">${t('ai.intro2')}</p>
+      <label class="st-check"><input id="ai-on" type="checkbox"${c.enabled ? ' checked' : ''}/> ${t('ai.enable')}</label>
 
-      <div class="ai-sec" data-for="claude-code codex">
-        <div class="stats-row">
-          <label>${t('ai.model')} <input id="ai-cli-model" type="text" spellcheck="false" list="ai-cli-models" placeholder="${t('ai.model.default')}"/></label>
-          <label>${t('ai.effort')}
-            <select id="ai-effort">${[['', t('ai.model.default')], ['low', t('ai.effort.low')], ['medium', t('ai.effort.medium')], ['high', t('ai.effort.high')]].map(([v, l]) => opt(v, l, c.effort)).join('')}</select>
-          </label>
+      <section class="st-sec">
+        <h3>${t('ai.secProvider')}</h3>
+        ${field(t('ai.provider'), `<select id="ai-provider">${AI_PROVIDERS.map((p) => opt(p, t('ai.prov.' + p), c.provider)).join('')}</select>`)}
+        <p class="soft ai-prov-note" style="font-size:12px;margin:0"></p>
+      </section>
+
+      <section class="st-sec">
+        <h3>${t('ai.secModel')}</h3>
+        <div class="ai-sec" data-for="claude-code codex">
+          <div class="st-grid">
+            ${field(t('ai.model'), `<input id="ai-cli-model" type="text" spellcheck="false" list="ai-cli-models" placeholder="${t('ai.model.default')}"/>`)}
+            ${field(t('ai.effort'), `<select id="ai-effort">${[['', t('ai.model.default')], ['low', t('ai.effort.low')], ['medium', t('ai.effort.medium')], ['high', t('ai.effort.high')]].map(([v, l]) => opt(v, l, c.effort)).join('')}</select>`)}
+          </div>
+          <datalist id="ai-cli-models"></datalist>
+          <details class="st-advanced">
+            <summary class="soft">${t('ai.advanced')}</summary>
+            ${field(t('ai.path'), `<input id="ai-path" type="text" spellcheck="false"/>`)}
+          </details>
         </div>
-        <datalist id="ai-cli-models"></datalist>
-        <details class="st-advanced">
-          <summary class="soft">${t('ai.advanced')}</summary>
-          <label>${t('ai.path')} <input id="ai-path" type="text" spellcheck="false" style="width:100%"/></label>
-        </details>
-      </div>
-
-      <div class="ai-sec" data-for="anthropic">
-        <label>${t('ai.apiModel')}
-          <select id="ai-api-model">${[['claude-opus-5', 'Claude Opus 5'], ['claude-sonnet-5', 'Claude Sonnet 5'], ['claude-haiku-4-5', 'Claude Haiku 4.5']].map(([v, l]) => opt(v, l, c.apiModel || 'claude-opus-5')).join('')}</select>
-        </label>
-      </div>
-
-      <div class="ai-sec" data-for="compat">
-        <div class="stats-row">
-          <label>${t('ai.preset')}
-            <select id="ai-preset">${COMPAT_PRESETS.map((p) => opt(p, t('ai.preset.' + p), c.compatPreset)).join('')}</select>
-          </label>
-          <label style="flex:1">${t('ai.url')} <input id="ai-url" type="text" spellcheck="false" style="width:100%"/></label>
+        <div class="ai-sec" data-for="anthropic">
+          ${field(t('ai.apiModel'), `<select id="ai-api-model">${[['claude-opus-5', 'Claude Opus 5'], ['claude-sonnet-5', 'Claude Sonnet 5'], ['claude-haiku-4-5', 'Claude Haiku 4.5']].map(([v, l]) => opt(v, l, c.apiModel || 'claude-opus-5')).join('')}</select>`)}
         </div>
-        <div class="stats-row">
-          <label style="flex:1">${t('ai.model')} <input id="ai-compat-model" type="text" spellcheck="false" list="ai-compat-models" style="width:100%"/></label>
-          <button class="btn-quiet ai-list-models" style="margin-top:14px">${t('ai.listModels')}</button>
+        <div class="ai-sec" data-for="compat">
+          <div class="st-grid">
+            ${field(t('ai.preset'), `<select id="ai-preset">${COMPAT_PRESETS.map((p) => opt(p, t('ai.preset.' + p), c.compatPreset)).join('')}</select>`)}
+            ${field(t('ai.url'), `<input id="ai-url" type="text" spellcheck="false"/>`)}
+          </div>
+          <div class="st-grid st-grid-wide">
+            ${field(t('ai.model'), `<span class="st-inline"><input id="ai-compat-model" type="text" spellcheck="false" list="ai-compat-models" style="width:100%"/><button class="btn-quiet st-btn ai-list-models">${t('ai.listModels')}</button></span>`)}
+          </div>
+          <datalist id="ai-compat-models"></datalist>
         </div>
-        <datalist id="ai-compat-models"></datalist>
-      </div>
+      </section>
 
-      <div class="ai-sec" data-for="anthropic compat">
-        <label>${t('ai.key')} <input id="ai-key" type="password" autocomplete="off" spellcheck="false" style="width:100%"/></label>
-        <p class="soft ai-key-note" style="font-size:12px;margin:-8px 0 10px"></p>
-      </div>
+      <section class="st-sec">
+        <h3>${t('ai.secConnection')}</h3>
+        <div class="ai-sec" data-for="anthropic compat">
+          ${field(t('ai.key'), `<input id="ai-key" type="password" autocomplete="off" spellcheck="false"/>`)}
+          <p class="soft ai-key-note" style="font-size:12px;margin:6px 0 0"></p>
+        </div>
+        <div class="ai-status-box">
+          <div class="ai-state">${t('ai.checking')}</div>
+          <div class="ai-state-note soft" hidden></div>
+          <div class="ai-usage soft"></div>
+        </div>
+      </section>
 
-      <div class="ai-state soft">${t('ai.checking')}</div>
-      <p class="soft ai-usage" style="font-size:12px;margin-top:10px"></p>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
-        <button class="ai-test btn-quiet">${t('ai.test')}</button>
+      <div class="st-foot-bar" style="justify-content:space-between">
+        <button class="ai-test btn-quiet st-btn">${t('ai.test')}</button>
         <span>
           <button class="m-cancel btn-quiet" style="margin-right:10px">${t('common.cancel')}</button>
           <button class="m-ok btn-gold">${t('src.save')}</button>
@@ -296,6 +299,7 @@ async function openAiSettings() {
     if (fixed) $m('#ai-url').value = COMPAT_URLS[preset()];
     const state = $m('.ai-state');
     state.textContent = t('ai.checking');
+    $m('.ai-state-note').hidden = true;
     const st = await window.neo.aiStatus(settingsNow());
     if (my !== token || !bd.isConnected) return;
     if (p === 'claude-code' || p === 'codex') {
@@ -310,7 +314,10 @@ async function openAiSettings() {
       $m('#ai-key').placeholder = hasSaved ? t('ai.keySaved') : st.keyFromEnv ? t('ai.keyEnv', { env: st.keyFromEnv }) : (p === 'compat' && ['ollama', 'llamacpp'].includes(preset()) ? t('ai.keyNone') : '');
       $m('.ai-key-note').textContent = t(hasSaved ? 'ai.keyNoteSaved' : 'ai.keyNote');
       state.textContent = typedKey || st.loggedIn ? t('ai.state.apiReady', { model: st.model || '—' }) : t('ai.state.needKey');
-      if (p === 'compat' && !st.web) state.textContent += ' ' + t('ai.noWebNote');
+      // one line per thing: the connection, then what this kind of service can't do
+      const noteEl = $m('.ai-state-note');
+      noteEl.hidden = !(p === 'compat' && !st.web);
+      noteEl.textContent = noteEl.hidden ? '' : t('ai.noWebNote');
     }
   };
   refresh();
