@@ -2,52 +2,56 @@
 /* Dark surround, white page. The writing is the interface.        */
 
 :root {
-  --bg: #191919;
-  --bg-soft: #222;
+  /* Mutiny's own look: the Aetheria palette — deep violet ground, teal text,
+     the show's red for accents. */
+  --bg: #0e091d;
+  --bg-soft: #0e1225;
   --paper: #fbfaf7;
   --ink: #1c1c1c;
-  --accent: #c9a86a;
-  --muted: #8a8a8a;
-  --pane: #202020;
-  --red: #c0392b;
+  --accent: #BE3F50;
+  --muted: #128487;
+  --pane: #0e0e22;
+  --red: #FD3E6A;
   --body-font: 'Mutiny Literata', Georgia, serif;
 
   /* The interface — everything but the page — draws from these tokens, so a
      system theme (Omarchy) can repaint it (see theme.js). The page keeps
      --paper / --ink and its own rules. */
   --ui-font: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-  --fg: #ddd;
-  --fg-strong: #eee;
-  --fg-2: #bbb;
-  --faint: #777;
-  --fainter: #555;
-  --surface: #262626;
-  --surface-2: #2a2a2a;
-  --line: #3a3a3a;
-  --line-soft: #2c2c2c;
-  --line-strong: #4a4a4a;
-  --shelf-line: #2e2a24;
-  --scrim: rgba(0,0,0,0.6);
-  --accent-ink: #191919;
-  --accent-bg: #2a2620;
-  --accent-line: #4a3f2c;
-  --accent-fg: #e8dcc2;
-  --note-bg: #2a2a26;
-  --ai: #7fa6c9;
-  --ai-dim: #8a9aa8;
-  --ai-line: #4f6f8f;
-  --ai-bg: #1b1f24;
-  --danger-soft: #d98c6c;
-  --warn: #d9a66c;
-  --ok: #8fbf9f;
-  --ok-bg: #2c3326;
-  --ok-line: #56704a;
-  --ok-fg: #b9d6a4;
+  --fg: #14B9B5;          /* text */
+  --fg-strong: #66d2cf;   /* emphasis: section names, figures, the selected */
+  --fg-2: #13999a;        /* readable, a step down */
+  --faint: #11656c;       /* hints inside empty fields, switched-off options */
+  --fainter: #104c57;
+  --surface: #0e1528;
+  --surface-2: #0f1e2f;
+  --line: #133846;
+  --line-soft: #0f2232;
+  --line-strong: #11535d;
+  --shelf-line: #0f2938;
+  --scrim: color-mix(in srgb, #0e091d 72%, transparent);
+  --accent-ink: #ffffff;  /* text on red buttons */
+  --accent-bg: #271124;
+  --accent-line: #541f31;
+  --accent-fg: #14B9B5;
+  --note-bg: #0e1426;
+  --ai: #b07cc6;
+  --ai-dim: #77548b;
+  --ai-line: #5f4272;
+  --ai-bg: #1e142e;
+  --danger-soft: #FD3E6A;
+  --warn: #ffbe74;
+  --ok: #7cd699;
+  --ok-bg: #1e2830;
+  --ok-line: #45705b;
+  --ok-fg: #7cd699;
+  --link: #04C5F0;
   --round: 1;
 
-  /* the page's own accent, never repainted by a system theme */
-  --page-accent: #c9a86a;
-  --page-muted: #8a8a8a;
+  /* the page's own colours, never repainted by a system theme; on Paper the
+     citations take the red of the show's logo */
+  --page-accent: #A6021E;
+  --page-muted: #6f6f6f;
   --page-red: #c0392b;
 }
 
@@ -394,24 +398,28 @@ input, select, textarea { font-family: inherit; }
 
 /* --- Night page: dark paper for midnight sessions --- */
 body.night {
-  --paper: #232221;
-  --ink: #d6d2c6;
+  /* Night: soft greys with a lavender cast on a violet sheet — dimmer than
+     white, easier over long sessions */
+  --paper: #17131f;
+  --ink: #b6b1c0;
+  --page-accent: #c85c6a;
+  --page-muted: #8a849a;
 }
-body.night .sheet, body.night #aux-paper { box-shadow: 0 4px 30px rgba(0,0,0,0.7); border: 1px solid #2e2d2b; }
-body.night .chapter-head, body.night #aux-paper h2 { color: #918b7d; }
-body.night #tp-subtitle { color: #a09a8c; }
-body.night #tp-author { color: #918b7d; }
-body.night .chapter-body p.scene-break { color: #7d7768; }
-body.night .chapter-body p.ghost { color: #6f6a5e; }
+body.night .sheet, body.night #aux-paper { box-shadow: 0 4px 30px rgba(0,0,0,0.7); border: 1px solid #2a2436; }
+body.night .chapter-head, body.night #aux-paper h2 { color: #8a849a; }
+body.night #tp-subtitle { color: #8a849a; }
+body.night #tp-author { color: #8a849a; }
+body.night .chapter-body p.scene-break { color: #726c83; }
+body.night .chapter-body p.ghost { color: #5f596e; }
 body.night [contenteditable][data-ph]:empty::before,
 body.night #aux-editor:empty::before,
-body.night .darlings-empty { color: #5f5b52; }
-body.night .chapter-head .ch-title:empty::before { color: #5f5b52; }
-body.night .darling { border-color: #3a3835; }
-body.night .ol-num { color: #7d7768; }
-body.night .ol-chapter .ol-num { color: #918b7d; }
-body.night .ol-text:focus { border-bottom-color: #4a4742; }
-body.night .ol-hint { color: #5f5b52; }
+body.night .darlings-empty { color: #5f596e; }
+body.night .chapter-head .ch-title:empty::before { color: #5f596e; }
+body.night .darling { border-color: #2a2436; }
+body.night .ol-num { color: #726c83; }
+body.night .ol-chapter .ol-num { color: #8a849a; }
+body.night .ol-text:focus { border-bottom-color: #3a3350; }
+body.night .ol-hint { color: #5f596e; }
 /* notes pasted before paste-cleaning existed may carry their own colors */
 body.night #aux-editor * { color: inherit; }
 
@@ -426,8 +434,8 @@ body.night #aux-editor * { color: inherit; }
 }
 
 /* Search highlights — no DOM mutation, no focus theft */
-::highlight(neo-search) { background: rgba(201, 168, 106, 0.35); }
-::highlight(neo-search-current) { background: #c9a86a; color: #1c1c1c; }
+::highlight(neo-search) { background: rgba(190, 63, 80, 0.35); }
+::highlight(neo-search-current) { background: #BE3F50; color: #ffffff; }
 
 /* Each page of the book is its own sheet of paper */
 #paper {
@@ -499,7 +507,7 @@ body.typewriter #paper { margin-bottom: 60vh; }
   outline: none;
   min-height: 60px;
 }
-.sheet ::selection, #aux-paper ::selection { background: rgba(201, 168, 106, 0.35); }
+.sheet ::selection, #aux-paper ::selection { background: rgba(190, 63, 80, 0.35); }
 /* pre-wrap keeps spaces literal, so the engine's space-collapsing repair
    pass (the source of duplicated characters on delete) never runs */
 .chapter-body p { text-indent: 2em; margin: 0; white-space: pre-wrap; }
@@ -829,7 +837,7 @@ body.bright .show-scrollbar::-webkit-scrollbar-thumb:hover { background: color-m
   padding: 0 72px; min-height: 0; margin: 0;
 }
 body.night .sheet { box-shadow: none; border: none; }
-body.night #paper { box-shadow: 0 4px 30px rgba(0,0,0,0.7); border: 1px solid #2e2d2b; }
+body.night #paper { box-shadow: 0 4px 30px rgba(0,0,0,0.7); border: 1px solid #2a2436; }
 
 #title-page { text-align: left; display: block; margin-bottom: 48px; }
 #tp-subtitle { margin-top: 10px; }
@@ -850,8 +858,8 @@ body.night #paper { box-shadow: 0 4px 30px rgba(0,0,0,0.7); border: 1px solid #2
   content: attr(data-ph); letter-spacing: 0; font-weight: 400;
   font-size: 0.8em; margin-left: 10px;
 }
-body.night .chapter-head { color: var(--ink); }
-body.night .chapter-head .ch-num { color: #5f5b52; }
+body.night .chapter-head, body.night #tp-title { color: #cdc8d6; }
+body.night .chapter-head .ch-num { color: #5f596e; }
 /* the opening section flows straight on from the title — no marker */
 .chapter:first-child .chapter-head:not(.has-title) .ch-num { display: none; }
 
@@ -874,11 +882,11 @@ body.night .chapter-head .ch-num { color: #5f5b52; }
   flex: 1; background: transparent; border: 1px solid #cfc9bb; border-radius: 6px;
   padding: 8px 10px; color: var(--ink); font-size: 14px; font-family: inherit;
 }
-body.night .src-input { border-color: #4a4742; }
+body.night .src-input { border-color: #3a3350; }
 .src-manual { margin-bottom: 22px; }
 .src-manual .btn-quiet { font-size: 12px; padding: 0; }
 .src-item { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid #e3ded2; }
-body.night .src-item { border-top-color: #34322e; }
+body.night .src-item { border-top-color: #2a2436; }
 .src-item.candidate { opacity: 0.6; }
 .src-num { min-width: 22px; text-align: right; color: var(--page-accent); font-family: var(--body-font); font-size: 15px; }
 .src-body { flex: 1; min-width: 0; }
@@ -1011,7 +1019,7 @@ body.night .src-item { border-top-color: #34322e; }
 #chat-view, .chat-log, .chat-compose { min-width: 0; width: 100%; }
 .chat-log { overflow-x: hidden; }
 .chat-body { overflow-wrap: anywhere; }
-.chat-body a.ext { color: var(--accent); cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.chat-body a.ext { color: var(--link); cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .chat-opts { flex-wrap: wrap; }
 
 /* ---- reorder: the draft as cards ---- */
@@ -1055,7 +1063,7 @@ body.reordering #bottombar { opacity: 1; }
   margin: 0 0 8px; padding: 2px 0 2px 12px; border-left: 2px solid var(--line); cursor: pointer;
 }
 .ro-first:hover { border-left-color: var(--accent); color: var(--fg-strong); }
-body.night .ro-card { box-shadow: 0 1px 4px rgba(0,0,0,0.6); border-color: #2e2d2b; }
+body.night .ro-card { box-shadow: 0 1px 4px rgba(0,0,0,0.6); border-color: #2a2436; }
 body.night .ro-card:focus { border-color: var(--page-accent); }
 .nav-item .n-caret { color: var(--faint); font-size: 10px; width: 12px; display: inline-block; cursor: pointer; flex-shrink: 0; }
 .nav-item .n-caret:hover { color: var(--accent); }

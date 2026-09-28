@@ -12,7 +12,7 @@ const THEME_TOKENS = [
   '--surface', '--surface-2', '--line', '--line-soft', '--line-strong', '--shelf-line', '--scrim',
   '--accent', '--accent-ink', '--accent-bg', '--accent-line', '--accent-fg', '--note-bg',
   '--ai', '--ai-dim', '--ai-line', '--ai-bg', '--red', '--danger-soft', '--warn',
-  '--ok', '--ok-bg', '--ok-line', '--ok-fg', '--ui-font', '--round'
+  '--ok', '--ok-bg', '--ok-line', '--ok-fg', '--link', '--ui-font', '--round'
 ];
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
@@ -61,7 +61,7 @@ function omarchyTokens(th) {
     '--scrim': `color-mix(in srgb, ${bg} 72%, transparent)`,
     '--accent': accent,
     // text on the accent: whichever of the two reads better
-    '--accent-ink': contrast(accent, bg) >= contrast(accent, fg) ? bg : fg,
+    '--accent-ink': [bg, fg, '#ffffff'].sort((a, b) => contrast(accent, b) - contrast(accent, a))[0],
     '--accent-bg': mix(bg, accent, 0.14),
     '--accent-line': mix(bg, accent, 0.4),
     '--accent-fg': fg,
@@ -77,6 +77,7 @@ function omarchyTokens(th) {
     '--ok-bg': mix(bg, green, 0.15),
     '--ok-line': mix(bg, green, 0.5),
     '--ok-fg': green,
+    '--link': pick('bright_blue', 'color12', 'blue', 'color4') || accent,
     '--ui-font': font,
     '--round': '0'
   };
