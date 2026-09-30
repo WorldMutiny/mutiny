@@ -171,12 +171,19 @@ ipcMain.handle('library:read', () => {
 });
 
 let menuBright = true;
+let menuTheme = 'auto';
+// View → Theme (the looks themselves live in theme.js)
+const MENU_THEMES = [
+  { id: 'auto' }, { id: 'mutiny', name: 'Mutiny' }, { id: 'blackgold', name: 'BlackGold' },
+  { id: 'black-arch', name: 'Black Arch' }, { id: 'matrix', name: 'Matrix' },
+  { id: 'tokyo-night', name: 'Tokyo Night' }, { id: 'city-783', name: 'City 783' }
+];
 ipcMain.handle('library:write', (_e, data) => {
   ensureLibrary();
   writeJSON(LIBRARY_FILE, data);
   writeCatalog();
-  // the View menu shows "Brighter Interface" as a check — keep it in step
-  if ((data && data.uiBright !== false) !== menuBright) {
+  // the View menu shows "Brighter Interface" and the theme as checks — keep them in step
+  if ((data && data.uiBright !== false) !== menuBright || ((data && data.appearance) || 'auto') !== menuTheme) {
     try { buildMenu(); } catch (err) { logError('menu', err); }
   }
   return true;
@@ -911,7 +918,9 @@ function sendToWindow(msg) {
 }
 
 function buildMenu() {
-  menuBright = readJSON(LIBRARY_FILE, {}).uiBright !== false;
+  const lib = readJSON(LIBRARY_FILE, {});
+  menuBright = lib.uiBright !== false;
+  menuTheme = lib.appearance || 'auto';
   const isMac = process.platform === 'darwin';
   // "&" marks a mnemonic outside macOS — a literal one is written "&&"
   const T = (key) => (isMac ? mt(key) : mt(key).replace(/&/g, '&&'));
@@ -1041,6 +1050,15 @@ function buildMenu() {
             { label: T('menu.page.paper'), click: () => sendToWindow({ type: 'pageTheme', value: 'paper' }) }
           ]
         },
+        {
+          label: T('menu.theme'),
+          submenu: MENU_THEMES.filter((th) => th.id !== 'auto' || process.platform === 'linux').map((th) => ({
+            label: th.id === 'auto' ? T('theme.omarchy') : th.name,
+            type: 'radio',
+            checked: menuTheme === th.id,
+            click: () => sendToWindow({ type: 'theme', value: th.id })
+          }))
+        },
         { type: 'separator' },
         { label: T('menu.navPane'), accelerator: 'CmdOrCtrl+[', click: () => sendToWindow({ type: 'togglePane', value: 'nav' }) },
         { label: T('menu.sidePane'), accelerator: 'CmdOrCtrl+]', click: () => sendToWindow({ type: 'togglePane', value: 'side' }) },
@@ -1112,7 +1130,7 @@ function menuModel(items) {
     if (it.submenu) { out.push({ label, items: menuModel(it.submenu) }); continue; }
     const id = 'm' + appMenuActions.size;
     appMenuActions.set(id, it);
-    out.push({ id, label, accel: accelText(it.accelerator || ROLE_ACCEL[it.role]), ...(it.type === 'checkbox' ? { checked: !!it.checked } : {}) });
+    out.push({ id, label, accel: accelText(it.accelerator || ROLE_ACCEL[it.role]), ...(it.type === 'checkbox' || it.type === 'radio' ? { checked: !!it.checked } : {}) });
   }
   return out;
 }

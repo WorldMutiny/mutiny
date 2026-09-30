@@ -434,8 +434,8 @@ body.night #aux-editor * { color: inherit; }
 }
 
 /* Search highlights — no DOM mutation, no focus theft */
-::highlight(neo-search) { background: rgba(190, 63, 80, 0.35); }
-::highlight(neo-search-current) { background: #BE3F50; color: #ffffff; }
+::highlight(neo-search) { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+::highlight(neo-search-current) { background: var(--accent); color: var(--accent-ink); }
 
 /* Each page of the book is its own sheet of paper */
 #paper {
@@ -879,7 +879,7 @@ body.night #paper { box-shadow: 0 4px 30px rgba(0,0,0,0.7); border: 1px solid #2
   content: attr(data-ph); letter-spacing: 0; font-weight: 400;
   font-size: 0.8em; margin-left: 10px;
 }
-body.night .chapter-head, body.night #tp-title { color: #cdc8d6; }
+body.night .chapter-head, body.night #tp-title { color: var(--page-title, #cdc8d6); }
 body.night .chapter-head .ch-num { color: #5f596e; }
 /* the opening section flows straight on from the title — no marker */
 .chapter:first-child .chapter-head:not(.has-title) .ch-num { display: none; }
@@ -1185,37 +1185,37 @@ body.night .ro-card:focus { border-color: var(--page-accent); }
 #aux-paper .btn-quiet { color: var(--page-muted); }
 #aux-paper .btn-quiet:hover { color: var(--ink); }
 
-/* ---- Omarchy: Sources, Later and Reorder aren't writing pages ----
-   The system theme dresses them like the rest of the interface. Only the
+/* ---- Themes (Omarchy or built-in): Sources, Later and Reorder aren't writing pages ----
+   The theme dresses them like the rest of the interface. Only the
    writing pages (Draft, Notes, Outline) keep the paper. */
-body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]),
-body.omarchy #reorder-paper {
+body.themed :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]),
+body.themed #reorder-paper {
   --ink: var(--fg);
   --page-accent: var(--accent);
   --page-muted: var(--muted);
   --page-red: var(--red);
   --body-font: var(--ui-font);
 }
-body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) {
+body.themed :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) {
   --paper: var(--pane);
   box-shadow: none; border: 1px solid var(--line-soft);
 }
-body.omarchy #reorder-paper { --paper: var(--surface); }
-body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) h2 { color: var(--muted); }
-body.omarchy #aux-paper[data-kind="darlings"] .darling { border-color: var(--line); border-left-color: var(--accent); border-radius: 0; }
-body.omarchy #aux-paper[data-kind="darlings"] .darling .d-meta { color: var(--muted); font-family: var(--ui-font); }
-body.omarchy #aux-paper[data-kind="darlings"] .darling button { border-color: var(--line); color: var(--faint); border-radius: 0; }
-body.omarchy #aux-paper[data-kind="darlings"] .darling button:hover { border-color: var(--accent); color: var(--fg); }
-body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .darlings-empty { color: var(--faint); }
-body.omarchy #aux-paper[data-kind="sources"] .src-item { border-top-color: var(--line-soft); }
-body.omarchy #aux-paper[data-kind="sources"] .src-input { border-color: var(--line); border-radius: 0; }
-body.omarchy #aux-paper[data-kind="sources"] .src-url { color: var(--fg-2); }
-body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .btn-gold { background: var(--accent); color: var(--accent-ink); }
-body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .btn-quiet:hover { color: var(--fg); }
-body.omarchy :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
-body.omarchy #reorder-paper .ro-card { border-radius: 0; box-shadow: none; border-color: var(--line-soft); }
-body.omarchy #reorder-paper .ro-card:focus { border-color: var(--accent); }
-body.omarchy #reorder-paper .ro-meta { color: var(--muted); }
+body.themed #reorder-paper { --paper: var(--surface); }
+body.themed :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) h2 { color: var(--muted); }
+body.themed #aux-paper[data-kind="darlings"] .darling { border-color: var(--line); border-left-color: var(--accent); border-radius: calc(4px * var(--round)); }
+body.themed #aux-paper[data-kind="darlings"] .darling .d-meta { color: var(--muted); font-family: var(--ui-font); }
+body.themed #aux-paper[data-kind="darlings"] .darling button { border-color: var(--line); color: var(--faint); border-radius: calc(4px * var(--round)); }
+body.themed #aux-paper[data-kind="darlings"] .darling button:hover { border-color: var(--accent); color: var(--fg); }
+body.themed :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .darlings-empty { color: var(--faint); }
+body.themed #aux-paper[data-kind="sources"] .src-item { border-top-color: var(--line-soft); }
+body.themed #aux-paper[data-kind="sources"] .src-input { border-color: var(--line); border-radius: calc(4px * var(--round)); }
+body.themed #aux-paper[data-kind="sources"] .src-url { color: var(--fg-2); }
+body.themed :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .btn-gold { background: var(--accent); color: var(--accent-ink); }
+body.themed :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) .btn-quiet:hover { color: var(--fg); }
+body.themed :is(#aux-paper[data-kind="sources"], #aux-paper[data-kind="darlings"]) ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+body.themed #reorder-paper .ro-card { border-radius: calc(4px * var(--round)); box-shadow: none; border-color: var(--line-soft); }
+body.themed #reorder-paper .ro-card:focus { border-color: var(--accent); }
+body.themed #reorder-paper .ro-meta { color: var(--muted); }
 
 /* ---- the menu bar drawn by the page (appmenu.js, Omarchy) ---- */
 #appmenu {
@@ -1400,3 +1400,26 @@ body.omarchy #counters { gap: 10px; }
 }
 #editor-view.nav-open #nav-tab, #editor-view.side-open #side-tab { opacity: 0; pointer-events: none; }
 body.reordering .edge-tab { display: none; }
+
+/* ---- theme picker (Goals & settings, first run) ---- */
+.theme-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.theme-card {
+  display: flex; flex-direction: column; gap: 6px; padding: 6px; cursor: pointer; text-align: left;
+  background: var(--surface); border: 1.5px solid var(--line-soft); border-radius: calc(8px * var(--round));
+  color: var(--fg-2); font: inherit; font-size: 12px;
+}
+.theme-card:hover { border-color: var(--line-strong); color: var(--fg); }
+.theme-card.sel { border-color: var(--accent); color: var(--fg-strong); background: var(--accent-bg); }
+.theme-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tc-swatch {
+  position: relative; display: flex; align-items: center; height: 46px; padding: 0 10px;
+  border-radius: calc(5px * var(--round)); border: 1px solid rgba(255,255,255,0.08);
+}
+.tc-aa { font-family: var(--body-font); font-size: 20px; }
+.tc-dot { position: absolute; right: 10px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; }
+/* Omarchy: the colours are whatever the desktop wears */
+.tc-system { background: linear-gradient(135deg, #1a1b26, #0e091d 50%, #181a1f); }
+.tc-system .tc-aa { color: #d4d4d4; }
+.tc-system .tc-dot { background: conic-gradient(#7aa2f7, #3CBF5C, #BFA75D, #BE3F50, #7aa2f7); }
+.st-theme { grid-column: 1 / -1; margin-bottom: 14px; }
+#fr-themes { margin-top: 14px; }

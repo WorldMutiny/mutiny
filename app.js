@@ -190,10 +190,22 @@ function showFirstRun() {
       library.penNames = pen ? [pen] : [];
       library.writingStyle = btn.dataset.style;
       $('#fr-step1').hidden = true;
-      $('#fr-step2').hidden = false;
-      buildFontStep();
+      $('#fr-steptheme').hidden = false;
+      const box = $('#fr-themes');
+      box.innerHTML = '';
+      box.appendChild(themePicker(library.appearance || 'auto', async (id) => {
+        library.appearance = id;
+        await applyAppearance();
+      }));
     };
   });
+
+  // Step 1b: the theme, applied at once to everything behind the dialog
+  $('#fr-theme-next').onclick = () => {
+    $('#fr-steptheme').hidden = true;
+    $('#fr-step2').hidden = false;
+    buildFontStep();
+  };
 
   // Step 2: fonts, with a WYSIWYG sample
   function preview() {
@@ -4331,8 +4343,8 @@ function openStats() {
         <h3>${t('stats.secApp')}</h3>
         <div class="st-grid">
           ${field(t('stats.uiLang'), langSel('st-uilang', I18N.lang))}
-          ${field(t('stats.appearance'), `<select id="st-appearance"><option value="auto"${(library.appearance || 'auto') === 'auto' ? ' selected' : ''}>${t('stats.appearanceAuto')}</option><option value="mutiny"${library.appearance === 'mutiny' ? ' selected' : ''}>${t('stats.appearanceMutiny')}</option></select><span class="soft st-appearance-now">${appearanceNow.mode === 'omarchy' ? t('stats.appearanceUsing', { name: escHtml(appearanceNow.name || 'Omarchy') }) : ''}</span>`, ` title="${t('stats.appearanceNote')}"${/Linux/.test(navigator.userAgent) ? '' : ' hidden'}`)}
         </div>
+        <div class="st-field st-theme"><span class="st-label">${t('stats.theme')}</span><div id="st-theme"></div><span class="soft st-appearance-now"></span></div>
         <label class="st-check" title="${t('stats.updatesNote')}"><input type="checkbox" id="st-updates"${library.updateChecks === false ? '' : ' checked'}/> ${t('stats.updates')}</label>
       </section>
       <div class="st-foot-bar">
@@ -4366,13 +4378,16 @@ function openStats() {
   bd.querySelector('.m-ok').onclick = close;
   bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
   // the appearance switches at once, so the writer sees what they chose
-  bd.querySelector('#st-appearance').onchange = async (e) => {
-    library.appearance = e.target.value;
-    await window.neo.writeLibrary(library);
-    const now = await applyAppearance();
+  const themeNote = (now) => {
     bd.querySelector('.st-appearance-now').textContent = now.mode === 'omarchy' ? t('stats.appearanceUsing', { name: now.name || 'Omarchy' })
-      : e.target.value === 'auto' ? t('stats.appearanceNone') : '';
+      : (library.appearance || 'auto') === 'auto' && /Linux/.test(navigator.userAgent) ? t('stats.appearanceNone') : '';
   };
+  bd.querySelector('#st-theme').appendChild(themePicker(library.appearance || 'auto', async (id) => {
+    library.appearance = id;
+    await window.neo.writeLibrary(library);
+    themeNote(await applyAppearance());
+  }));
+  themeNote(appearanceNow);
   if (hasBook) {
     bd.querySelector('#st-sprint-btn').onclick = () => {
       if (sprint && !sprint.done) {
@@ -5200,6 +5215,11 @@ window.neo.onMenu(async (msg) => {
     applyAlign(msg.value);
   }
   if (msg.type === 'togglePane') togglePane(msg.value);
+  if (msg.type === 'theme') {
+    library.appearance = msg.value;
+    await window.neo.writeLibrary(library);
+    await applyAppearance();
+  }
   if (msg.type === 'uiBright') {
     library.uiBright = library.uiBright === false;
     await window.neo.writeLibrary(library);
