@@ -424,10 +424,29 @@ Decisiones tomadas en el camino que no estaban en el plan:
   - botón "Activar el asistente…" en el chat;
   - "Acerca de" con enlace a worldmutiny.com y "Regresar a escribir".
 
+### Siguiente — Marca y sitio web (worldmutiny.com) (plan 2026-09-30)
+
+**Identidad (palabras del autor):** el mundo está roto, y solo con nuevas ideas y voces se podrá arreglar o al menos mejorar. Mutiny es para los rebeldes, los atrevidos, los que quieren expresar sus ideas y se juegan el pellejo; los que a primera vista parecen idealistas pero saben que pueden generar cambios. Software libre, abierto y gratuito, inspirado en sistemas como Omarchy. Esa identidad guía el logo, los textos y el tono del sitio.
+
+1. **Logo:**
+   - 3 propuestas que cuenten la idea: **A Evolución** (la M pixel con desfase CRT, la señal que se cuela), **B Bandera** (el banderín del motín) y **C Grito** (la voz que se levanta).
+   - Luego el sistema completo: símbolo, logotipo MUTINY en la misma retícula, versiones horizontal y apilada, color y una tinta, SVG/PNG/favicon y guía de uso.
+   - Aplicarlo en el icono de la app, el manual, "Acerca de", el README y la web.
+2. **Manifiesto y textos (EN y ES):**
+   - "The Mutiny Manifesto", unos 7 principios que unan la idea y el software (*Words are how the world changes · Your page is yours · The AI questions, you decide · Free as in freedom · For the ones who put their name on it…*), en su propia página `/manifesto`;
+   - titulares de portada con postura;
+   - "Why Mutiny": la app, el nombre (motín; *Halt and Catch Fire*) y el *World*.
+3. **Sitio web**, inspirado en omarchy.org:
+   - worldmutiny.com como raíz, inglés con ES a un clic, Cloudflare Web Analytics (sin cookies), Astro en Cloudflare Pages, repo `worldmutiny/web`.
+   - Secciones: portada → manifiesto → míralo en acción → qué escribes → el asistente → privacidad → temas (el selector cambia el tema de todo el sitio) → libre y abierto → descargar (detecta el sistema, SHA-256) → pie.
+   - `/manual` generado de TUTORIAL.md.
+   - Tono directo, valiente y con humor ("Join the mutiny", "Nobody reads over your shoulder").
+4. Conectar el dominio y publicar.
+
 ### Lo que falta después de la 1.0 (orden sugerido)
 1. **Verificar fuentes** (versión futura, arriba).
 2. **Paquete de AUR** (fase 6).
-3. **Capturas en el README** y una página en worldmutiny.com.
+3. **Capturas en el README** (el sitio va arriba, en "Marca y sitio web").
 
 Ideas abiertas: fondo con imagen en la hoja (platicado, no decidido).
 
