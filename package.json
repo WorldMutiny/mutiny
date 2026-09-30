@@ -1,7 +1,7 @@
 {
   "name": "mutiny",
   "productName": "Mutiny",
-  "version": "0.9.0-beta.3",
+  "version": "0.9.0-beta.4",
   "description": "A distraction-free essay writer with an optional AI research & critique assistant.",
   "homepage": "https://github.com/worldmutiny/mutiny",
   "main": "main.js",
