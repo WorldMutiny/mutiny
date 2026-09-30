@@ -1971,12 +1971,20 @@ function flashMark(sid) {
 }
 
 // keep an assistant's comment by moving it into the Notes tab
+// Add a block at the end of the Notes page, one blank line apart from what's
+// already there so each note stands on its own.
+async function appendToNotes(block) {
+  flushAux();
+  const html = (await window.neo.readAux(book.id, 'notes')) || '';
+  const empty = !html.replace(/<br\s*\/?>|&nbsp;|<\/?p>|\s/gi, '');
+  const gap = empty || /<p>(<br>)?<\/p>\s*$/i.test(html) ? '' : '<p><br></p>';
+  await window.neo.writeAux(book.id, 'notes', (empty ? '' : html) + gap + block);
+}
+
 async function stickyToNotes(s) {
   const chIdx = book.chapterOrder.indexOf(s.chapterId);
   const head = `✦ ${t('crit.cat.' + (s.category || 'clarity'))}${chIdx >= 0 ? ' · ' + t('side.section', { n: chIdx + 1 }) : ''}`;
-  flushAux();
-  const html = await window.neo.readAux(book.id, 'notes');
-  await window.neo.writeAux(book.id, 'notes', (html || '') + `<p><b>${escHtml(head)}</b></p><p>${escHtml(s.text)}</p>`);
+  await appendToNotes(`<p><b>${escHtml(head)}</b></p><p>${escHtml(s.text)}</p>`);
   resolveSticky(s.id);
   toast(t('side.movedToNotes'));
 }

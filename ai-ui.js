@@ -697,9 +697,7 @@ function chatBubble(m) {
       insertFromChat(picked);
     };
     bar.querySelector('.c-note').onclick = async () => {
-      flushAux();
-      const html = await window.neo.readAux(book.id, 'notes');
-      await window.neo.writeAux(book.id, 'notes', (html || '') + `<p><b>${escHtml(t('chat.noteHead'))}</b></p>` + miniMarkdown(m.text));
+      await appendToNotes(`<p><b>${escHtml(t('chat.noteHead'))}</b></p>` + miniMarkdown(m.text));
       toast(t('side.movedToNotes'));
     };
     bar.querySelector('.c-copy').onclick = () => { navigator.clipboard.writeText(m.text); toast(t('chat.copied')); };
