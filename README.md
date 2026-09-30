@@ -8,6 +8,8 @@
 
 Mutiny is built on [NEO](https://github.com/hughhowey/neo) by Hugh Howey, a lovely word processor made for novelists. It keeps what makes NEO great — a clean page, plain files on your disk, no accounts, no cloud — and retargets it at essays and other non-fiction: templates for seven essay methods plus blog posts, newsletters, scripts and speeches, sources and citations, reordering, versions of a sentence, six themes, and an assistant that adapts to what you're writing and can learn your voice.
 
+**Why?** Read [The Mutiny Manifesto](MANIFESTO.md): words start mutinies.
+
 **New here?** The [tutorial](TUTORIAL.md) walks through everything ([en español](TUTORIAL_ES.md)).
 
 > **Status: 1.0.** The first stable release. If something breaks, please [report it](https://github.com/worldmutiny/mutiny/issues).
