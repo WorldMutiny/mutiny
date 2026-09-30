@@ -4264,7 +4264,7 @@ document.addEventListener('contextmenu', async (e) => {
     if (library.ai && library.ai.enabled) {
       if (hasSel) items.push({ label: t('ctx.versions'), accel: K('⌘⇧M', 'Ctrl+Shift+M'), run: () => openVersions() });
       items.push(
-        { label: t('ctx.critique'), accel: K('⌘⇧C', 'Ctrl+Shift+C'), run: () => critique('section') },
+        { label: t(QUESTION_FORMS.has(bookTemplate().kind + '/' + bookTemplate().form) ? 'ctx.questions' : 'ctx.critique'), accel: K('⌘⇧C', 'Ctrl+Shift+C'), run: () => critique('section') },
         { label: t('ctx.chat'), accel: K('⌘⇧A', 'Ctrl+Shift+A'), run: () => openChat() });
     } else {
       items.push({ label: t('ctx.aiOn'), run: () => openAiSettings() });
