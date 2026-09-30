@@ -535,6 +535,13 @@ body.typewriter #paper { margin-bottom: 60vh; }
 .spell-menu .sm-sep { height: 1px; background: var(--line); margin: 4px 0; }
 body.bright .spell-menu { border-color: var(--line-strong); }
 body.bright .spell-menu button { color: var(--fg-strong); }
+/* the right-click menu: dressed like the menu bar, shortcuts on the right */
+.ctx-menu { min-width: 240px; font-family: var(--ui-font); }
+.ctx-menu button { display: flex; justify-content: space-between; gap: 24px; font-family: var(--ui-font); font-size: 13px; white-space: nowrap; }
+.ctx-menu button.cm-strong { font-family: var(--body-font); font-size: 14px; font-weight: 600; }
+.ctx-menu button:disabled { font-style: normal; cursor: default; }
+.ctx-menu .cm-accel { color: var(--muted); }
+.ctx-menu button:hover:not(:disabled) .cm-accel { color: inherit; }
 
 /* Section breaks: Enter twice for ***, three times for a new chapter */
 .chapter-body p.scene-break {

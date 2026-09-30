@@ -4135,81 +4135,142 @@ function toggleSpellcheck() {
   toast(t(spellOn ? 'spell.on' : 'spell.off'));
 }
 
-// right-click a flagged word for suggestions
+// Right-click in the writing: spelling (when the word is flagged), the
+// clipboard, and — in the Draft — marks, citations and the assistant.
 document.addEventListener('contextmenu', async (e) => {
-  if (!spellOn || e.defaultPrevented) return;
-  const editor = e.target.closest && e.target.closest('.chapter-body, #aux-editor');
-  if (!editor) return;
-  const pos = document.caretRangeFromPoint(e.clientX, e.clientY);
-  if (!pos || pos.startContainer.nodeType !== Node.TEXT_NODE) return;
+  if (e.defaultPrevented) return; // a citation's own menu
+  const field = e.target.closest && e.target.closest('textarea, input[type="text"], input:not([type])');
+  const editor = e.target.closest && e.target.closest('.chapter-body, #aux-editor, .ol-text, #tp-title, #tp-subtitle, .ch-title');
+  if (!editor && !field) return;
+  e.preventDefault();
+  const items = [];
+  const sel = window.getSelection();
+  const hasSel = field ? field.selectionStart !== field.selectionEnd : !!(sel.rangeCount && !sel.isCollapsed);
+
+  // spelling first, as before
+  if (editor && spellOn) {
+    const spell = await spellItemsAt(editor, e.clientX, e.clientY);
+    if (spell.length) items.push(...spell, 'sep');
+  }
+  items.push(
+    { label: t('ctx.cut'), accel: K('⌘X', 'Ctrl+X'), disabled: !hasSel, run: () => window.neo.editRole('cut') },
+    { label: t('ctx.copy'), accel: K('⌘C', 'Ctrl+C'), disabled: !hasSel, run: () => window.neo.editRole('copy') },
+    { label: t('ctx.paste'), accel: K('⌘V', 'Ctrl+V'), run: () => window.neo.editRole('paste') }
+  );
+
+  const inDraft = editor && editor.classList.contains('chapter-body') && currentTab === 'manuscript';
+  if (inDraft) {
+    const mark = e.target.closest('.ph-mark');
+    if (mark && mark.dataset.sid) {
+      items.push('sep',
+        { label: t('ctx.seeNote'), run: () => focusSticky(mark.dataset.sid) },
+        { label: t('ctx.resolve'), run: () => resolveSticky(mark.dataset.sid) });
+    }
+    items.push('sep',
+      { label: t('ctx.mark'), accel: K('⌘⇧X', 'Ctrl+Shift+X'), run: () => insertPlaceholder() },
+      { label: t('ctx.cite'), accel: K('⌘⇧K', 'Ctrl+Shift+K'), run: () => insertCitation() });
+    if (hasSel) items.push({ label: t('ctx.later'), accel: K('⌘⇧D', 'Ctrl+Shift+D'), run: () => darlingFromKeyboard() });
+    items.push('sep');
+    if (library.ai && library.ai.enabled) {
+      if (hasSel) items.push({ label: t('ctx.versions'), accel: K('⌘⇧M', 'Ctrl+Shift+M'), run: () => openVersions() });
+      items.push(
+        { label: t('ctx.critique'), accel: K('⌘⇧C', 'Ctrl+Shift+C'), run: () => critique('section') },
+        { label: t('ctx.chat'), accel: K('⌘⇧A', 'Ctrl+Shift+A'), run: () => openChat() });
+    } else {
+      items.push({ label: t('ctx.aiOn'), run: () => openAiSettings() });
+    }
+  }
+  showContextMenu(e.clientX, e.clientY, items);
+});
+
+// the spelling part: suggestions for a flagged word under the pointer, and "learn it"
+async function spellItemsAt(editor, x, y) {
+  const pos = document.caretRangeFromPoint(x, y);
+  if (!pos || pos.startContainer.nodeType !== Node.TEXT_NODE) return [];
   const node = pos.startContainer;
   const text = node.data;
   let a = pos.startOffset, b = pos.startOffset;
   while (a > 0 && isSpellChar(text[a - 1])) a--;
   while (b < text.length && isSpellChar(text[b])) b++;
-  if (a === b) return;
+  if (a === b) return [];
   const word = spellNorm(text.slice(a, b));
-  if (spellCache.get(spellKey(word)) !== false) return; // only flagged words get our menu
-  e.preventDefault();
+  if (spellCache.get(spellKey(word)) !== false) return []; // only flagged words
   const chEl = editor.closest ? editor.closest('.chapter') : null;
   const key = editor.id === 'aux-editor'
     ? 'aux-' + (editor.dataset.kind || 'notes')
     : (chEl ? chEl.dataset.id : null);
   const sugg = await window.neo.spellSuggest(word, spellLang());
-  showSpellMenu(e.clientX, e.clientY, word, sugg, {
-    replace: (s) => {
+  const items = sugg.length
+    ? sugg.map((s) => ({ label: s, strong: true, run: () => {
       const sel = window.getSelection();
       const r = document.createRange();
       r.setStart(node, a); r.setEnd(node, b);
       sel.removeAllRanges(); sel.addRange(r);
       document.execCommand('insertText', false, s);
       if (key) spellScanEl(spellElFor(key), key);
-    },
-    learn: async () => {
-      library.customWords = library.customWords || [];
-      if (!library.customWords.includes(word)) library.customWords.push(word);
-      await window.neo.writeLibrary(library);
-      await window.neo.spellLearn(word);
-      for (const lang of ['en', 'es']) spellCache.set(lang + ':' + word, true);
-      for (const k of [...spellScanned]) spellScanEl(spellElFor(k), k);
-    }
-  });
-});
+    } }))
+    : [{ label: t('spell.none'), disabled: true }];
+  items.push({ label: t('spell.learn', { word }), run: async () => {
+    library.customWords = library.customWords || [];
+    if (!library.customWords.includes(word)) library.customWords.push(word);
+    await window.neo.writeLibrary(library);
+    await window.neo.spellLearn(word);
+    for (const lang of ['en', 'es']) spellCache.set(lang + ':' + word, true);
+    for (const k of [...spellScanned]) spellScanEl(spellElFor(k), k);
+  } });
+  return items;
+}
 
-function showSpellMenu(x, y, word, suggestions, actions) {
+// items: { label, accel?, disabled?, strong?, run } or 'sep'
+function showContextMenu(x, y, items) {
   document.querySelector('.spell-menu')?.remove();
   const menu = document.createElement('div');
-  menu.className = 'spell-menu';
-  if (suggestions.length) {
-    for (const s of suggestions) {
-      const btn = document.createElement('button');
-      btn.textContent = s;
-      btn.onclick = () => { menu.remove(); actions.replace(s); };
-      menu.appendChild(btn);
+  menu.className = 'spell-menu ctx-menu';
+  menu.setAttribute('role', 'menu');
+  let lastSep = true;
+  for (const it of items) {
+    if (it === 'sep') {
+      if (lastSep) continue;
+      const sep = document.createElement('div');
+      sep.className = 'sm-sep';
+      menu.appendChild(sep);
+      lastSep = true;
+      continue;
     }
-  } else {
-    const none = document.createElement('button');
-    none.textContent = t('spell.none');
-    none.disabled = true;
-    menu.appendChild(none);
+    const btn = document.createElement('button');
+    btn.setAttribute('role', 'menuitem');
+    if (it.strong) btn.classList.add('cm-strong');
+    const label = document.createElement('span');
+    label.textContent = it.label;
+    btn.appendChild(label);
+    if (it.accel) {
+      const k = document.createElement('span');
+      k.className = 'cm-accel';
+      k.textContent = it.accel;
+      btn.appendChild(k);
+    }
+    btn.disabled = !!it.disabled;
+    // mousedown keeps the selection in the text for Cut / Copy / Versions
+    btn.addEventListener('mousedown', (ev) => ev.preventDefault());
+    btn.onclick = () => { menu.remove(); it.run(); };
+    menu.appendChild(btn);
+    lastSep = false;
   }
-  const sep = document.createElement('div');
-  sep.className = 'sm-sep';
-  menu.appendChild(sep);
-  const learn = document.createElement('button');
-  learn.textContent = t('spell.learn', { word });
-  learn.onclick = () => { menu.remove(); actions.learn(); };
-  menu.appendChild(learn);
+  if (menu.lastChild && menu.lastChild.classList.contains('sm-sep')) menu.lastChild.remove();
   document.body.appendChild(menu);
   const r = menu.getBoundingClientRect();
-  menu.style.left = Math.min(x, window.innerWidth - r.width - 10) + 'px';
-  menu.style.top = Math.min(y + 4, window.innerHeight - r.height - 10) + 'px';
+  menu.style.left = Math.max(6, Math.min(x, window.innerWidth - r.width - 10)) + 'px';
+  menu.style.top = Math.max(6, Math.min(y + 4, window.innerHeight - r.height - 10)) + 'px';
   const close = (ev) => {
-    if (menu.contains(ev.target)) return;
+    if (ev.type === 'mousedown' && menu.contains(ev.target)) return;
+    if (ev.type === 'keydown' && ev.key !== 'Escape') return;
+    if (ev.type === 'keydown') ev.stopPropagation();
     menu.remove();
     document.removeEventListener('mousedown', close, true);
+    document.removeEventListener('keydown', close, true);
   };
   document.addEventListener('mousedown', close, true);
+  document.addEventListener('keydown', close, true);
 }
 
 let typewriterEnabled = false;
@@ -5215,6 +5276,10 @@ window.neo.onMenu(async (msg) => {
     applyAlign(msg.value);
   }
   if (msg.type === 'togglePane') togglePane(msg.value);
+  if (msg.type === 'mark' || msg.type === 'cite') {
+    if (!book || $('#editor-view').hidden || currentTab !== 'manuscript') { toast(t('ctx.draftOnly')); return; }
+    if (msg.type === 'mark') insertPlaceholder(); else insertCitation();
+  }
   if (msg.type === 'theme') {
     library.appearance = msg.value;
     await window.neo.writeLibrary(library);

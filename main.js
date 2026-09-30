@@ -982,7 +982,10 @@ function buildMenu() {
           label: T('menu.spellcheck'),
           accelerator: 'CmdOrCtrl+;',
           click: () => sendToWindow({ type: 'spellcheck' })
-        }
+        },
+        { type: 'separator' },
+        { label: T('menu.mark'), accelerator: 'CmdOrCtrl+Shift+X', registerAccelerator: false, click: () => sendToWindow({ type: 'mark' }) },
+        { label: T('menu.cite'), accelerator: 'CmdOrCtrl+Shift+K', registerAccelerator: false, click: () => sendToWindow({ type: 'cite' }) }
       ]
     },
     {
@@ -1136,6 +1139,13 @@ function menuModel(items) {
 }
 
 ipcMain.handle('appmenu:get', () => appMenuModel);
+
+// the right-click menu's Cut / Copy / Paste, done by the page like the Edit menu's
+ipcMain.handle('edit:role', (e, role) => {
+  if (!['cut', 'copy', 'paste'].includes(role)) return false;
+  e.sender[role]();
+  return true;
+});
 
 ipcMain.handle('appmenu:run', (e, id) => {
   const it = appMenuActions.get(String(id));
