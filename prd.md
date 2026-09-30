@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** 0.9.0-beta.4 publicada — fases 0 a 6 y betas 2 a 4 · 2026-09-30
+**Estado:** 1.0.0 — primera versión estable · 2026-09-30
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx Darko
 
@@ -402,17 +402,32 @@ Decisiones tomadas en el camino que no estaban en el plan:
 - **Import de Markdown:** `#` es el título del ensayo y `##` crea secciones con nombre.
 - **Bugs heredados de NEO corregidos:** temporizadores de guardado que se disparaban tras cerrar un libro (error visible y posible escritura en el libro equivocado), y HTML exportado sin escapar el título.
 
-### Fase final — Pulido de la experiencia de usuario
-- [ ] Revisión completa de la UX una vez que todas las funciones estén en su lugar (pedido 2026-09-26). Ahora que hay plantillas, temas y un onboarding de 8 pasos, revisar sobre todo la primera experiencia.
+### Fase final — Pulido de la experiencia de usuario ✅ (2026-09-30, versión 1.0.0)
+- [x] Recorrido completo como usuario nuevo (22 capturas) y revisión de cada pantalla en los 6 temas, Omarchy y la hoja Papel.
+- [x] Onboarding:
+  - 6 pasos con puntos de avance y **← Atrás**;
+  - tema y tipografía juntos en "Cómo se ve";
+  - la tarjeta Omarchy solo donde Omarchy existe;
+  - el paso del asistente nombra los 4 proveedores y abre sus ajustes al final si hace falta;
+  - cierre "Todo listo" con **Empezar mi primer texto**.
+- [x] Mi voz vacío en una sola línea.
+- [x] **Ayuda → Manual (F1):** ventana propia al estilo del manual de Omarchy:
+  - capítulos a la izquierda, logo MUTINY en pixel art, anterior/siguiente;
+  - colores del tema, ES/EN y sin internet;
+  - lee `TUTORIAL*.md`, empaquetados;
+  - su preload solo puede leer el manual y abrir enlaces https.
+- [x] Secciones vacías de una plantilla: la pregunta guía como título fantasma.
+- [x] Otros arreglos:
+  - "Escribe libremente…" traducido;
+  - "Ensayo · Toulmin" en ajustes;
+  - la ayuda al día;
+  - botón "Activar el asistente…" en el chat;
+  - "Acerca de" con enlace a worldmutiny.com y "Regresar a escribir".
 
-### Lo que falta (orden sugerido, 2026-09-30)
-1. **Pulido final de UX** (arriba).
-2. **Verificar fuentes** (versión futura, arriba).
-3. **Paquete de AUR** (fase 6).
-4. **1.0:**
-   - sin errores conocidos;
-   - capturas en el README;
-   - quizá una página en worldmutiny.com.
+### Lo que falta después de la 1.0 (orden sugerido)
+1. **Verificar fuentes** (versión futura, arriba).
+2. **Paquete de AUR** (fase 6).
+3. **Capturas en el README** y una página en worldmutiny.com.
 
 Ideas abiertas: fondo con imagen en la hoja (platicado, no decidido).
 
