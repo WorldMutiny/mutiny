@@ -29,6 +29,8 @@
   <!-- ======================= FIRST RUN ======================= -->
   <div id="firstrun" class="modal-backdrop" hidden>
     <div class="modal">
+      <!-- where you are, and a way back (drawn by showFirstRun) -->
+      <div class="fr-nav" hidden><button type="button" class="fr-back btn-quiet" data-i18n="fr.back"></button><span class="fr-dots" aria-hidden="true"></span></div>
       <!-- step 0 is deliberately bilingual: it's how the language gets chosen -->
       <div id="fr-step0">
         <h2>Mutiny</h2>
@@ -67,14 +69,6 @@
           </div>
         </div>
       </div>
-      <div id="fr-steptheme" hidden>
-        <h2 data-i18n="fr.themeTitle"></h2>
-        <p data-i18n="fr.themeIntro"></p>
-        <div id="fr-themes"></div>
-        <div style="text-align:right;margin-top:20px">
-          <button id="fr-theme-next" class="btn-gold" data-i18n="fr.next"></button>
-        </div>
-      </div>
       <div id="fr-stepkinds" hidden>
         <h2 data-i18n="fr.kindsTitle"></h2>
         <p data-i18n="fr.kindsIntro"></p>
@@ -86,10 +80,12 @@
       <div id="fr-step2" hidden>
         <h2 data-i18n="fr.lookTitle"></h2>
         <p data-i18n="fr.lookIntro"></p>
+        <p class="fr-sub" data-i18n="fr.themeLabel"></p>
+        <div id="fr-themes"></div>
+        <p class="fr-sub" data-i18n="fr.typeface"></p>
         <div id="fr-sample">
           <p id="fr-sample-text" data-i18n="fr.sample"></p>
         </div>
-        <p style="margin-bottom:6px" data-i18n="fr.typeface"></p>
         <div id="fr-bodyfonts" class="fr-fontrow"></div>
         <div style="text-align:right;margin-top:20px">
           <button id="fr-next" class="btn-gold" data-i18n="fr.next"></button>
@@ -123,6 +119,22 @@
           <button class="fr-choice" id="fr-done">
             <strong data-i18n="fr.voiceDone"></strong>
             <span data-i18n="fr.voiceDoneDesc"></span>
+          </button>
+        </div>
+      </div>
+
+      <div id="fr-stepready" hidden>
+        <h2 data-i18n="fr.readyTitle"></h2>
+        <p data-i18n="fr.readyIntro"></p>
+        <p class="soft" style="font-size:13px" data-i18n-html="fr.readyHelp"></p>
+        <div class="fr-choices">
+          <button class="fr-choice" id="fr-start">
+            <strong data-i18n="fr.startText"></strong>
+            <span data-i18n="fr.startTextDesc"></span>
+          </button>
+          <button class="fr-choice" id="fr-toshelf">
+            <strong data-i18n="fr.toShelf"></strong>
+            <span data-i18n="fr.toShelfDesc"></span>
           </button>
         </div>
       </div>

@@ -1,0 +1,99 @@
+/* ============================ MUTINY ============================ */
+/* The manual (Help → Manual): laid out like Omarchy's — chapters down */
+/* the left, one chapter at a time, a pixel wordmark on top, the next  */
+/* chapter at the bottom — in the colours of the theme Mutiny wears.   */
+
+@font-face { font-family: 'Mutiny iA Writer Duo'; src: url('fonts/iAWriterDuoS-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'Mutiny iA Writer Duo'; src: url('fonts/iAWriterDuoS-Italic.woff2') format('woff2'); font-weight: 400; font-style: italic; }
+@font-face { font-family: 'Mutiny iA Writer Duo'; src: url('fonts/iAWriterDuoS-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; }
+@font-face { font-family: 'Mutiny iA Writer Duo'; src: url('fonts/iAWriterDuoS-BoldItalic.woff2') format('woff2'); font-weight: 700; font-style: italic; }
+
+/* Mutiny's own look; the window gets the live theme's values on top (manual.js) */
+:root {
+  --bg: #0e091d; --pane: #0e0e22; --fg: #14B9B5; --fg-strong: #66d2cf; --fg-2: #13999a; --muted: #128487;
+  --faint: #11656c; --line: #133846; --line-soft: #0f2232; --surface: #0e1528; --surface-2: #0f1e2f;
+  --accent: #BE3F50; --accent-ink: #ffffff; --accent-bg: #271124; --link: #04C5F0;
+  --manual-font: 'Mutiny iA Writer Duo', ui-monospace, 'DejaVu Sans Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+html { color-scheme: dark; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--fg) 22%, transparent); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--manual-font);
+  font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+}
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+#layout { display: grid; grid-template-columns: 250px 1fr; height: 100vh; }
+
+/* chapters, down the left */
+#chapters {
+  overflow-y: auto; padding: 28px 12px 28px 22px; border-right: 1px solid var(--line-soft);
+  display: flex; flex-direction: column; gap: 1px;
+}
+#chapters a {
+  display: block; padding: 5px 9px; color: var(--fg-2); text-decoration: none; font-size: 13px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 3px; flex-shrink: 0;
+}
+#chapters a:hover { color: var(--fg-strong); background: var(--surface); }
+#chapters a.on { color: var(--fg-strong); background: var(--surface-2); font-weight: 700; }
+#chapters a:focus-visible { outline: 1px solid var(--accent); }
+
+/* the page */
+#page { overflow-y: auto; padding: 28px 56px 40px; position: relative; }
+#page > * { max-width: 780px; margin-left: auto; margin-right: auto; }
+#langs { position: absolute; top: 18px; right: 24px; display: flex; gap: 4px; }
+#langs button {
+  background: none; border: 1px solid var(--line); color: var(--muted); font: inherit; font-size: 12px;
+  padding: 2px 8px; border-radius: 3px; cursor: pointer;
+}
+#langs button.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+#brand { text-align: center; margin: 24px auto 40px; }
+#wordmark svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+#brand-sub { margin-top: 14px; font-size: 13px; letter-spacing: 4px; color: var(--muted); }
+
+/* a chapter */
+#chapter h1 { font-size: 30px; line-height: 1.2; margin: 0 0 22px; color: var(--accent); font-weight: 700; }
+#chapter h2 { font-size: 20px; margin: 34px 0 12px; color: var(--fg-strong); }
+#chapter h3 { font-size: 17px; margin: 28px 0 10px; color: var(--fg-strong); }
+#chapter p { margin: 0 0 16px; }
+#chapter a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
+#chapter strong { color: var(--fg-strong); }
+#chapter code {
+  font-family: inherit; font-size: 0.92em; padding: 1px 6px; border-radius: 3px;
+  background: var(--surface-2); color: var(--fg-strong);
+}
+#chapter ul, #chapter ol { margin: 0 0 16px; padding-left: 26px; }
+#chapter li { margin: 4px 0; }
+#chapter li > ul, #chapter li > ol { margin: 4px 0 6px; }
+#chapter li > p { margin: 8px 0; }
+#chapter blockquote {
+  margin: 0 0 18px; padding: 10px 16px; border-left: 3px solid var(--accent);
+  background: var(--surface); color: var(--fg-2);
+}
+#chapter blockquote p { margin: 0; }
+#chapter hr { border: none; border-top: 1px solid var(--line-soft); margin: 26px 0; }
+#chapter table { border-collapse: collapse; width: 100%; margin: 0 0 20px; font-size: 13.5px; }
+#chapter th, #chapter td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line-soft); }
+#chapter th { color: var(--fg-strong); border-bottom-color: var(--line); font-weight: 700; }
+#chapter .flash { animation: flash 1.6s ease; }
+@keyframes flash { from { background: var(--accent-bg); } to { background: transparent; } }
+
+/* previous / next */
+#pager {
+  display: flex; justify-content: space-between; gap: 20px; margin-top: 44px;
+  padding-top: 18px; border-top: 1px solid var(--line-soft);
+}
+#pager a { color: var(--fg-2); text-decoration: none; font-size: 14px; }
+#pager a:hover { color: var(--accent); }
+#pager .next { margin-left: auto; text-align: right; }
+
+@media (max-width: 620px) {
+  #layout { grid-template-columns: 1fr; }
+  #chapters { display: none; }
+  #page { padding: 22px 18px 32px; }
+}

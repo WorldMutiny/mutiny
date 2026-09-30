@@ -108,4 +108,4 @@ function register(ipcMain, windows) {
   watch(() => { for (const w of windows()) if (!w.isDestroyed()) w.webContents.send('omarchy:changed'); });
 }
 
-module.exports = { register, read, parseToml };
+module.exports = { register, read, parseToml, available };

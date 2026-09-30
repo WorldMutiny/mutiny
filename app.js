@@ -171,13 +171,30 @@ function showFirstRun() {
   const fr = $('#firstrun');
   fr.hidden = false;
   let picked = { body: DEFAULT_BODY_FONT };
+  const writes = new Set(['essay']); // what they write — one shelf for each kind
+  let setUpAi = false;               // "Use the assistant" before it could run: open its settings at the end
+
+  // The steps, in order; the last one is the closing screen (no dot)
+  const STEPS = ['fr-step0', 'fr-step1', 'fr-stepkinds', 'fr-step2', 'fr-step3', 'fr-step4', 'fr-stepready'];
+  const enter = { 'fr-stepkinds': buildKinds, 'fr-step2': buildLook, 'fr-step3': checkAi };
+  let at = 0;
+  function go(i) {
+    at = i;
+    STEPS.forEach((id, j) => { $('#' + id).hidden = j !== i; });
+    const nav = fr.querySelector('.fr-nav');
+    nav.hidden = i === 0; // the language screen stands alone, bilingual
+    const dots = fr.querySelector('.fr-dots');
+    dots.innerHTML = STEPS.slice(0, -1).map((_, j) => `<i class="${j < i ? 'done' : j === i ? 'on' : ''}"></i>`).join('');
+    dots.title = t('fr.stepOf', { i: Math.min(i + 1, STEPS.length - 1), n: STEPS.length - 1 });
+    if (enter[STEPS[i]]) enter[STEPS[i]]();
+  }
+  fr.querySelector('.fr-back').onclick = () => { if (at > 0) go(at - 1); };
 
   // Step 0: the language, offered in both — the answer drives everything after
   $$('.fr-lang').forEach((btn) => {
     btn.onclick = async () => {
       await setLanguage(btn.dataset.lang);
-      $('#fr-step0').hidden = true;
-      $('#fr-step1').hidden = false;
+      go(1);
       $('#fr-name').focus();
     };
   });
@@ -189,21 +206,12 @@ function showFirstRun() {
       const pen = $('#fr-pen').value.trim();
       library.penNames = pen ? [pen] : [];
       library.writingStyle = btn.dataset.style;
-      $('#fr-step1').hidden = true;
-      $('#fr-steptheme').hidden = false;
-      const box = $('#fr-themes');
-      box.innerHTML = '';
-      box.appendChild(themePicker(library.appearance || 'auto', async (id) => {
-        library.appearance = id;
-        await applyAppearance();
-      }));
+      go(2);
     };
   });
 
-  // Step 1b: the theme, applied at once to everything behind the dialog
-  $('#fr-theme-next').onclick = () => {
-    $('#fr-steptheme').hidden = true;
-    $('#fr-stepkinds').hidden = false;
+  // Step 2: what they write
+  function buildKinds() {
     const box = $('#fr-kinds');
     box.innerHTML = '';
     for (const ty of TEMPLATE_TYPES) {
@@ -220,16 +228,20 @@ function showFirstRun() {
       };
       box.appendChild(b);
     }
-  };
-  // Step 1c: what they write — one shelf for each kind (essays already have theirs)
-  const writes = new Set(['essay']);
-  $('#fr-kinds-next').onclick = () => {
-    $('#fr-stepkinds').hidden = true;
-    $('#fr-step2').hidden = false;
-    buildFontStep();
-  };
+  }
+  $('#fr-kinds-next').onclick = () => go(3);
 
-  // Step 2: fonts, with a WYSIWYG sample
+  // Step 3: how it looks — the theme (applied at once, behind the dialog) and
+  // the page's typeface, with a WYSIWYG sample
+  async function buildLook() {
+    const box = $('#fr-themes');
+    box.innerHTML = '';
+    box.appendChild(themePicker(library.appearance || 'auto', async (id) => {
+      library.appearance = id;
+      await applyAppearance();
+    }, { omarchy: await hasOmarchy() }));
+    buildFontStep();
+  }
   function preview() {
     document.documentElement.style.setProperty('--body-font', fontStack(picked.body));
   }
@@ -263,32 +275,29 @@ function showFirstRun() {
     bodyRow.appendChild(sys);
     preview();
   }
+  $('#fr-next').onclick = () => go(4);
 
-  // Step 2 → 3: the optional assistant, with what was found on this computer
-  $('#fr-next').onclick = async () => {
-    $('#fr-step2').hidden = true;
-    $('#fr-step3').hidden = false;
+  // Step 4: the optional assistant, with what was found on this computer.
+  // Any provider will do; the ones that need a key are set up in its settings.
+  let aiReady = false;
+  async function checkAi() {
     const state = $('.fr-ai-state');
     state.textContent = t('ai.checking');
     const st = await window.neo.aiStatus({});
-    const ready = st.installed && st.loggedIn;
+    aiReady = st.installed && st.loggedIn;
     state.textContent = !st.installed ? t('ai.state.missing')
       : !st.loggedIn ? t('ai.state.loggedOut', { v: st.version })
       : t('ai.state.ready', { v: st.version, plan: st.plan || '—' });
-    $('#fr-ai-on').disabled = !st.installed;
-    $('#fr-ai-on').style.opacity = st.installed ? '' : '0.5';
-    if (!ready && st.installed) state.textContent += ' ' + t('fr.aiLater');
-  };
-  // Step 3 → 4: Mi voz — the writer's own texts, optional
-  const toVoice = () => {
-    $('#fr-step3').hidden = true;
-    $('#fr-step4').hidden = false;
-  };
+    if (!aiReady) state.textContent += ' ' + t('fr.aiOther');
+  }
   $('#fr-ai-on').onclick = () => {
     library.ai = { ...(library.ai || {}), enabled: true };
-    toVoice();
+    setUpAi = !aiReady;
+    go(5);
   };
-  $('#fr-ai-off').onclick = toVoice;
+  $('#fr-ai-off').onclick = () => { setUpAi = false; go(5); };
+
+  // Step 5: Mi voz — the writer's own texts, optional
   $('#fr-voice-import').onclick = async () => {
     await importToVoice();
     const docs = await voiceCorpus();
@@ -299,8 +308,10 @@ function showFirstRun() {
       $('#fr-done strong').textContent = t('fr.voiceNext');
     }
   };
+  $('#fr-done').onclick = () => go(6);
 
-  $('#fr-done').onclick = async () => {
+  // Last: ready — straight into a first text, or to the shelf
+  async function finish(startText) {
     library.fonts = { body: picked.body };
     library.firstRunDone = true;
     // a shelf for each kind they write, in the order offered; + New starts on the first
@@ -314,13 +325,19 @@ function showFirstRun() {
     // the shelf was drawn (and the author record seeded as Anonymous) before
     // the name was typed — carry the name across
     currentAuthor().name = library.authorName || (library.penNames || [])[0] || 'Anonymous';
-    // the essays default to the interface language
+    // the texts default to the interface language
     library.language = library.language || I18N.lang;
     await window.neo.writeLibrary(library);
     applyFonts();
     fr.hidden = true;
     renderShelves();
-  };
+    if (setUpAi) openAiSettings();
+    else if (startText) createBookOnShelf(null);
+  }
+  $('#fr-start').onclick = () => finish(true);
+  $('#fr-toshelf').onclick = () => finish(false);
+
+  go(0);
 }
 
 // Pen names: each author owns a set of shelves. Books all live in the one
@@ -4508,6 +4525,18 @@ function readTextFields(bd) {
   if (min) book.targetMin = parseInt(min.value, 10) || 0;
 }
 
+// Help → Manual: its own window, in this window's colours and language
+function openManual() {
+  const cs = getComputedStyle(document.body);
+  const tokens = {};
+  for (const k of ['--bg', '--pane', '--fg', '--fg-strong', '--fg-2', '--muted', '--faint', '--line', '--line-soft',
+    '--surface', '--surface-2', '--accent', '--accent-ink', '--accent-bg', '--link', '--ui-font']) {
+    const v = cs.getPropertyValue(k).trim();
+    if (v) tokens[k] = v;
+  }
+  window.neo.openManual({ lang: I18N.lang, tokens, mono: document.body.classList.contains('omarchy') });
+}
+
 function openStats() {
   const hasBook = !!book;
   const today = hasBook ? (book.dailyCounts || {})[todayStr()] : null;
@@ -4603,13 +4632,13 @@ function openStats() {
   // the appearance switches at once, so the writer sees what they chose
   const themeNote = (now) => {
     bd.querySelector('.st-appearance-now').textContent = now.mode === 'omarchy' ? t('stats.appearanceUsing', { name: now.name || 'Omarchy' })
-      : (library.appearance || 'auto') === 'auto' && /Linux/.test(navigator.userAgent) ? t('stats.appearanceNone') : '';
+      : '';
   };
-  bd.querySelector('#st-theme').appendChild(themePicker(library.appearance || 'auto', async (id) => {
+  hasOmarchy().then((omarchy) => bd.querySelector('#st-theme').appendChild(themePicker(library.appearance || 'auto', async (id) => {
     library.appearance = id;
     await window.neo.writeLibrary(library);
     themeNote(await applyAppearance());
-  }));
+  }, { omarchy })));
   themeNote(appearanceNow);
   if (hasBook) {
     bd.querySelector('#st-sprint-btn').onclick = () => {
@@ -5462,6 +5491,7 @@ window.neo.onMenu(async (msg) => {
     applyAlign(msg.value);
   }
   if (msg.type === 'togglePane') togglePane(msg.value);
+  if (msg.type === 'manual') openManual();
   if (msg.type === 'mark' || msg.type === 'cite') {
     if (!book || $('#editor-view').hidden || currentTab !== 'manuscript') { toast(t('ctx.draftOnly')); return; }
     if (msg.type === 'mark') insertPlaceholder(); else insertCitation();

@@ -1148,6 +1148,10 @@ body.night .ro-card:focus { border-color: var(--page-accent); }
 .voice-actions .btn-quiet { font-size: 12px; padding: 6px 8px; }
 .voice-actions .btn-gold { font-size: 12px; padding: 6px 14px; margin-left: 6px; }
 .voice-actions button:disabled { opacity: 0.4; cursor: default; filter: none; }
+.voice-empty .voice-head { align-items: center; margin-bottom: 6px; }
+.voice-empty .vm-analysis, .voice-empty .vm-gen, .voice-empty .vm-expect { display: none; }
+.voice-empty .voice-meter strong { color: var(--muted); }
+.voice-shelf.voice-empty .shelf-books { min-height: 36px; box-shadow: none; border-bottom-width: 2px; }
 .voice-shelf .shelf-books { min-height: 120px; }
 
 .va-level { margin-bottom: 12px !important; }
@@ -1437,7 +1441,7 @@ body.reordering .edge-tab { display: none; }
 .tc-system .tc-aa { color: #d4d4d4; }
 .tc-system .tc-dot { background: conic-gradient(#7aa2f7, #3CBF5C, #BFA75D, #BE3F50, #7aa2f7); }
 .st-theme { grid-column: 1 / -1; margin-bottom: 14px; }
-#fr-themes { margin-top: 14px; }
+#fr-themes { margin-top: 0; }
 
 /* ---- New text: a type, then its form (templates.js) ---- */
 .new-text-modal { width: min(720px, 94vw); max-height: 90vh; overflow-y: auto; }
@@ -1486,3 +1490,14 @@ body.reordering .edge-tab { display: none; }
 
 /* buttons centre their content: these cards read from the top */
 .fr-kind, .nt-type, .nt-form { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
+
+/* first run: where you are, and a way back */
+.fr-nav { display: flex; align-items: center; justify-content: space-between; margin: -6px 0 10px; min-height: 26px; }
+.fr-nav[hidden] { display: none; }
+.fr-back { font-size: 13px; padding: 2px 0; }
+.fr-dots { display: flex; gap: 6px; margin-left: auto; }
+.fr-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+.fr-dots i.done { background: color-mix(in srgb, var(--accent) 55%, var(--line-strong)); }
+.fr-dots i.on { background: var(--accent); width: 18px; border-radius: 4px; }
+.fr-sub { margin: 16px 0 8px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+#firstrun .modal { max-height: 92vh; overflow-y: auto; }

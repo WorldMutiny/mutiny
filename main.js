@@ -463,10 +463,68 @@ ipcMain.handle('link:open', (_e, url) => {
   return true;
 });
 
+// ---------------------------------------------------------------------------
+// The manual (Help → Manual): TUTORIAL.md / TUTORIAL_ES.md in a window of its
+// own, laid out like Omarchy's manual and dressed in the theme Mutiny wears.
+// Its preload can only ask for that text and open http(s) links.
+// ---------------------------------------------------------------------------
+let manualWin = null;
+let manualState = { lang: 'en', tokens: {}, mono: false };
+const MANUAL_TOKENS = ['--bg', '--pane', '--fg', '--fg-strong', '--fg-2', '--muted', '--faint', '--line', '--line-soft',
+  '--surface', '--surface-2', '--accent', '--accent-ink', '--accent-bg', '--link', '--ui-font'];
+
+ipcMain.handle('manual:open', (_e, req) => {
+  const r = req || {};
+  const tokens = {};
+  for (const k of MANUAL_TOKENS) {
+    const v = r.tokens && r.tokens[k];
+    // colours and font stacks only — nothing that could close the declaration
+    if (typeof v === 'string' && v.length <= 200 && /^[#\w\s(),.%"'-]+$/.test(v)) tokens[k] = v;
+  }
+  manualState = { lang: LANGS.includes(r.lang) ? r.lang : MAIN_LANG, tokens, mono: !!r.mono };
+  if (manualWin && !manualWin.isDestroyed()) {
+    manualWin.webContents.send('manual:refresh');
+    if (manualWin.isMinimized()) manualWin.restore();
+    manualWin.focus();
+    return true;
+  }
+  manualWin = new BrowserWindow({
+    width: 1180,
+    height: 820,
+    minWidth: 520,
+    minHeight: 420,
+    title: 'Mutiny',
+    backgroundColor: tokens['--bg'] || '#0e091d',
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'manual-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webviewTag: false,
+      spellcheck: false
+    }
+  });
+  if (process.platform !== 'darwin') manualWin.removeMenu();
+  lockPermissions(manualWin.webContents.session);
+  manualWin.loadFile('manual.html');
+  manualWin.on('closed', () => { manualWin = null; });
+  return true;
+});
+
+ipcMain.handle('manual:get', (_e, lang) => {
+  const l = LANGS.includes(lang) ? lang : manualState.lang;
+  let md = '';
+  try { md = fs.readFileSync(path.join(__dirname, l === 'es' ? 'TUTORIAL_ES.md' : 'TUTORIAL.md'), 'utf8'); } catch (err) { logError('manual', err); }
+  if (LANGS.includes(lang)) manualState.lang = l;
+  return { lang: l, md, tokens: manualState.tokens, mono: manualState.mono };
+});
+
 // AI assistant (ai/): research, critique, rewrite — see ai/index.js
 require('./ai/index.js').register(logError, readSecret, readStyle);
 // Omarchy: the interface follows the desktop's theme (see omarchy.js)
-require('./omarchy.js').register(ipcMain, () => BrowserWindow.getAllWindows());
+const omarchy = require('./omarchy.js');
+omarchy.register(ipcMain, () => BrowserWindow.getAllWindows());
 
 // ---------------------------------------------------------------------------
 // Fullscreen
@@ -1058,10 +1116,10 @@ function buildMenu() {
         },
         {
           label: T('menu.theme'),
-          submenu: MENU_THEMES.filter((th) => th.id !== 'auto' || process.platform === 'linux').map((th) => ({
+          submenu: MENU_THEMES.filter((th) => th.id !== 'auto' || omarchy.available()).map((th) => ({
             label: th.id === 'auto' ? T('theme.omarchy') : th.name,
             type: 'radio',
-            checked: menuTheme === th.id,
+            checked: menuTheme === th.id || (menuTheme === 'auto' && th.id === 'mutiny' && !omarchy.available()),
             click: () => sendToWindow({ type: 'theme', value: th.id })
           }))
         },
@@ -1089,6 +1147,11 @@ function buildMenu() {
     {
       label: T('menu.help'),
       submenu: [
+        {
+          label: T('menu.manual'),
+          accelerator: 'F1',
+          click: () => sendToWindow({ type: 'manual' })
+        },
         {
           label: T('menu.shortcuts'),
           accelerator: 'CmdOrCtrl+/',

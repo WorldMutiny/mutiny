@@ -16,18 +16,18 @@ Download the version for your system from [Releases](https://github.com/worldmut
 
 ## 2. The first time
 
-Mutiny asks a few questions, once. You can change all of it later in **File → Goals & Settings…** (Ctrl+,):
+Mutiny asks a few questions, once, in six steps (the dots at the top show where you are, and **← Back** takes you back). You can change all of it later in **File → Goals & Settings…** (Ctrl+,):
 
 1. **Language** of the interface: English or Spanish.
-2. **Who you are**: your name, which goes on every text and export, and an optional pen name.
-3. **How you write**:
+2. **Who you are and how you write**: your name, which goes on every text and export, and an optional pen name. And whether:
    - *I discover by writing*: new texts open on a blank page.
    - *I start from an outline*: they open in the **Outline**, with their template's guiding questions.
-4. **Theme**: the colours of the whole app (see [§ 14](#14-how-it-looks)).
-5. **What do you write?**: tick the kinds of text you write — essay, free writing, blog, newsletter, script, speech — and each gets its own shelf. You can write any of them later even if you don't tick it.
-6. **How the page looks**: pick a typeface from a sample that shows exactly what you'll see.
-7. **The assistant**, if you want one (see [§ 11](#11-the-assistant-optional)).
-8. **Your voice**: if you have texts of your own, add them so the assistant can learn how you write (see [§ 12](#12-my-voice-have-the-assistant-write-like-you)). You can skip this.
+3. **What do you write?**: tick the kinds of text you write — essay, free writing, blog, newsletter, script, speech — and each gets its own shelf. You can write any of them later even if you don't tick it.
+4. **How it looks**: the theme (the colours of the whole app, see [§ 14](#14-how-it-looks)) and your page's typeface, from a sample that shows exactly what you'll see.
+5. **The assistant**, if you want one (see [§ 11](#11-the-assistant-optional)).
+6. **Your voice**: if you have texts of your own, add them so the assistant can learn how you write (see [§ 12](#12-my-voice-have-the-assistant-write-like-you)). You can skip this.
+
+At the end you can **start your first text** right away or go to your shelves. This manual is always at hand in **Help → Manual** (F1).
 
 ## 3. The shelf
 

@@ -275,6 +275,9 @@ async function decorateVoiceShelf(sec, row, shelf) {
     head.querySelector('.vm-expect').textContent = t('voice.expect.' + level);
   }
   head.dataset.level = docs.length ? level : 'empty';
+  // empty, it's one quiet line with a way in — the rest appears with the first text
+  sec.classList.toggle('voice-empty', !docs.length);
+  head.querySelector('.vm-style').hidden = !docs.length && !library.styleGen;
   const gen = library.styleGen;
   const grown = gen ? words - (gen.words || 0) : 0;
   if (gen && grown >= 1000) head.querySelector('.vm-new').textContent = t('voice.grown', { n: fmtN(grown) });

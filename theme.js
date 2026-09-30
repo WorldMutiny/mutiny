@@ -173,13 +173,25 @@ async function applyAppearance() {
   return appearanceNow;
 }
 
+// is this an Omarchy desktop? (asked once)
+let omarchyHere = null;
+async function hasOmarchy() {
+  if (omarchyHere === null) {
+    try { omarchyHere = !!(await window.neo.omarchyTheme()).available; } catch { omarchyHere = false; }
+  }
+  return omarchyHere;
+}
+
 // A row of cards, one per look: a small swatch of its colours and its name.
 // Picking one applies it at once; `onPick(id)` saves it.
-function themePicker(current, onPick) {
+// Omarchy's card only shows where Omarchy is; elsewhere "follow the system"
+// would just be Mutiny's own look, so that card stands in for it.
+function themePicker(current, onPick, { omarchy = false } = {}) {
   const row = document.createElement('div');
   row.className = 'theme-picker';
   const looks = [];
-  if (/Linux/.test(navigator.userAgent)) looks.push({ id: 'auto', name: t('theme.omarchy'), sw: null });
+  if (omarchy) looks.push({ id: 'auto', name: t('theme.omarchy'), sw: null });
+  else if (current === 'auto') current = 'mutiny';
   looks.push({ id: 'mutiny', name: 'Mutiny', sw: MUTINY_SWATCH });
   for (const [id, th] of Object.entries(THEMES)) looks.push({ id, name: th.name, sw: th.colors });
   for (const look of looks) {

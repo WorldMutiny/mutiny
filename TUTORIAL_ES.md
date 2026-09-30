@@ -16,18 +16,18 @@ Descarga la versión para tu sistema en [Releases](https://github.com/worldmutin
 
 ## 2. La primera vez
 
-Mutiny te hace unas pocas preguntas, una sola vez. Todo se puede cambiar después en **Archivo → Metas y ajustes** (Ctrl+,):
+Mutiny te hace unas pocas preguntas, una sola vez, en seis pasos (los puntos de arriba te dicen dónde vas y **← Atrás** te regresa). Todo se puede cambiar después en **Archivo → Metas y ajustes** (Ctrl+,):
 
 1. **Idioma** de la interfaz: español o inglés.
-2. **Quién eres**: tu nombre, que va en cada texto y en las exportaciones, y un seudónimo opcional.
-3. **Cómo escribes**:
+2. **Quién eres y cómo escribes**: tu nombre, que va en cada texto y en las exportaciones, y un seudónimo opcional. Y si:
    - *Descubro escribiendo*: los textos nuevos abren en una página en blanco.
    - *Parto de un esquema*: abren en el **Esquema**, con las preguntas guía de su plantilla.
-4. **Tema**: los colores de toda la app (ver [§ 14](#14-cómo-se-ve)).
-5. **¿Qué escribes?**: marca los tipos de texto que usas —ensayo, escritura libre, blog, newsletter, guion, discurso— y cada uno tendrá su estante. Puedes escribir cualquiera después aunque no lo marques.
-6. **Cómo se ve la página**: elige la tipografía con una muestra exacta de lo que verás.
-7. **El asistente**, si lo quieres (ver [§ 11](#11-el-asistente-opcional)).
-8. **Tu voz**: si tienes textos tuyos, súbelos para que el asistente aprenda cómo escribes (ver [§ 12](#12-mi-voz-que-el-asistente-escriba-como-tú)). Puedes saltar este paso.
+3. **¿Qué escribes?**: marca los tipos de texto que usas —ensayo, escritura libre, blog, newsletter, guion, discurso— y cada uno tendrá su estante. Puedes escribir cualquiera después aunque no lo marques.
+4. **Cómo se ve**: el tema (los colores de toda la app, ver [§ 14](#14-cómo-se-ve)) y la tipografía de tu hoja, con una muestra exacta de lo que verás.
+5. **El asistente**, si lo quieres (ver [§ 11](#11-el-asistente-opcional)).
+6. **Tu voz**: si tienes textos tuyos, súbelos para que el asistente aprenda cómo escribes (ver [§ 12](#12-mi-voz-que-el-asistente-escriba-como-tú)). Puedes saltar este paso.
+
+Al final puedes **empezar tu primer texto** de una vez o ir a tus estantes. Este manual está siempre a mano en **Ayuda → Manual** (F1).
 
 ## 3. El estante
 
