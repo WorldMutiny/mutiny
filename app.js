@@ -719,10 +719,38 @@ async function refreshCover(meta, el) {
   dressTile(el, live);
 }
 
+// A new shelf goes in just above Mi voz, never below it.
+function addShelf(fields) {
+  const shelf = { id: 'shelf-' + Date.now().toString(36), name: '', bookIds: [], authorId: currentAuthor().id, ...fields };
+  const voice = library.shelves.findIndex((s) => isVoiceShelf(s));
+  if (voice === -1) library.shelves.push(shelf);
+  else library.shelves.splice(voice, 0, shelf);
+  return shelf;
+}
+
+// what a shelf holds: the type it was made for ('any' for one made by hand);
+// older shelves hold essays
+const shelfKind = (s) => s.textKind || 'essay';
+
+// The shelf a new text of this type goes to from "+ New": the first shelf of
+// its type, or a new one named after the type.
+function shelfForKind(kind) {
+  const mine = shelvesFor(currentAuthor().id).filter((s) => !isVoiceShelf(s));
+  const found = mine.find((s) => shelfKind(s) === kind);
+  if (found) return found;
+  const shelf = addShelf({ nameKey: 'shelf.kind.' + kind, textKind: kind });
+  toast(t('shelf.madeFor', { name: t('shelf.kind.' + kind) }));
+  return shelf;
+}
+
+// "+" on a shelf puts the text on that shelf; "+ New" (no shelf) files it by type
 async function createBookOnShelf(shelf) {
-  const tpl = await pickTemplate(library.lastTemplate);
+  const last = library.lastTemplate;
+  const typed = shelf && shelf.textKind && shelf.textKind !== 'any' ? shelf.textKind : null;
+  const tpl = await pickTemplate(typed && (!last || last.kind !== typed) ? { kind: typed } : last);
   if (!tpl) return;
   library.lastTemplate = tpl;
+  if (!shelf) shelf = shelfForKind(tpl.kind);
   const meta = await window.neo.createBook({ author: displayAuthor() });
   meta.kind = tpl.kind;
   meta.form = tpl.form;
@@ -759,16 +787,10 @@ function shelfAutoScrollStep() {
   view.addEventListener('dragleave', (e) => { if (!e.relatedTarget) shelfScrollDir = 0; });
 }
 
-$('#new-text-btn').onclick = () => createBookOnShelf(firstEssayShelf());
+$('#new-text-btn').onclick = () => createBookOnShelf(null);
 
 $('#add-shelf-btn').onclick = async () => {
-  library.shelves.push({
-    id: 'shelf-' + Date.now().toString(36),
-    name: '',
-    nameKey: 'shelf.new',
-    bookIds: [],
-    authorId: currentAuthor().id
-  });
+  addShelf({ nameKey: 'shelf.new', textKind: 'any' }); // yours to fill with anything
   await window.neo.writeLibrary(library);
   renderShelves();
 };
