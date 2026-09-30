@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0-beta.4
+
+- **Types of text and templates:** + New asks what you're writing — an essay (Peterson, Dialectic, Toulmin, They say / I say, Pyramid SCQA, Exploratory, Five paragraphs), free writing (Free, Morning pages), a blog post (Opinion, How-to, List), a newsletter (Personal letter, Digest), a script (Long video, Short, Podcast) or a speech (Talk, Toast). Each form brings its own outline of guiding questions, and a text's form can be changed later in Goals & settings. Existing essays are Essay · Peterson.
+- **Shelves by type:** + New files a text on the shelf for its type, making it the first time; the + on a shelf keeps it there. New shelves go in above My voice. The first run asks what you write and makes those shelves.
+- **The bottom bar** shows reading time for blog posts and newsletters, and time out loud — against a target length — for scripts and speeches.
+- **Details per type** in Goals & settings → This text: meta description and slug, email subject and preheader, target length.
+- **Exports:** Markdown for a website (with front matter for Astro, Hugo, Jekyll…), Copy with formatting to paste into WordPress, Ghost, Medium or Substack, and a large-type PDF to read scripts and speeches aloud from.
+- **The assistant follows the template:** each type and form gets its own critique (Toulmin's claim, grounds and warrant; a blog's hook and call to action; a script's hook, pacing and how it sounds out loud…); in Exploratory and Free writing it asks questions instead of correcting; Versions and the Chat know what kind of text it is.
+- The interface says "text" instead of "essay" wherever it means any kind of text.
+
 ## 0.9.0-beta.3
 
 - **Themes:** six looks — Mutiny, BlackGold, Black Arch, Matrix, Tokyo Night and City 783 (from Omarchy palettes, with Mutiny's typefaces) — plus "follow Omarchy" on Linux. Pick one when you first open Mutiny, in Goals & settings, or in View → Theme. Paper stays white.

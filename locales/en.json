@@ -376,6 +376,8 @@
   "fr.aiOnDesc": "You can turn it off anytime in the Assistant menu.",
   "fr.aiTitle": "An assistant, if you want one",
   "fr.intro": "Mutiny is for writing essays and other texts: blog posts, newsletters, scripts, speeches. A few quick questions and it will never ask again.",
+  "fr.kindsIntro": "Pick all that apply. Each one gets its own shelf, and its own outline and assistant. You can write any of them later anyway.",
+  "fr.kindsTitle": "What do you write?",
   "fr.lookIntro": "Pick a typeface. The sample shows exactly what you’ll get. (Changeable anytime in the Format menu.)",
   "fr.lookTitle": "How should the page look?",
   "fr.name": "Your name",

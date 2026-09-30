@@ -203,6 +203,28 @@ function showFirstRun() {
   // Step 1b: the theme, applied at once to everything behind the dialog
   $('#fr-theme-next').onclick = () => {
     $('#fr-steptheme').hidden = true;
+    $('#fr-stepkinds').hidden = false;
+    const box = $('#fr-kinds');
+    box.innerHTML = '';
+    for (const ty of TEMPLATE_TYPES) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'fr-kind' + (writes.has(ty.id) ? ' sel' : '');
+      b.dataset.kind = ty.id;
+      b.setAttribute('aria-pressed', String(writes.has(ty.id)));
+      b.innerHTML = `<span class="fk-check" aria-hidden="true"></span><strong>${escHtml(t('type.' + ty.id))}</strong><span>${escHtml(t('type.' + ty.id + '.desc'))}</span>`;
+      b.onclick = () => {
+        if (writes.has(ty.id)) writes.delete(ty.id); else writes.add(ty.id);
+        b.classList.toggle('sel', writes.has(ty.id));
+        b.setAttribute('aria-pressed', String(writes.has(ty.id)));
+      };
+      box.appendChild(b);
+    }
+  };
+  // Step 1c: what they write — one shelf for each kind (essays already have theirs)
+  const writes = new Set(['essay']);
+  $('#fr-kinds-next').onclick = () => {
+    $('#fr-stepkinds').hidden = true;
     $('#fr-step2').hidden = false;
     buildFontStep();
   };
@@ -281,6 +303,14 @@ function showFirstRun() {
   $('#fr-done').onclick = async () => {
     library.fonts = { body: picked.body };
     library.firstRunDone = true;
+    // a shelf for each kind they write, in the order offered; + New starts on the first
+    for (const ty of TEMPLATE_TYPES) {
+      if (ty.id !== 'essay' && writes.has(ty.id) && !library.shelves.some((s) => s.textKind === ty.id)) {
+        addShelf({ nameKey: 'shelf.kind.' + ty.id, textKind: ty.id });
+      }
+    }
+    const first = TEMPLATE_TYPES.find((ty) => writes.has(ty.id));
+    if (first) library.lastTemplate = { kind: first.id, form: first.forms[0] };
     // the shelf was drawn (and the author record seeded as Anonymous) before
     // the name was typed — carry the name across
     currentAuthor().name = library.authorName || (library.penNames || [])[0] || 'Anonymous';

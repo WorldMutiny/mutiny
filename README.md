@@ -2,15 +2,15 @@
 
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 
-**A distraction-free writer for essays — opinion and popular non-fiction — with an optional AI assistant that researches and critiques, but never touches your page without asking.**
+**A distraction-free writer for essays — opinion and popular non-fiction — and other texts (blog posts, newsletters, scripts, speeches), with an optional AI assistant that researches, critiques and asks questions, but never touches your page without asking.**
 
-Mutiny is built on [NEO](https://github.com/hughhowey/neo) by Hugh Howey, a lovely word processor made for novelists. It keeps what makes NEO great — a clean page, plain files on your disk, no accounts, no cloud — and retargets it at essays: outline-first structure, sources and citations, reordering, versions of a sentence, and an assistant that can learn your voice.
+Mutiny is built on [NEO](https://github.com/hughhowey/neo) by Hugh Howey, a lovely word processor made for novelists. It keeps what makes NEO great — a clean page, plain files on your disk, no accounts, no cloud — and retargets it at essays and other non-fiction: templates for seven essay methods plus blog posts, newsletters, scripts and speeches, sources and citations, reordering, versions of a sentence, six themes, and an assistant that adapts to what you're writing and can learn your voice.
 
 **New here?** The [tutorial](TUTORIAL.md) walks through everything ([en español](TUTORIAL_ES.md)).
 
 > **Status: 0.9 beta.** It works and it's used daily, but expect rough edges. Please report what breaks.
 
-**Español:** Mutiny es un procesador de textos para ensayos (opinión y divulgación), con la interfaz en español e inglés. Abajo están las instrucciones de instalación, y en [TUTORIAL_ES.md](TUTORIAL_ES.md) cómo usar todo.
+**Español:** Mutiny es un procesador de textos para ensayos (opinión y divulgación) y otros textos —blog, newsletter, guiones, discursos—, con la interfaz en español e inglés. Abajo están las instrucciones de instalación, y en [TUTORIAL_ES.md](TUTORIAL_ES.md) cómo usar todo.
 
 ## Download
 
@@ -24,15 +24,15 @@ The builds are **not signed** with paid Apple or Microsoft certificates, so your
 | **macOS** (Apple Silicon: `arm64`, Intel: `x64`) | `Mutiny-…-mac-arm64.dmg` | Drag Mutiny to Applications. The first time, **right-click the app → Open → Open**. If macOS says it's "damaged", run `xattr -cr /Applications/Mutiny.app` in Terminal once. |
 | **Linux** | `Mutiny-…-linux-x86_64.AppImage` | `chmod +x` it and run it — or, from a clone, `scripts/install-linux.sh` to install it with a launcher entry. |
 
-Mutiny checks once a day whether a newer version exists (it reads the public list of releases; you can turn this off in **File → Goals & settings**). It doesn't update itself: download the new version and install it over the old one — your essays are kept.
+Mutiny checks once a day whether a newer version exists (it reads the public list of releases; you can turn this off in **File → Goals & settings**). It doesn't update itself: download the new version and install it over the old one — your texts are kept.
 
 ### On Omarchy
 
-On [Omarchy](https://omarchy.org), Mutiny follows your desktop theme — colours, font and square corners — and changes with it live, including its menu bar. The writing typefaces stay yours. `scripts/install-linux.sh` also adds a **Mutiny** row to the Omarchy menu. Prefer the classic look? **File → Goals & settings → Appearance**.
+On [Omarchy](https://omarchy.org), Mutiny follows your desktop theme — colours, font and square corners — and changes with it live, including its menu bar. The writing typefaces stay yours. `scripts/install-linux.sh` also adds a **Mutiny** row to the Omarchy menu. Prefer another look? **View → Theme**.
 
 ## Your files
 
-Your essays live in `Documents/Mutiny Library`, one folder per essay, as plain HTML and JSON you can open, sync or back up. Mutiny keeps a daily backup of the library in its `Backups` folder.
+Your texts live in `Documents/Mutiny Library`, one folder per text, as plain HTML and JSON you can open, sync or back up. Mutiny keeps a daily backup of the library in its `Backups` folder.
 
 What leaves your computer — and only when you use it:
 
