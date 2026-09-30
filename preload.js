@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('neo', {
   appMenu: () => ipcRenderer.invoke('appmenu:get'),
   appMenuRun: (id) => ipcRenderer.invoke('appmenu:run', id),
   editRole: (role) => ipcRenderer.invoke('edit:role', role),
+  copyRich: (data) => ipcRenderer.invoke('clipboard:rich', data),
   appMenuNative: (visible) => ipcRenderer.invoke('appmenu:native', !!visible),
   onAppMenuChanged: (cb) => ipcRenderer.on('appmenu:changed', () => cb()),
   onOmarchyChanged: (cb) => ipcRenderer.on('omarchy:changed', () => cb()),

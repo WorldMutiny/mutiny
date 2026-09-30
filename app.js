@@ -726,6 +726,7 @@ async function createBookOnShelf(shelf) {
   const meta = await window.neo.createBook({ author: displayAuthor() });
   meta.kind = tpl.kind;
   meta.form = tpl.form;
+  Object.assign(meta, FORM_START[tpl.kind + '/' + tpl.form] || {});
   meta.language = library.language || 'en';
   meta.tabNames = { ...(library.tabDefaults || {}) };
   await window.neo.writeBookMeta(meta.id, meta);
@@ -3499,12 +3500,23 @@ function bookWordCount() {
   return book.chapterOrder.reduce((sum, chId) => sum + chapterWords(chId), 0);
 }
 
+// blogs and newsletters are read, scripts and speeches heard: the bar says how long
+function measureText(words) {
+  const m = typeInfo(bookTemplate().kind).measure;
+  if (m === 'read') return ' · ' + t('count.read', { min: Math.max(1, Math.round(words / READ_WPM)) });
+  if (m === 'spoken') {
+    const time = clockMin(words / SPOKEN_WPM);
+    return ' · ' + (book.targetMin ? t('count.spokenOf', { time, target: book.targetMin }) : t('count.spoken', { time }));
+  }
+  return '';
+}
+
 function updateCounters() {
   if (!book) return;
   const total = bookWordCount();
   const wc = $('#word-counter');
   if (wordMode === 'book') {
-    wc.textContent = tn('count.words', total);
+    wc.textContent = tn('count.words', total) + measureText(total);
   } else {
     const n = currentChapterId ? chapterWords(currentChapterId) : 0;
     const idx = book.chapterOrder.indexOf(currentChapterId);
@@ -4423,6 +4435,27 @@ function templateSelect() {
       `<option value="${ty.id}/${f}"${ty.id === cur.kind && f === cur.form ? ' selected' : ''}>${escHtml(t('form.' + ty.id + '.' + f))}</option>`).join('')}</optgroup>`).join('')}</select>`;
 }
 
+// Goals & settings → This text: the details its type keeps
+function textFields() {
+  const v = (k) => escHtml(book[k] == null ? '' : String(book[k])).replace(/"/g, '&quot;');
+  const one = {
+    description: () => `<label class="st-field st-wide"><span>${t('field.description')}</span><textarea id="tf-description" rows="2" maxlength="300" spellcheck="true" placeholder="${escHtml(t('field.descriptionHint'))}">${v('description')}</textarea></label>`,
+    slug: () => `<label class="st-field"><span>${t('field.slug')}</span><input id="tf-slug" type="text" spellcheck="false" value="${v('slug')}" placeholder="${escHtml(slugify(displayTitle(book)))}"/></label>`,
+    emailSubject: () => `<label class="st-field st-wide"><span>${t('field.emailSubject')}</span><input id="tf-emailSubject" type="text" value="${v('emailSubject')}"/></label>`,
+    preheader: () => `<label class="st-field st-wide"><span>${t('field.preheader')}</span><input id="tf-preheader" type="text" value="${v('preheader')}" placeholder="${escHtml(t('field.preheaderHint'))}"/></label>`,
+    targetMin: () => `<label class="st-field"><span>${t('field.targetMin')}</span><input id="tf-targetMin" type="number" min="0" max="600" value="${v('targetMin')}"/></label>`
+  };
+  return typeInfo(bookTemplate().kind).fields.map((f) => one[f]()).join('');
+}
+function readTextFields(bd) {
+  for (const f of ['description', 'slug', 'emailSubject', 'preheader']) {
+    const el = bd.querySelector('#tf-' + f);
+    if (el) book[f] = f === 'slug' ? slugify(el.value) : el.value.trim();
+  }
+  const min = bd.querySelector('#tf-targetMin');
+  if (min) book.targetMin = parseInt(min.value, 10) || 0;
+}
+
 function openStats() {
   const hasBook = !!book;
   const today = hasBook ? (book.dailyCounts || {})[todayStr()] : null;
@@ -4465,6 +4498,10 @@ function openStats() {
           ${field(t('stats.newEssays'), `<select id="st-style"><option value="pantser"${library.writingStyle !== 'plotter' ? ' selected' : ''}>${t('stats.pantser')}</option><option value="plotter"${library.writingStyle === 'plotter' ? ' selected' : ''}>${t('stats.plotter')}</option></select>`)}
         </div>
       </section>
+      ${hasBook && typeInfo(bookTemplate().kind).fields.length ? `<section class="st-sec">
+        <h3>${t('stats.secText')}</h3>
+        <div class="st-grid">${textFields()}</div>
+      </section>` : ''}
       <section class="st-sec">
         <h3>${t('stats.secApp')}</h3>
         <div class="st-grid">
@@ -4489,6 +4526,7 @@ function openStats() {
     library.dayEndsAt = parseInt(bd.querySelector('#st-dayends').value, 10) || 0;
     library.writingStyle = bd.querySelector('#st-style').value;
     if (hasBook) {
+      readTextFields(bd);
       const [kind, form] = bd.querySelector('#st-template').value.split('/');
       const cur = bookTemplate();
       if (kind !== cur.kind || form !== cur.form) {
@@ -4913,7 +4951,7 @@ function buildTxt(data) {
   return out;
 }
 
-function buildMd(data) {
+function buildMd(data, opts = {}) {
   const d = data || bookExportData();
   // wrap a run in emphasis markers, keeping boundary spaces outside them
   const mdRun = (r) => {
@@ -4925,9 +4963,20 @@ function buildMd(data) {
     const core = t.slice(lead.length, t.length - trail.length);
     return core ? lead + mark + core + mark + trail : t;
   };
-  let out = `# ${d.title}\n\n`;
-  if (d.subtitle) out += `*${d.subtitle}*\n\n`;
-  out += `**${te(d.lang, 'export.by', { author: d.author })}**\n\n`;
+  let out = '';
+  if (opts.frontMatter) {
+    // for a site generator (Astro, Hugo, Jekyll, Eleventy…): the details on top, the text below
+    const y = (v) => JSON.stringify(String(v)); // a JSON string is valid YAML
+    out = '---\n' + [
+      ['title', d.title], ['subtitle', d.subtitle], ['description', book.description],
+      ['slug', book.slug || slugify(d.title)], ['author', d.author],
+      ['date', new Date().toISOString().slice(0, 10)], ['lang', d.lang]
+    ].filter(([, v]) => v).map(([k, v]) => `${k}: ${k === 'date' ? v : y(v)}`).join('\n') + '\n---\n\n';
+  } else {
+    out = `# ${d.title}\n\n`;
+    if (d.subtitle) out += `*${d.subtitle}*\n\n`;
+    out += `**${te(d.lang, 'export.by', { author: d.author })}**\n\n`;
+  }
   // cited words become a link with a footnote; a bare [n] is the footnote alone
   const cx = citeIndex(d);
   const note = (id) => { const c = cx.get(id); return c ? `[^${c.n}]` : ''; };
@@ -4985,6 +5034,16 @@ function buildHtml(data, opts = {}) {
       ${paras}
     </section>`;
   }).join('\n');
+  const sourcesHtml = cx.list.length ? `<section class="sources"><h2>${escHtml(te(d.lang, 'export.sources'))}</h2><ol>
+${cx.list.map((s, i) => `<li id="src-${i + 1}">${escHtml(sourceEntry(s, d.lang))}</li>`).join('\n')}
+</ol></section>` : '';
+  // just the text, to paste into a blog's editor (its title goes in the editor's own field)
+  if (opts.fragment) return chaptersHtml + '\n' + sourcesHtml;
+  // scripts and speeches: a page to read out loud from — big type, room between lines
+  const reading = opts.reading ? `
+  body { font-family: Helvetica, Arial, sans-serif; max-width: 680px; font-size: 17pt; line-height: 1.9; }
+  .chapter p { text-indent: 0; margin: 0 0 0.9em; }
+  .chapter h2 { font-size: 11pt; letter-spacing: 2px; text-transform: uppercase; color: #777; border-top: 1px solid #ccc; padding-top: 0.6em; }` : '';
   return `<!DOCTYPE html>
 <html lang="${d.lang || 'en'}"><head><meta charset="utf-8"><title>${escHtml(d.title)}</title>
 <style>
@@ -5005,15 +5064,13 @@ function buildHtml(data, opts = {}) {
   .sources { margin-top: 3em; font-size: 10.5pt; line-height: 1.5; }
   .sources h2 { font-size: 13pt; margin: 0 0 0.8em; }
   .sources ol { padding-left: 1.6em; }
-  .sources li { margin-bottom: 0.5em; overflow-wrap: anywhere; }
+  .sources li { margin-bottom: 0.5em; overflow-wrap: anywhere; }${reading}
 </style></head><body>
 <div class="titlepage"><h1>${escHtml(d.title)}</h1>
 ${d.subtitle ? `<p class="sub">${escHtml(d.subtitle)}</p>` : ''}
 <p class="auth">${escHtml(d.author)}</p></div>
 ${chaptersHtml}
-${cx.list.length ? `<section class="sources"><h2>${escHtml(te(d.lang, 'export.sources'))}</h2><ol>
-${cx.list.map((s, i) => `<li id="src-${i + 1}">${escHtml(sourceEntry(s, d.lang))}</li>`).join('\n')}
-</ol></section>` : ''}
+${sourcesHtml}
 ${opts.stamp ? `<p class="prov">${escHtml(te(d.lang, 'export.stamp', { words: tn('count.words', total), date: stamp }))}</p>` : ''}
 </body></html>`;
 }
@@ -5201,7 +5258,12 @@ async function doExport(format) {
   if (format === 'docx') payload = { format, defaultName, zipEntries: buildDocxEntries() };
   else if (format === 'txt') payload = { format, defaultName, content: buildTxt() };
   else if (format === 'md') payload = { format, defaultName, content: buildMd() };
-  else payload = { format, defaultName, content: buildHtml() };
+  else if (format === 'mdweb') payload = { format: 'md', defaultName: book.slug || slugify(book.title) || defaultName, content: buildMd(null, { frontMatter: true }) };
+  else if (format === 'copy') {
+    await window.neo.copyRich({ html: buildHtml(null, { fragment: true }), text: buildMd(null, { frontMatter: false }) });
+    toast(t('export.copied'));
+    return;
+  } else payload = { format, defaultName, content: buildHtml(null, { reading: format === 'pdf' && typeInfo(bookTemplate().kind).measure === 'spoken' }) };
   const saved = await window.neo.exportSave(payload);
   if (saved) toast(t('export.done', { file: saved.split(/[\\/]/).pop() }));
 }

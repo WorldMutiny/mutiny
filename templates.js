@@ -16,8 +16,30 @@ const TEMPLATE_TYPES = [
   { id: 'script', forms: ['video', 'short', 'podcast'] },
   { id: 'speech', forms: ['talk', 'toast'] }
 ];
-// the types that can be picked yet (the rest arrive with their own pieces)
-const TEMPLATE_READY = new Set(['essay']);
+// the types that can be picked
+const TEMPLATE_READY = new Set(TEMPLATE_TYPES.map((x) => x.id));
+
+// What each type measures in the bottom bar, and the extra details it keeps
+// (Goals & settings → This text). Reading ≈ 220 words a minute; out loud ≈ 140.
+const TYPE_INFO = {
+  essay: { measure: 'words', fields: [] },
+  free: { measure: 'words', fields: [] },
+  blog: { measure: 'read', fields: ['description', 'slug'] },
+  newsletter: { measure: 'read', fields: ['emailSubject', 'preheader'] },
+  script: { measure: 'spoken', fields: ['targetMin'] },
+  speech: { measure: 'spoken', fields: ['targetMin'] }
+};
+const READ_WPM = 220;
+const SPOKEN_WPM = 140;
+// what a brand-new text starts with, by form
+const FORM_START = {
+  'free/morning': { wordGoal: 750 },
+  'script/video': { targetMin: 10 },
+  'script/short': { targetMin: 1 },
+  'script/podcast': { targetMin: 30 },
+  'speech/talk': { targetMin: 15 },
+  'speech/toast': { targetMin: 3 }
+};
 
 // The skeletons: each section's guiding question, and the paragraph lines
 // under it (keys into the locales). Peterson's is the one Mutiny began with.
@@ -70,6 +92,79 @@ const OUTLINES = {
     { point: 'tpl.five.arg2', paras: EV },
     { point: 'tpl.five.arg3', paras: EV },
     { point: 'tpl.five.end', paras: ['tpl.five.takeaway'] }
+  ],
+  // free writing has no skeleton on purpose
+  'blog/opinion': [
+    { point: 'tpl.blog.hook', paras: ['tpl.blog.hookHow'] },
+    { point: 'tpl.blog.stance', paras: ['tpl.blog.oneLine', 'tpl.thesis.why'] },
+    { point: 'tpl.blog.main', paras: EV },
+    { point: 'tpl.blog.against', paras: ['tpl.objection.fair', 'tpl.tou.answer'] },
+    { point: 'tpl.blog.cta', paras: ['tpl.blog.ctaWhat'] }
+  ],
+  'blog/howto': [
+    { point: 'tpl.how.hook', paras: ['tpl.how.who'] },
+    { point: 'tpl.how.goal', paras: ['tpl.how.result'] },
+    { point: 'tpl.how.need', paras: ['tpl.how.needWhat'] },
+    { point: 'tpl.how.steps', paras: ['tpl.how.step1', 'tpl.how.step2', 'tpl.how.step3'] },
+    { point: 'tpl.how.mistakes', paras: ['tpl.how.mistake'] },
+    { point: 'tpl.how.next', paras: ['tpl.how.after'] }
+  ],
+  'blog/list': [
+    { point: 'tpl.list.intro', paras: ['tpl.list.forWhom'] },
+    { point: 'tpl.list.i1', paras: ['tpl.list.why', 'tpl.example'] },
+    { point: 'tpl.list.i2', paras: ['tpl.list.why', 'tpl.example'] },
+    { point: 'tpl.list.i3', paras: ['tpl.list.why', 'tpl.example'] },
+    { point: 'tpl.list.i4', paras: ['tpl.list.why', 'tpl.example'] },
+    { point: 'tpl.list.i5', paras: ['tpl.list.why', 'tpl.example'] },
+    { point: 'tpl.list.end', paras: ['tpl.list.pick'] }
+  ],
+  'newsletter/letter': [
+    { point: 'tpl.nl.hello', paras: ['tpl.nl.scene'] },
+    { point: 'tpl.nl.idea', paras: ['tpl.nl.learned'] },
+    { point: 'tpl.nl.reader', paras: [] },
+    { point: 'tpl.nl.bye', paras: ['tpl.nl.ask'] }
+  ],
+  'newsletter/digest': [
+    { point: 'tpl.dg.intro', paras: [] },
+    { point: 'tpl.dg.i1', paras: ['tpl.dg.worth'] },
+    { point: 'tpl.dg.i2', paras: ['tpl.dg.worth'] },
+    { point: 'tpl.dg.i3', paras: ['tpl.dg.worth'] },
+    { point: 'tpl.dg.end', paras: ['tpl.dg.last'] }
+  ],
+  'script/video': [
+    { point: 'tpl.vid.hook', paras: ['tpl.vid.seeHear'] },
+    { point: 'tpl.vid.promise', paras: [] },
+    { point: 'tpl.vid.b1', paras: ['tpl.vid.idea', 'tpl.vid.visual'] },
+    { point: 'tpl.vid.b2', paras: ['tpl.vid.idea', 'tpl.vid.visual'] },
+    { point: 'tpl.vid.twist', paras: [] },
+    { point: 'tpl.vid.end', paras: ['tpl.vid.cta'] }
+  ],
+  'script/short': [
+    { point: 'tpl.sh.hook', paras: [] },
+    { point: 'tpl.sh.idea', paras: ['tpl.example'] },
+    { point: 'tpl.sh.punch', paras: [] }
+  ],
+  'script/podcast': [
+    { point: 'tpl.pod.open', paras: ['tpl.pod.whyToday'] },
+    { point: 'tpl.pod.context', paras: [] },
+    { point: 'tpl.pod.t1', paras: ['tpl.pod.story', 'tpl.pod.take'] },
+    { point: 'tpl.pod.t2', paras: ['tpl.pod.story', 'tpl.pod.take'] },
+    { point: 'tpl.pod.end', paras: ['tpl.pod.sum', 'tpl.pod.nextEp'] }
+  ],
+  'speech/talk': [
+    { point: 'tpl.talk.open', paras: [] },
+    { point: 'tpl.talk.core', paras: ['tpl.blog.oneLine'] },
+    { point: 'tpl.talk.p1', paras: ['tpl.talk.story'] },
+    { point: 'tpl.talk.p2', paras: ['tpl.talk.story'] },
+    { point: 'tpl.talk.p3', paras: ['tpl.talk.story'] },
+    { point: 'tpl.talk.back', paras: ['tpl.talk.circle'] },
+    { point: 'tpl.talk.last', paras: [] }
+  ],
+  'speech/toast': [
+    { point: 'tpl.toast.who', paras: [] },
+    { point: 'tpl.toast.story', paras: ['tpl.toast.detail'] },
+    { point: 'tpl.toast.means', paras: ['tpl.toast.admire'] },
+    { point: 'tpl.toast.raise', paras: ['tpl.toast.line'] }
   ]
 };
 
@@ -82,6 +177,14 @@ function bookTemplate(b = book) {
 }
 const templateName = (kind, form) => `${t('type.' + kind)} · ${t('form.' + kind + '.' + form)}`;
 const outlineFor = (kind, form) => OUTLINES[kind + '/' + form] || null;
+const typeInfo = (kind) => TYPE_INFO[kind] || TYPE_INFO.essay;
+
+// a web address from a title: "Qué hacer en la ciudad" → que-hacer-en-la-ciudad
+const slugify = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+
+// minutes → "3:20"
+const clockMin = (min) => { const s = Math.round(min * 60); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
 // The New text dialog: a type, then its form. Resolves to { kind, form }, or
 // null if the writer backs out. `preset` is what gets selected first.

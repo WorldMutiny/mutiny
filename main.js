@@ -940,7 +940,10 @@ function buildMenu() {
             { label: T('menu.export.md'), click: () => sendToWindow({ type: 'export', format: 'md' }) },
             { label: T('menu.export.html'), click: () => sendToWindow({ type: 'export', format: 'html' }) },
             { label: T('menu.export.pdf'), click: () => sendToWindow({ type: 'export', format: 'pdf' }) },
-            { label: T('menu.export.docx'), click: () => sendToWindow({ type: 'export', format: 'docx' }) }
+            { label: T('menu.export.docx'), click: () => sendToWindow({ type: 'export', format: 'docx' }) },
+            { type: 'separator' },
+            { label: T('menu.export.mdweb'), click: () => sendToWindow({ type: 'export', format: 'mdweb' }) },
+            { label: T('menu.export.copy'), click: () => sendToWindow({ type: 'export', format: 'copy' }) }
           ]
         },
         { type: 'separator' },
@@ -1139,6 +1142,14 @@ function menuModel(items) {
 }
 
 ipcMain.handle('appmenu:get', () => appMenuModel);
+
+// Export → Copy with formatting: the text as HTML (for a blog's editor) and
+// as Markdown (for anything plain)
+ipcMain.handle('clipboard:rich', (_e, data) => {
+  const { clipboard } = require('electron');
+  clipboard.write({ html: String((data && data.html) || ''), text: String((data && data.text) || '') });
+  return true;
+});
 
 // the right-click menu's Cut / Copy / Paste, done by the page like the Edit menu's
 ipcMain.handle('edit:role', (e, role) => {

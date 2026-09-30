@@ -1305,14 +1305,16 @@ body.omarchy .settings-modal { width: min(780px, 94vw); }
 .st-progress { border-top: none; padding-top: 0; margin-top: 6px; }
 .st-progress .stats-nums { margin: 0; }
 #stats-chart { width: 100%; height: 130px; }
+.modal .st-wide { grid-column: 1 / -1; }
+.modal .st-field textarea { resize: vertical; }
 .st-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px 22px; align-items: start; }
 .modal .st-field { display: flex; flex-direction: column; gap: 6px; margin: 0; font-size: 12px; color: var(--fg-2); }
 .modal .st-field[hidden] { display: none; }
-.modal .st-field input, .modal .st-field select {
+.modal .st-field input, .modal .st-field select, .modal .st-field textarea {
   width: 100%; margin: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--line);
   border-radius: calc(6px * var(--round)); padding: 8px 10px; font: inherit; font-size: 13px;
 }
-.modal .st-field input:focus, .modal .st-field select:focus { outline: none; border-color: var(--accent); }
+.modal .st-field input:focus, .modal .st-field select:focus, .modal .st-field textarea:focus { outline: none; border-color: var(--accent); }
 .st-inline { display: flex; gap: 10px; align-items: center; }
 .modal .st-inline input { width: 110px; }
 .st-btn { white-space: nowrap; border: 1px solid var(--line) !important; border-radius: calc(6px * var(--round)); padding: 7px 12px !important; font-size: 13px !important; color: var(--fg) !important; }
