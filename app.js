@@ -5466,7 +5466,8 @@ async function showAbout() {
   bd.className = 'modal-backdrop';
   bd.innerHTML = `
     <div class="modal" style="width:340px;text-align:center">
-      <h2 style="font-size:22px;letter-spacing:6px">MUTINY</h2>
+      <h2 style="font-size:22px;letter-spacing:6px;margin-bottom:4px">MUTINY</h2>
+      <p style="margin-top:0"><a href="#" class="about-site" style="color:var(--link);font-size:13px">worldmutiny.com</a></p>
       <p style="color:var(--muted)">${t('about.version', { v })}</p>
       <p style="font-size:13px;color:var(--faint)">${t('about.tagline')}</p>
       <p style="font-size:12px;color:var(--faint);margin-bottom:4px">${t('about.credit')}</p>
@@ -5478,6 +5479,7 @@ async function showAbout() {
   document.body.appendChild(bd);
   const close = () => bd.remove();
   bd.querySelector('.m-ok').onclick = close;
+  bd.querySelector('.about-site').onclick = (e) => { e.preventDefault(); window.neo.openLink('https://worldmutiny.com'); };
   bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
   bd.querySelector('.m-ok').focus();
 }

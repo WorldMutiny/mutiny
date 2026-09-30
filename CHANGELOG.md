@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0 — first stable release
+
+Everything from the 0.9 betas — essays and other texts with their templates, sources and citations, Reorder and Versions, the optional assistant that follows your template, My voice, six themes and the Omarchy edition — now considered stable. New since 0.9.0-beta.4:
+
+- **A manual inside the app:** Help → Manual (F1) opens the whole manual in its own window, laid out like Omarchy's — chapters on the left, one at a time, in your theme's colours, in English or Spanish, offline.
+- **A shorter, friendlier first run:** six steps with a progress indicator and a Back button; theme and typeface together in "How it looks"; the Omarchy theme only offered where Omarchy is installed; the assistant step names every provider; it ends with "Start my first text".
+- **My voice** stays one quiet line until you add a text.
+- **Template sections** show their guiding question as a grey heading in the draft until you give them a title.
+- **Help (Ctrl+/)** covers the right-click menu, + New, the push-pin and F1; the chat offers a button to turn the assistant on; Goals & settings names the template in full ("Essay · Toulmin").
+- **About** links to worldmutiny.com.
+- Fixed: the Notes page's placeholder was in English in the Spanish interface.
+- Builds run on Node 24 GitHub Actions.
+
 ## 0.9.0-beta.4
 
 - **Types of text and templates:** + New asks what you're writing — an essay (Peterson, Dialectic, Toulmin, They say / I say, Pyramid SCQA, Exploratory, Five paragraphs), free writing (Free, Morning pages), a blog post (Opinion, How-to, List), a newsletter (Personal letter, Digest), a script (Long video, Short, Podcast) or a speech (Talk, Toast). Each form brings its own outline of guiding questions, and a text's form can be changed later in Goals & settings. Existing essays are Essay · Peterson.

@@ -8,7 +8,7 @@ Mutiny is built on [NEO](https://github.com/hughhowey/neo) by Hugh Howey, a love
 
 **New here?** The [tutorial](TUTORIAL.md) walks through everything ([en español](TUTORIAL_ES.md)).
 
-> **Status: 0.9 beta.** It works and it's used daily, but expect rough edges. Please report what breaks.
+> **Status: 1.0.** The first stable release. If something breaks, please [report it](https://github.com/worldmutiny/mutiny/issues).
 
 **Español:** Mutiny es un procesador de textos para ensayos (opinión y divulgación) y otros textos —blog, newsletter, guiones, discursos—, con la interfaz en español e inglés. Abajo están las instrucciones de instalación, y en [TUTORIAL_ES.md](TUTORIAL_ES.md) cómo usar todo.
 
