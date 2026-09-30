@@ -176,6 +176,13 @@ function bookTemplate(b = book) {
   return { kind: type.id, form };
 }
 const templateName = (kind, form) => `${t('type.' + kind)} · ${t('form.' + kind + '.' + form)}`;
+// where the assistant asks questions instead of criticising (ai/tasks.js decides the wording)
+const QUESTION_FORMS = new Set(['essay/exploratory', 'free/free', 'free/morning']);
+// every kind of remark the assistant can leave (ai/tasks.js CAT_DESC)
+const CRIT_CATEGORIES = ['thesis', 'logic', 'evidence', 'counterargument', 'redundancy', 'clarity', 'claim', 'grounds',
+  'warrant', 'qualifier', 'rebuttal', 'hook', 'structure', 'cta', 'voice', 'retention', 'ear', 'pacing', 'opening',
+  'story', 'ending', 'question'];
+
 const outlineFor = (kind, form) => OUTLINES[kind + '/' + form] || null;
 const typeInfo = (kind) => TYPE_INFO[kind] || TYPE_INFO.essay;
 

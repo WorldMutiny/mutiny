@@ -517,9 +517,11 @@ async function critique(scope) {
   if (paragraphs.length < 2) { toast(t('ai.tooShort')); return; }
   const words = paragraphs.reduce((a, x) => a + countWords(x.text), 0);
   const bookId = book.id;
-  const data = await aiRun('critique', { paragraphs, title: displayTitle(book), lang: spellLang(), scope },
-    t(scope === 'section' ? 'ai.critiquingSection' : 'ai.critiquingEssay'), {
-      title: t('ai.t.critique'),
+  const template = bookTemplate();
+  const asks = QUESTION_FORMS.has(template.kind + '/' + template.form); // exploratory, free writing: questions, not verdicts
+  const data = await aiRun('critique', { paragraphs, title: displayTitle(book), lang: spellLang(), scope, template },
+    t(asks ? 'ai.asking' : scope === 'section' ? 'ai.critiquingSection' : 'ai.critiquingEssay'), {
+      title: t(asks ? 'ai.t.questions' : 'ai.t.critique'),
       detail: scope === 'section'
         ? (paragraphs[0].section
           ? t('ai.d.critiqueSection', { name: paragraphs[0].section, paras: fmtN(paragraphs.length), words: fmtN(words) })
@@ -531,10 +533,10 @@ async function critique(scope) {
   if (!data) return;
   if (!book || book.id !== bookId) { toast(t('ai.bookClosed'), 7000); return; } // the essay was closed meanwhile
   const comments = (data.comments || []).slice(0, 7);
-  if (!comments.length) { toast(t('ai.noIssues'), 6000); return; }
+  if (!comments.length) { toast(t(asks ? 'ai.noQuestions' : 'ai.noIssues'), 6000); return; }
   snapshotStructure('critique');
   const touched = new Set();
-  const CATS = ['thesis', 'logic', 'evidence', 'counterargument', 'redundancy', 'clarity'];
+  const CATS = CRIT_CATEGORIES;
   const SEVS = ['high', 'medium', 'low'];
   for (const c of comments) {
     // model output is data: only known values reach the page's markup
@@ -765,7 +767,8 @@ async function chatContext(scope) {
     outline,
     notes: holder.innerText.trim(),
     sources: sources.filter((s) => s.status !== 'candidate').map((s) => [s.title || s.url, s.site].filter(Boolean).join(' — ')),
-    selection: chatSelection
+    selection: chatSelection,
+    template: bookTemplate()
   };
 }
 
