@@ -3,7 +3,7 @@
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 > — Joe MacMillan, *Halt and Catch Fire*
 
-**Estado:** 0.9.0-beta.1 publicada — fases 0 a 6 · 2026-09-27
+**Estado:** 0.9.0-beta.4 publicada — fases 0 a 6 y betas 2 a 4 · 2026-09-30
 **Base:** fork de [NEO](https://github.com/hughhowey/neo) v0.7.9 (Hugh Howey, MIT)
 **Autor:** Maxx Darko
 
@@ -11,7 +11,7 @@
 
 ## 1. Qué es
 
-Mutiny es un procesador de textos local y sin distracciones para escribir **ensayos de opinión y divulgación**. Un asistente de IA configurable **investiga, critica y ayuda a pulir la redacción**, pero nunca cambia el texto sin tu permiso.
+Mutiny es un procesador de textos local y sin distracciones para escribir **ensayos de opinión y divulgación** y, desde la beta.4, **otros textos de no ficción**: entradas de blog, newsletters, guiones de video o podcast y discursos. Un asistente de IA configurable **investiga, critica y ayuda a pulir la redacción**, pero nunca cambia el texto sin tu permiso.
 
 Toma el núcleo de NEO (página en blanco, archivos planos, sin cuentas ni nube) y le aplica el método de escritura estructurada de essay.app: outline → producir → reescribir → reordenar.
 
@@ -22,6 +22,7 @@ NEO es deliberadamente solo para novelas, y su autor rechaza funciones que lo ag
 ## 2. Usuario y alcance
 
 - **Usuario primario:** yo. Escribo ensayos de opinión y divulgación en español.
+- **Tipos de texto (beta.4):** ensayo, escritura libre, blog, newsletter, guion y discurso, cada uno con sus formas (§6.10). El guion de cine queda fuera: su formato de página es otra app.
 - **Usuario secundario (si el proyecto madura):** la comunidad. Por eso la IA es configurable desde el inicio y no está atada a mi setup.
 - **Fuera de alcance:** escritura académica formal (APA/MLA, Zotero, notas al pie numeradas estilo Chicago), colaboración en tiempo real, sincronización en la nube, app móvil.
 
@@ -31,7 +32,7 @@ NEO es deliberadamente solo para novelas, y su autor rechaza funciones que lo ag
 2. **Sin fuentes inventadas.** Cada afirmación de la IA sobre el mundo viene con URL y la cita textual que la respalda, o se marca como "sin fuente".
 3. **Archivos planos.** Todo sigue siendo HTML/JSON legible en disco, sin bases de datos ni formatos propietarios.
 4. **Lo de NEO que funciona se queda.** Página limpia, controles que se desvanecen, autoguardado y backups diarios.
-5. **Sin inflar la app.** Si una función no sirve para escribir un ensayo, no entra.
+5. **Sin inflar la app.** Si una función no sirve para escribir, no entra.
 
 ## 4. De NEO a Mutiny
 
@@ -56,7 +57,8 @@ NEO es deliberadamente solo para novelas, y su autor rechaza funciones que lo ag
 ## 5. Arquitectura actual (referencia)
 
 - Electron 43 con JS sin framework: `main.js` (disco, IPC, export, secretos), `preload.js` (puente `window.neo`), `app.js` (~4.6k líneas, toda la UI, editor `contentEditable` nativo).
-- Biblioteca en `~/Documents/NEO Library/<book-id>/`:
+- Módulos propios de Mutiny: `ai/` (proveedores y tareas, en el proceso principal), `ai-ui.js`, `versions.js`, `reorder.js`, `voice.js`, `templates.js`, `theme.js` + `omarchy.js`, `appmenu.js`, `sources-lookup.js`, `i18n.js`.
+- Biblioteca en `~/Documents/Mutiny Library/<book-id>/` (era `NEO Library`):
   - `book.json`: metadatos y `chapterOrder`
   - `chapters/<id>.html`
   - `notes.html`, `outline.html`
@@ -206,13 +208,17 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 1. **Idioma** (nuevo, primer paso): Español / English. Define el idioma de la UI y el del corrector por defecto.
 2. **Quién eres:** nombre (autor en cada exportación) y seudónimo o firma opcional.
 3. **Cómo escribes** (equivalente a pantser/plotter):
-   - **Descubro escribiendo:** los ensayos nuevos abren en página en blanco.
-   - **Parto de un esquema:** los ensayos nuevos abren en Outline con la plantilla Peterson (tesis + frases-esqueleto).
-4. **Cómo se ve la página:** tipografía con muestra WYSIWYG. Se quita la elección de capitulares.
-5. **Asistente de IA** (nuevo, **opcional y saltable**):
+   - **Descubro escribiendo:** los textos nuevos abren en página en blanco.
+   - **Parto de un esquema:** los textos nuevos abren en el Esquema con las preguntas guía de su plantilla.
+4. **Tema** (beta.3): tarjetas con muestra de color; se aplica al instante.
+5. **¿Qué escribes?** (beta.4): casillas por tipo de texto; se crea un estante por cada uno.
+6. **Cómo se ve la página:** tipografía con muestra WYSIWYG. Se quita la elección de capitulares.
+7. **Asistente de IA** (nuevo, **opcional y saltable**):
    - Si detecta `claude` en el PATH, ofrece "Usar Claude Code" con un botón para probar la conexión.
    - Si no, muestra "Configurar después" o "Usar una API key" (a partir de la fase 3b).
    - Una línea clara sobre qué hace la IA y que nunca cambia tu texto sin permiso.
+
+8. **Tu voz** (fase 5a): importar textos propios a Mi voz; saltable.
 
 ### 6.9 Idiomas (i18n)
 
@@ -220,6 +226,38 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - Aplica a cadenas de la UI, menús nativos (`main.js`), toasts, onboarding y textos de exportación ("Fuentes" / "Sources").
 - Las instrucciones a la IA también dependen del idioma: la IA responde en el idioma del ensayo.
 - Contribuir un idioma nuevo = añadir un JSON.
+- Desde la beta.4 la interfaz dice **"texto"** donde aplica a cualquier tipo; "ensayo" queda para lo que es de ensayos.
+
+### 6.10 Tipos de texto y plantillas (beta.4)
+
+- Cada texto tiene `book.kind` (tipo) y `book.form` (forma); sin ellos es Ensayo · Peterson. Todo vive en `templates.js`.
+
+| Tipo | Formas | La barra mide | Datos extra |
+|---|---|---|---|
+| Ensayo | Peterson, Dialéctico, Toulmin, Ellos dicen / Yo digo, Pirámide (SCQA), Exploratorio, Cinco párrafos | palabras | — |
+| Escritura libre | Libre, Páginas matutinas (meta 750) | palabras | — |
+| Blog | Opinión, Tutorial, Lista | palabras + minutos de lectura (220 ppm) | meta-descripción, slug |
+| Newsletter | Carta personal, Resumen | palabras + minutos de lectura | asunto, pre-encabezado |
+| Guion | Video largo, Video corto, Podcast | minutos en voz alta (140 ppm) vs. duración objetivo | duración objetivo |
+| Discurso | Charla, Brindis | minutos en voz alta vs. duración objetivo | duración objetivo |
+
+- **Esquema:** cada forma tiene su esqueleto de preguntas guía; la escritura libre no tiene. Si el texto está vacío, el Esquema ofrece "Usar el esquema…". La forma se cambia en Metas y ajustes sin tocar el texto.
+- **Nuevo texto:** diálogo tipo → forma; recuerda la última elección.
+- **Estantes por tipo** (`shelf.textKind`): "+ Nuevo" manda el texto al primer estante de su tipo y lo crea si falta. El "+" de un estante lo deja ahí. "+ Estante" crea uno general (`any`). Los estantes nuevos van arriba de Mi voz; los viejos cuentan como de ensayos.
+- **IA por plantilla:** el renderer solo manda `{kind, form}`. `ai/tasks.js` los valida contra una lista fija (lo desconocido cae en Ensayo · Peterson) y arma las instrucciones:
+  - crítica con categorías por tipo (Toulmin: afirmación, pruebas, garantía, límites, refutación; guion: gancho, atención, al oído, ritmo…);
+  - en Exploratorio y Escritura libre, **preguntas en vez de crítica**;
+  - versiones y chat saben qué texto es, y en lo hablado piden frases fáciles de decir.
+- **Exportaciones:**
+  - Markdown para web, con front matter (título, descripción, slug, autor, fecha, idioma);
+  - copiar con formato (HTML + Markdown al portapapeles) para WordPress, Ghost, Medium o Substack;
+  - PDF de lectura en letra grande para guiones y discursos.
+
+### 6.11 Temas (beta.3)
+
+- `library.appearance`: `auto` (Omarchy, solo Linux) · `mutiny` · `blackgold` · `black-arch` · `matrix` · `tokyo-night` · `city-783`.
+- Paletas tomadas de los `colors.toml` de esos temas de Omarchy, pasadas por el mismo conversor que el tema del sistema. Conservan las tipografías y las esquinas redondeadas de Mutiny. BlackGold usa el dorado como acento; City 783 usa el rojo claro para la IA.
+- Se eligen en el onboarding, en Metas y ajustes (tarjetas con muestra) y en Ver → Tema (radio). La hoja Noche toma el tema; Papel queda blanca.
 
 ## 7. Fases y criterios de aceptación
 
@@ -316,6 +354,41 @@ Se conserva el flujo de NEO: pocas preguntas, una sola vez, todo modificable des
 - [x] Versión **0.9.0-beta.1**, README público, CHANGELOG, `scripts/release.sh`.
 - [x] Publicado (2026-09-27): repo público con Secret scanning, Push protection y reporte privado de vulnerabilidades; release **v0.9.0-beta.1**. TUTORIAL.md reescrito (el de NEO queda en NEO-TUTORIAL.md).
 - [ ] Más adelante: paquete de AUR.
+- [x] Acciones de GitHub en Node 24 (checkout, setup-node y upload-artifact v7), 2026-09-30. La app se compila con Node 22.
+
+### Beta.2 — Aspecto, ajustes y paneles ✅ (2026-09-28)
+- [x] "La de Mutiny" con la paleta Aetheria: fondo `#0e091d`, texto turquesa y acento rojo `#BE3F50`. Hoja Noche con párrafos turquesa y títulos gris claro, respetando las tipografías.
+- [x] Menú con tema propio también en "La de Mutiny" (Linux y Windows).
+- [x] Metas y ajustes y Ajustes del asistente, ordenados por secciones.
+- [x] Revisión de UX (17 hallazgos), sobre todo en el panel de notas y la IA:
+  - filtros siempre visibles, y cada nota dice en qué sección está;
+  - las críticas largas se pliegan y las notas propias crecen al escribir;
+  - las notas resueltas se conservan (Reabrir / Borrar, con Ctrl+Z);
+  - clic en ✦ o ⚑ señala su nota;
+  - Versiones marca las palabras que cambió la IA;
+  - Investigar explica cuándo el proveedor no tiene web;
+  - Citar aquí / Guardar en Fuentes, e Insertar desde el chat.
+- [x] Los paneles empujan la hoja. Pestañas en los bordes (☰ y ⚑ con el número de notas abiertas) y Ctrl+[ / Ctrl+].
+- [x] Icono nuevo: M en pixel art (variante C), en todas las plataformas.
+
+### Beta.3 — Temas y clic derecho ✅ (2026-09-30)
+- [x] Seis temas (§6.11).
+- [x] "Interfaz más clara" activada por defecto, con ✓ en Ver.
+- [x] Atajos reales en el menú Asistente.
+- [x] Pestañas de los bordes más grandes, con el color del acento.
+- [x] Chincheta SVG para fijar el panel derecho.
+- [x] Las notas mandadas a Notas quedan separadas por un renglón en blanco.
+- [x] **Clic derecho** en el borrador:
+  - portapapeles, marca, cita, Para después, acciones del asistente y ortografía, con los atajos a la vista;
+  - marca y cita también en Edición.
+- [x] Una marca nueva abre su nota en el panel derecho.
+- [x] Arreglo: restaurar desde Para después ya no mete el texto en la línea `***` cuando se había cortado al inicio de un párrafo (`anchorAtStart`).
+
+### Beta.4 — Plantillas ✅ (2026-09-30)
+- [x] Tipos de texto y formas, estantes por tipo, barra de lectura y voz alta, datos por tipo, exportaciones para web y la IA según la plantilla (§6.10).
+- [x] Onboarding: paso "¿Qué escribes?".
+- [x] "Ensayo" → "texto" en la interfaz.
+- [x] TUTORIAL.md y TUTORIAL_ES.md reescritos, README al día.
 
 ### Notas de implementación — fase 1 (2026-09-25)
 
@@ -330,7 +403,18 @@ Decisiones tomadas en el camino que no estaban en el plan:
 - **Bugs heredados de NEO corregidos:** temporizadores de guardado que se disparaban tras cerrar un libro (error visible y posible escritura en el libro equivocado), y HTML exportado sin escapar el título.
 
 ### Fase final — Pulido de la experiencia de usuario
-- [ ] Revisión completa de la UX una vez que todas las funciones estén en su lugar (pedido 2026-09-26).
+- [ ] Revisión completa de la UX una vez que todas las funciones estén en su lugar (pedido 2026-09-26). Ahora que hay plantillas, temas y un onboarding de 8 pasos, revisar sobre todo la primera experiencia.
+
+### Lo que falta (orden sugerido, 2026-09-30)
+1. **Pulido final de UX** (arriba).
+2. **Verificar fuentes** (versión futura, arriba).
+3. **Paquete de AUR** (fase 6).
+4. **1.0:**
+   - sin errores conocidos;
+   - capturas en el README;
+   - quizá una página en worldmutiny.com.
+
+Ideas abiertas: fondo con imagen en la hoja (platicado, no decidido).
 
 ## 8. Riesgos
 
@@ -363,4 +447,4 @@ Decisiones tomadas en el camino que no estaban en el plan:
 
 ## 11. Preguntas abiertas
 
-1. Confirmar repo independiente frente a fork de GitHub (§9), el nombre del repo (`mutiny` o `mutiny-write`) y si empieza privado.
+1. ~~Confirmar repo independiente frente a fork de GitHub (§9), el nombre del repo y si empieza privado.~~ Resuelto (2026-09-27): repo independiente y público, `github.com/worldmutiny/mutiny`.
