@@ -7,6 +7,9 @@
 - The Assistant menu shows its shortcuts like every other menu.
 - The pull tabs on the edges are bigger and wear the theme's accent; pinning the right pane is a push-pin that shows whether it's pinned.
 - Notes sent to the Notes page are kept one blank line apart.
+- **Right-click menu** in the Draft: cut, copy and paste, add a mark, cite a source, send to Later, and the assistant's actions — each with its shortcut — plus spelling suggestions. Add a mark and Cite a source are also in the Edit menu.
+- A new mark opens its note in the right pane, ready to write in.
+- Restoring from Later no longer drops a passage into the *** line when it had been cut from the start of a paragraph.
 
 ## 0.9.0-beta.2
 
