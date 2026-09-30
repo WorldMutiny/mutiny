@@ -100,6 +100,12 @@ input, select, textarea { font-family: inherit; }
   border-radius: calc(6px * var(--round)); padding: 5px 12px; font-size: 12px;
 }
 #add-shelf-btn:hover { color: var(--accent); border-color: var(--accent); }
+/* + New: the main way in, so it wears the accent */
+#new-text-btn {
+  background: var(--accent); border: 1px solid var(--accent); color: var(--accent-ink);
+  border-radius: calc(6px * var(--round)); padding: 5px 14px; font-size: 12px; font-weight: 600;
+}
+#new-text-btn:hover { filter: brightness(1.12); }
 
 .shelf { margin-bottom: 44px; }
 .shelf.dragging { opacity: 0.4; }
@@ -1430,3 +1436,29 @@ body.reordering .edge-tab { display: none; }
 .tc-system .tc-dot { background: conic-gradient(#7aa2f7, #3CBF5C, #BFA75D, #BE3F50, #7aa2f7); }
 .st-theme { grid-column: 1 / -1; margin-bottom: 14px; }
 #fr-themes { margin-top: 14px; }
+
+/* ---- New text: a type, then its form (templates.js) ---- */
+.new-text-modal { width: min(720px, 94vw); max-height: 90vh; overflow-y: auto; }
+.nt-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.nt-type, .nt-form {
+  text-align: left; background: var(--bg); border: 1.5px solid var(--line); color: var(--fg);
+  border-radius: calc(8px * var(--round)); padding: 10px 12px; cursor: pointer; font: inherit;
+}
+.nt-type strong, .nt-form strong { display: block; font-size: 14px; margin-bottom: 3px; color: var(--fg-strong); }
+.nt-type span, .nt-form span { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.nt-type:hover:not(:disabled), .nt-form:hover { border-color: var(--line-strong); }
+.nt-type.sel, .nt-form.sel { border-color: var(--accent); background: var(--accent-bg); }
+.nt-type.sel strong, .nt-form.sel strong { color: var(--accent); }
+.nt-type:disabled { opacity: 0.45; cursor: default; }
+.nt-type:focus-visible, .nt-form:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nt-forms-title { margin: 18px 0 8px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.nt-forms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (max-width: 620px) { .nt-types { grid-template-columns: repeat(2, 1fr); } .nt-forms { grid-template-columns: 1fr; } }
+
+/* the outline says which template it follows, and offers its skeleton while the page is blank */
+.ol-template {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 18px; font-family: var(--ui-font); font-size: 11px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--page-muted, var(--muted));
+}
+.ol-use-template { text-transform: none; letter-spacing: 0; font-size: 13px; }

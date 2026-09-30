@@ -720,7 +720,12 @@ async function refreshCover(meta, el) {
 }
 
 async function createBookOnShelf(shelf) {
+  const tpl = await pickTemplate(library.lastTemplate);
+  if (!tpl) return;
+  library.lastTemplate = tpl;
   const meta = await window.neo.createBook({ author: displayAuthor() });
+  meta.kind = tpl.kind;
+  meta.form = tpl.form;
   meta.language = library.language || 'en';
   meta.tabNames = { ...(library.tabDefaults || {}) };
   await window.neo.writeBookMeta(meta.id, meta);
@@ -752,6 +757,8 @@ function shelfAutoScrollStep() {
   view.addEventListener('dragend', () => { shelfScrollDir = 0; });
   view.addEventListener('dragleave', (e) => { if (!e.relatedTarget) shelfScrollDir = 0; });
 }
+
+$('#new-text-btn').onclick = () => createBookOnShelf(firstEssayShelf());
 
 $('#add-shelf-btn').onclick = async () => {
   library.shelves.push({
@@ -853,8 +860,7 @@ async function openBook(bookId) {
 
   // Outline-first writers land on a skeleton for a brand-new essay
   const isNew = book.chapterOrder.length === 0;
-  if (isNew && library.writingStyle === 'plotter') {
-    applyEssayTemplate();
+  if (isNew && library.writingStyle === 'plotter' && applyTemplateOutline()) {
     switchTab('outline');
   } else {
     switchTab('manuscript');
@@ -2695,29 +2701,34 @@ function switchTab(name) {
 
 const secLetter = (i) => String.fromCharCode(65 + (i % 26));
 
-// The structured-writing skeleton (after Jordan Peterson's essay method):
+// The structured-writing skeleton, from the book's template (templates.js):
 // an essay is outlined as ten-odd sentences before it is written. Each
 // line starts empty with a guiding question as its placeholder, so nothing
 // reaches the manuscript until the writer puts a sentence of their own there.
-const ESSAY_TEMPLATE = [
-  { point: 'tpl.thesis', paras: ['tpl.thesis.why', 'tpl.thesis.reader'] },
-  { point: 'tpl.reason1', paras: ['tpl.evidence', 'tpl.example'] },
-  { point: 'tpl.reason2', paras: ['tpl.evidence', 'tpl.example'] },
-  { point: 'tpl.objection', paras: ['tpl.objection.fair', 'tpl.objection.answer'] },
-  { point: 'tpl.conclusion', paras: ['tpl.conclusion.next'] }
-];
-
-function applyEssayTemplate() {
+function applyTemplateOutline() {
+  const { kind, form } = bookTemplate();
+  const skeleton = outlineFor(kind, form);
+  if (!skeleton) return false;
   book.chapterNotes = book.chapterNotes || {};
   book.sectionNotes = book.sectionNotes || {};
   book.outlinePrompts = {};
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  ESSAY_TEMPLATE.forEach((sec, i) => {
+  skeleton.forEach((sec, i) => {
     const chId = createChapterAt(i);
     book.outlinePrompts[chId] = t(sec.point);
     book.sectionNotes[chId] = sec.paras.map((ph) => ({ id: 'sec-' + uid(), text: '', ph: t(ph) }));
   });
   saveMeta();
+  return true;
+}
+
+// nothing written yet — neither in the outline nor in the draft
+function outlineIsBlank() {
+  if (!book.chapterOrder.length) return true;
+  if (book.chapterOrder.length > 1) return false;
+  const chId = book.chapterOrder[0];
+  const body = document.querySelector(`.chapter[data-id="${chId}"] .chapter-body`);
+  return !(book.chapterNotes || {})[chId] && !((book.sectionNotes || {})[chId] || []).length && !(body && body.textContent.trim());
 }
 
 function renderOutline(focusTarget) {
@@ -2733,6 +2744,23 @@ function renderOutline(focusTarget) {
       wrap.appendChild(outlineLine('section', chId, sec.id, j, secLetter(j), sec.text, sec.ph));
     });
   });
+
+  const { kind, form } = bookTemplate();
+  const head = document.createElement('div');
+  head.className = 'ol-template';
+  head.textContent = templateName(kind, form);
+  wrap.prepend(head);
+  if (outlineFor(kind, form) && outlineIsBlank()) {
+    const use = document.createElement('button');
+    use.className = 'ol-use-template btn-quiet';
+    use.textContent = t('outline.useTemplate', { name: t('form.' + kind + '.' + form) });
+    use.onclick = async () => {
+      // a blank first section (from the draft's start) gives way to the skeleton
+      if (book.chapterOrder.length === 1) await deleteChapterQuiet(book.chapterOrder[0]);
+      if (applyTemplateOutline()) { renderChapters(); renderOutline(); scheduleNavRefresh(); }
+    };
+    head.appendChild(use);
+  }
 
   const hint = document.createElement('div');
   hint.className = 'ol-hint';
@@ -4387,6 +4415,14 @@ function statsChartSvg() {
   </div>`;
 }
 
+// type · form for this essay, grouped by type (only the types that are ready)
+function templateSelect() {
+  const cur = bookTemplate();
+  return `<select id="st-template">${TEMPLATE_TYPES.filter((ty) => TEMPLATE_READY.has(ty.id)).map((ty) =>
+    `<optgroup label="${escHtml(t('type.' + ty.id))}">${ty.forms.map((f) =>
+      `<option value="${ty.id}/${f}"${ty.id === cur.kind && f === cur.form ? ' selected' : ''}>${escHtml(t('form.' + ty.id + '.' + f))}</option>`).join('')}</optgroup>`).join('')}</select>`;
+}
+
 function openStats() {
   const hasBook = !!book;
   const today = hasBook ? (book.dailyCounts || {})[todayStr()] : null;
@@ -4425,6 +4461,7 @@ function openStats() {
         <h3>${t('stats.secWriting')}</h3>
         <div class="st-grid">
           ${hasBook ? field(t('stats.lang'), langSel('st-lang', spellLang()), ` title="${t('stats.langNote')}"`) : ''}
+          ${hasBook ? field(t('stats.template'), templateSelect(), ` title="${t('stats.templateNote')}"`) : ''}
           ${field(t('stats.newEssays'), `<select id="st-style"><option value="pantser"${library.writingStyle !== 'plotter' ? ' selected' : ''}>${t('stats.pantser')}</option><option value="plotter"${library.writingStyle === 'plotter' ? ' selected' : ''}>${t('stats.plotter')}</option></select>`)}
         </div>
       </section>
@@ -4452,6 +4489,13 @@ function openStats() {
     library.dayEndsAt = parseInt(bd.querySelector('#st-dayends').value, 10) || 0;
     library.writingStyle = bd.querySelector('#st-style').value;
     if (hasBook) {
+      const [kind, form] = bd.querySelector('#st-template').value.split('/');
+      const cur = bookTemplate();
+      if (kind !== cur.kind || form !== cur.form) {
+        book.kind = kind;
+        book.form = form;
+        if (currentTab === 'outline') renderOutline();
+      }
       book.wordGoal = parseInt(bd.querySelector('#st-book').value, 10) || 0;
       const lang = bd.querySelector('#st-lang').value;
       if (lang !== spellLang()) {
