@@ -554,6 +554,7 @@ ipcMain.handle('fullscreen:escape', (e) => {
 async function renderPDF(html) {
   // the export is static HTML: no script runs while it prints
   const pdfWin = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } });
+  lockPermissions(pdfWin.webContents.session);
   // Letter is a North American habit; most of the world prints A4.
   const letterCountries = ['US', 'CA', 'MX', 'PH'];
   try {
@@ -604,7 +605,8 @@ ipcMain.handle('email:draft', async (_e, { to, subject, body, html, defaultName,
   const exportsDir = path.join(LIBRARY_DIR, 'Exports');
   if (!fs.existsSync(exportsDir)) fs.mkdirSync(exportsDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const file = path.join(exportsDir, `${defaultName}-${stamp}.pdf`);
+  const safe = String(defaultName || 'draft').replace(/[^\p{L}\p{N} _.-]/gu, '').replace(/^\.+/, '').slice(0, 80) || 'draft';
+  const file = path.join(exportsDir, `${safe}-${stamp}.pdf`);
   fs.writeFileSync(file, await renderPDF(html));
 
   if (method === 'gmail') {
@@ -812,6 +814,8 @@ function logError(source, err) {
   try {
     ensureLibrary();
     const line = `[${new Date().toISOString()}] [${source}] ${err && err.stack ? err.stack : String(err)}\n`;
+    // past 1 MB the older half goes: a log, not an archive
+    try { if (fs.statSync(ERROR_LOG()).size > 1024 * 1024) fs.writeFileSync(ERROR_LOG(), fs.readFileSync(ERROR_LOG(), 'utf8').slice(-512 * 1024)); } catch { /* no log yet */ }
     fs.appendFileSync(ERROR_LOG(), line);
   } catch { /* never let logging crash the app */ }
 }
@@ -875,7 +879,19 @@ app.on('web-contents-created', (_e, contents) => {
   contents.on('will-attach-webview', (ev) => ev.preventDefault());
 });
 
+// The windows only ever load Mutiny's own files. Anything they try to fetch
+// from the network is refused here — every connection Mutiny makes (the
+// assistant, source lookup, the update check) goes from the main process,
+// on purpose. Cookies have no use at all, so any left over are cleared.
+function lockNetwork(session) {
+  if (session.__mutinyLocked) return;
+  session.__mutinyLocked = true;
+  session.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] }, (_details, callback) => callback({ cancel: true }));
+  session.clearStorageData({ storages: ['cookies'] }).catch(() => {});
+}
+
 function lockPermissions(session) {
+  lockNetwork(session);
   session.setPermissionRequestHandler((_wc, permission, callback) => callback(ALLOWED_PERMISSIONS.has(permission)));
   session.setPermissionCheckHandler((_wc, permission) => ALLOWED_PERMISSIONS.has(permission));
 }
@@ -894,17 +910,15 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       webviewTag: false,
-      // The engine is available, but every editable element starts with
-      // spellcheck="false" — NEO never nags. A spellcheck pass is a
-      // deliberate act (Edit → Spellcheck Pass), not a klaxon.
-      spellcheck: true
+      // Mutiny spellchecks with its own dictionaries (spell:* below). The
+      // engine's checker stays off: switched on, Chromium downloads a
+      // dictionary from Google's servers on the first run.
+      spellcheck: false
     }
   });
   lockPermissions(win.webContents.session);
   win.loadFile('index.html');
 
-  // NEO does its own spellchecking (see spell:* handlers) — the engine's
-  // checker proved unreliable at scanning existing text, so it stays off
   win.webContents.session.setSpellCheckerEnabled(false);
 }
 
@@ -1348,6 +1362,14 @@ function checkForUpdates() {
 }
 
 app.whenReady().then(() => {
+  // before any window: Chromium's spellchecker off for good, and its dictionary
+  // download pointed nowhere — otherwise it fetches one from Google on first run
+  try {
+    const { session } = require('electron');
+    session.defaultSession.setSpellCheckerDictionaryDownloadURL('https://spellcheck.invalid/');
+    session.defaultSession.setSpellCheckerEnabled(false);
+    lockNetwork(session.defaultSession);
+  } catch (err) { logError('spell-off', err); }
   // Packaged builds get name/icon from electron-builder; this covers `npm start`.
   try {
     const devIcon = path.join(__dirname, 'build', 'icon.png');

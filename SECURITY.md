@@ -1,6 +1,6 @@
 # Security
 
-Mutiny is a local app: your essays, notes and sources are plain files in your own library folder, and nothing leaves your computer unless you use the assistant or look up a source. Once a day it also reads the public list of releases on GitHub to tell you about new versions (you can turn that off in the settings); nothing about you is sent.
+Mutiny is a local app: your texts, notes and sources are plain files in your own library folder, and nothing leaves your computer unless you use the assistant or look up a source. Once a day it also reads the public list of releases on GitHub to tell you about new versions (you can turn that off in the settings); nothing about you is sent.
 
 ## API keys
 
@@ -15,11 +15,15 @@ Mutiny is a local app: your essays, notes and sources are plain files in your ow
 
 ## The app
 
-- The window loads only Mutiny's own files under a strict Content-Security-Policy (no remote scripts, no network access from the page), runs sandboxed with context isolation, never navigates away or opens windows, and grants no permissions beyond local fonts and clipboard writes.
+- The windows load only Mutiny's own files under a strict Content-Security-Policy (no remote scripts, no network access from the page), run sandboxed with context isolation, never navigate away or open windows, and get no permissions beyond local fonts and clipboard writes.
+- **The windows can't reach the network at all**: every http(s)/ws request from them is refused, and cookies are cleared at start. Every connection Mutiny makes — the assistant, source lookup, the update check — comes from the main process, on purpose. Chromium's own spellchecker is off (Mutiny ships its own dictionaries), so it never downloads one from Google.
+- The manual (Help → Manual) is a separate window whose bridge can only read the manual's text and open http(s) links.
 - Every file request from the page is validated: ids are plain tokens, file names come from fixed lists, paths must stay inside the library.
 - Source lookups refuse this computer and the local network (every redirect hop is checked).
 - Pasted HTML is parsed in an inert document, so nothing in it runs or loads.
 - Packaged builds disable Electron's run-as-Node mode, `NODE_OPTIONS` and `--inspect`, and load the app only from its archive.
+- The error log (`neo-errors.log` in the library) keeps error messages, not your text, and trims itself past 1 MB.
+- What's stored where, and what each feature sends, is listed in the manual: [TUTORIAL.md](TUTORIAL.md#whats-kept-and-where).
 
 ## Reporting
 

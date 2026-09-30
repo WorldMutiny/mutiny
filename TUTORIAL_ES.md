@@ -229,6 +229,26 @@ Todo se guarda solo, constantemente, en archivos normales dentro de **Documentos
 
 **Versiones nuevas**: una vez al día Mutiny revisa si hay una versión nueva y te avisa. Para actualizar, descarga la nueva e instálala encima; tus textos se conservan. El aviso se apaga en Metas y ajustes.
 
+### Qué se guarda y dónde
+
+| Dónde | Qué |
+|---|---|
+| **Documentos/Mutiny Library** | Tus textos (una carpeta por texto: secciones, notas, esquema, fuentes, *Para después* y el chat del asistente de ese texto), tu perfil de estilo `estilo.md`, las copias diarias (*Backups*), los PDF de "Enviarme el borrador" (*Exports*) y un registro de errores (`neo-errors.log`, sin tu texto) |
+| **La carpeta de la app** (Linux `~/.config/Mutiny`, Mac `~/Library/Application Support/Mutiny`, Windows `%APPDATA%\Mutiny`) | Tus API keys en `secrets.json`, **cifradas con el llavero de tu sistema**; una carpeta de trabajo vacía para el asistente (`ai-workspace`); y las cachés propias del motor de la ventana |
+
+Nada de esto se sube a ningún lado: Mutiny no tiene cuentas, ni nube, ni estadísticas de uso.
+
+### Qué sale de tu computadora
+
+Las ventanas de Mutiny **no pueden conectarse a internet**. Solo salen datos cuando tú usas una de estas funciones:
+
+- **El asistente**: el texto con el que le pides trabajar va al servicio que elegiste (Claude Code → Anthropic, Codex → OpenAI, la API de Anthropic o el servicio compatible que configures). Mutiny no guarda nada en la nube, y a Claude Code y Codex los lanza en modo solo lectura y **sin guardar la conversación**. Lo que cada proveedor haga con tu texto —si lo conserva, cuánto tiempo, si lo usa para entrenar— **depende de su política y de la configuración de tu cuenta**; revísala con él. Con Ollama o llama.cpp en tu propia máquina, nada sale.
+- **Buscar una fuente** (URL, DOI o ISBN): pide los datos a esa página, a Crossref, Open Library o Google Books. Nunca a tu computadora ni a tu red local.
+- **El aviso de versiones**: una vez al día lee la lista pública de versiones en GitHub, sin enviar nada tuyo. Se apaga en Metas y ajustes.
+- **Enviarme el borrador** y los **enlaces**: se abren en tu correo o tu navegador; lo que se envía, lo envías tú.
+
+Procesos que Mutiny lanza en tu sistema: el programa de **Claude Code** o **Codex**, solo mientras el asistente trabaja con ellos; en Omarchy, los comandos que leen tu tema (`omarchy-theme-color`, `omarchy-font-current`); en Mac, *osascript* para abrir Mail. Nada más.
+
 ## 17. Qué se quitó de NEO (y por qué)
 
 Mutiny es un fork: nació de NEO, que está hecho para novelistas. Esto es lo que dejó atrás:

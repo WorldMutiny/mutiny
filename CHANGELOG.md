@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1 — security and privacy
+
+From a full audit of the code after 1.0:
+
+- **The windows can't reach the internet at all** any more: every web request from them is refused, and cookies are cleared at start. Everything Mutiny sends — to the assistant, for a source lookup, the daily update check — goes from the main process, on purpose.
+- Chromium's own spellchecker is off for good, so the first run no longer downloads a dictionary from Google's servers (Mutiny has always used its own).
+- Electron 43.7.7, with the fix for a sandboxed-preload advisory; a bundled URL parser updated. `npm audit` reports nothing.
+- "Email Draft to Myself" names its PDF itself, and the error log trims itself past 1 MB.
+- The manual gains **What's kept, and where** and **What leaves your computer**, including that what each AI provider keeps depends on its own policy.
+
 ## 1.0.0 — first stable release
 
 Everything from the 0.9 betas — essays and other texts with their templates, sources and citations, Reorder and Versions, the optional assistant that follows your template, My voice, six themes and the Omarchy edition — now considered stable. New since 0.9.0-beta.4:

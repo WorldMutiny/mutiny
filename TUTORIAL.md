@@ -233,6 +233,26 @@ Everything saves by itself, constantly, into plain files in **Documents/Mutiny L
 
 **New versions**: once a day Mutiny checks whether there's a newer version and tells you. To update, download it and install it over the old one; your texts are kept. You can turn the check off in Goals & Settings.
 
+### What's kept, and where
+
+| Where | What |
+|---|---|
+| **Documents/Mutiny Library** | Your texts (one folder per text: sections, notes, outline, sources, *Later* and that text's assistant chat), your style profile `estilo.md`, the daily copies (*Backups*), the "Email Draft" PDFs (*Exports*) and an error log (`neo-errors.log`, without your text) |
+| **The app's folder** (Linux `~/.config/Mutiny`, Mac `~/Library/Application Support/Mutiny`, Windows `%APPDATA%\Mutiny`) | Your API keys in `secrets.json`, **encrypted by your system's keychain**; an empty working folder for the assistant (`ai-workspace`); and the window engine's own caches |
+
+None of it is uploaded anywhere: Mutiny has no accounts, no cloud and no usage statistics.
+
+### What leaves your computer
+
+Mutiny's windows **cannot connect to the internet**. Data only leaves when you use one of these:
+
+- **The assistant**: the text you ask it to work on goes to the service you chose (Claude Code → Anthropic, Codex → OpenAI, the Anthropic API, or the compatible service you set up). Mutiny keeps nothing in the cloud, and it runs Claude Code and Codex read-only and **without saving the conversation**. What each provider does with your text — whether it keeps it, for how long, whether it trains on it — **depends on its policy and your account settings**; check with them. With Ollama or llama.cpp on your own machine, nothing leaves.
+- **Looking up a source** (URL, DOI or ISBN): asks that page, Crossref, Open Library or Google Books for its details. Never your computer or your local network.
+- **The update notice**: once a day it reads the public list of releases on GitHub, sending nothing of yours. Turn it off in Goals & Settings.
+- **Email Draft** and **links**: they open in your email or your browser; what gets sent, you send.
+
+Processes Mutiny starts on your system: the **Claude Code** or **Codex** program, only while the assistant works with them; on Omarchy, the commands that read your theme (`omarchy-theme-color`, `omarchy-font-current`); on a Mac, *osascript* to open Mail. Nothing else.
+
 ## 17. What was taken out of NEO (and why)
 
 Mutiny is a fork: it grew out of NEO, which is made for novelists. This is what it left behind:
