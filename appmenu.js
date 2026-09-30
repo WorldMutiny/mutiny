@@ -81,6 +81,7 @@ function buildDropdown(items, depth) {
     row.setAttribute('role', 'menuitem');
     const label = document.createElement('span');
     label.textContent = it.label;
+    if (it.checked !== undefined) { row.classList.add('am-check'); if (it.checked) row.classList.add('checked'); }
     const right = document.createElement('span');
     right.className = 'am-accel';
     right.textContent = it.items ? '›' : (it.accel || '');

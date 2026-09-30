@@ -1227,6 +1227,8 @@ body.omarchy #reorder-paper .ro-meta { color: var(--muted); }
 #appmenu .am-item { position: relative; display: flex; justify-content: space-between; gap: 24px; padding: 6px 14px; white-space: nowrap; }
 #appmenu .am-item.sel { background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--accent); }
 #appmenu .am-item .am-accel { color: var(--muted); }
+#appmenu .am-item.am-check > span:first-child::before { content: ''; display: inline-block; width: 1.3em; }
+#appmenu .am-item.am-check.checked > span:first-child::before { content: '✓'; }
 #appmenu .am-item.sel .am-accel { color: inherit; }
 #appmenu .am-item > .am-drop { top: -5px; left: 100%; }
 #appmenu .am-sep { height: 1px; margin: 4px 0; background: var(--line-soft); }
@@ -1368,17 +1370,22 @@ body.omarchy #counters { gap: 10px; }
 /* ---- pull tabs at the edges: the panes are there (beta.2) ---- */
 .edge-tab {
   position: fixed; top: 50%; transform: translateY(-50%); z-index: 65;
-  width: 20px; padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  background: var(--pane); color: var(--fg-2); border: 1px solid var(--line-soft);
-  font-size: 12px; cursor: pointer; opacity: 0.45; transition: opacity 0.15s ease, color 0.15s ease;
+  width: 30px; padding: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--pane)); color: var(--accent);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  font-size: 19px; line-height: 1; cursor: pointer; opacity: 0.8;
+  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
-.edge-tab.left { left: 0; border-left: none; border-radius: 0 calc(8px * var(--round)) calc(8px * var(--round)) 0; }
-.edge-tab.right { right: 0; border-right: none; border-radius: calc(8px * var(--round)) 0 0 calc(8px * var(--round)); }
-.edge-tab:hover, .edge-tab:focus-visible { opacity: 1; color: var(--accent); outline: none; }
-.edge-tab.has-notes { opacity: 0.75; }
+.edge-tab.left { left: 0; border-left: none; border-radius: 0 calc(10px * var(--round)) calc(10px * var(--round)) 0; }
+.edge-tab.right { right: 0; border-right: none; border-radius: calc(10px * var(--round)) 0 0 calc(10px * var(--round)); }
+.edge-tab:hover, .edge-tab:focus-visible {
+  opacity: 1; outline: none; border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, var(--pane));
+}
+.edge-tab.has-notes { opacity: 0.95; }
 .edge-tab .et-count {
-  min-width: 16px; padding: 1px 3px; border-radius: calc(8px * var(--round));
-  background: var(--accent); color: var(--accent-ink); font-size: 10px; line-height: 1.3; text-align: center;
+  min-width: 18px; padding: 2px 4px; border-radius: calc(9px * var(--round));
+  background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 600; line-height: 1.3; text-align: center;
   font-variant-numeric: tabular-nums;
 }
 #editor-view.nav-open #nav-tab, #editor-view.side-open #side-tab { opacity: 0; pointer-events: none; }

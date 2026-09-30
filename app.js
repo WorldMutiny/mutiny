@@ -4489,7 +4489,7 @@ function applyFonts() {
   const f = library.fonts || {};
   document.documentElement.style.setProperty('--body-font', fontStack(f.body));
   document.body.classList.toggle('night', library.pageTheme === 'night');
-  document.body.classList.toggle('bright', !!library.uiBright);
+  document.body.classList.toggle('bright', library.uiBright !== false); // on unless turned off
   const size = Math.min(22, Math.max(14, library.editorFontSize || 17));
   document.documentElement.style.setProperty('--editor-size', size + 'px');
   const zoom = Math.min(1.6, Math.max(0.75, library.pageZoom || 1));
@@ -5191,7 +5191,7 @@ window.neo.onMenu(async (msg) => {
   }
   if (msg.type === 'togglePane') togglePane(msg.value);
   if (msg.type === 'uiBright') {
-    library.uiBright = !library.uiBright;
+    library.uiBright = library.uiBright === false;
     await window.neo.writeLibrary(library);
     applyFonts();
   }

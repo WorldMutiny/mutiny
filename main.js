@@ -170,10 +170,15 @@ ipcMain.handle('library:read', () => {
   return readJSON(LIBRARY_FILE, null);
 });
 
+let menuBright = true;
 ipcMain.handle('library:write', (_e, data) => {
   ensureLibrary();
   writeJSON(LIBRARY_FILE, data);
   writeCatalog();
+  // the View menu shows "Brighter Interface" as a check — keep it in step
+  if ((data && data.uiBright !== false) !== menuBright) {
+    try { buildMenu(); } catch (err) { logError('menu', err); }
+  }
   return true;
 });
 
@@ -906,6 +911,7 @@ function sendToWindow(msg) {
 }
 
 function buildMenu() {
+  menuBright = readJSON(LIBRARY_FILE, {}).uiBright !== false;
   const isMac = process.platform === 'darwin';
   // "&" marks a mnemonic outside macOS — a literal one is written "&&"
   const T = (key) => (isMac ? mt(key) : mt(key).replace(/&/g, '&&'));
@@ -1008,10 +1014,10 @@ function buildMenu() {
     {
       label: T('menu.assistant'),
       submenu: [
-        { label: T('menu.aiRewrite'), click: () => sendToWindow({ type: 'ai', action: 'rewrite' }) },
-        { label: T('menu.aiCritiqueSection'), click: () => sendToWindow({ type: 'ai', action: 'critique-section' }) },
+        { label: T('menu.aiRewrite'), accelerator: 'CmdOrCtrl+Shift+M', registerAccelerator: false, click: () => sendToWindow({ type: 'ai', action: 'rewrite' }) },
+        { label: T('menu.aiCritiqueSection'), accelerator: 'CmdOrCtrl+Shift+C', registerAccelerator: false, click: () => sendToWindow({ type: 'ai', action: 'critique-section' }) },
         { label: T('menu.aiCritiqueEssay'), click: () => sendToWindow({ type: 'ai', action: 'critique-essay' }) },
-        { label: T('menu.aiChat'), click: () => sendToWindow({ type: 'ai', action: 'chat' }) },
+        { label: T('menu.aiChat'), accelerator: 'CmdOrCtrl+Shift+A', registerAccelerator: false, click: () => sendToWindow({ type: 'ai', action: 'chat' }) },
         { type: 'separator' },
         { label: T('menu.aiSettings'), click: () => sendToWindow({ type: 'ai', action: 'settings' }) }
       ]
@@ -1041,6 +1047,8 @@ function buildMenu() {
         { type: 'separator' },
         {
           label: T('menu.brighter'),
+          type: 'checkbox',
+          checked: menuBright,
           click: () => sendToWindow({ type: 'uiBright' })
         }
       ]
@@ -1104,7 +1112,7 @@ function menuModel(items) {
     if (it.submenu) { out.push({ label, items: menuModel(it.submenu) }); continue; }
     const id = 'm' + appMenuActions.size;
     appMenuActions.set(id, it);
-    out.push({ id, label, accel: accelText(it.accelerator || ROLE_ACCEL[it.role]) });
+    out.push({ id, label, accel: accelText(it.accelerator || ROLE_ACCEL[it.role]), ...(it.type === 'checkbox' ? { checked: !!it.checked } : {}) });
   }
   return out;
 }
