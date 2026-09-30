@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0-beta.3
+
+- **Themes:** six looks — Mutiny, BlackGold, Black Arch, Matrix, Tokyo Night and City 783 (from Omarchy palettes, with Mutiny's typefaces) — plus "follow Omarchy" on Linux. Pick one when you first open Mutiny, in Goals & settings, or in View → Theme. Paper stays white.
+- **Brighter interface** is now on by default, with a check mark in the View menu.
+- The Assistant menu shows its shortcuts like every other menu.
+- The pull tabs on the edges are bigger and wear the theme's accent; pinning the right pane is a push-pin that shows whether it's pinned.
+- Notes sent to the Notes page are kept one blank line apart.
+
 ## 0.9.0-beta.2
 
 - **New look:** Mutiny's own look uses the Aetheria palette — deep violet background, teal text, red accent — and the Night page follows it (Paper stays white). The themed menu bar is now used in both looks on Linux and Windows.
