@@ -39,8 +39,8 @@ jobs:
     if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -57,7 +57,7 @@ jobs:
             sleep 1
           done
           cat "$RUNNER_TEMP/app.log"; echo "Mutiny never created its library"; exit 1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux
           path: dist/*.AppImage
@@ -72,8 +72,8 @@ jobs:
     if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -90,7 +90,7 @@ jobs:
             Start-Sleep -Seconds 1
           }
           Write-Error "Mutiny never created its library ($lib)"; exit 1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: dist/*.exe
@@ -106,8 +106,8 @@ jobs:
     if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -126,7 +126,7 @@ jobs:
             sleep 1
           done
           cat "$RUNNER_TEMP/app.log"; echo "Mutiny never created its library"; exit 1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: mac
           path: dist/*.dmg
