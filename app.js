@@ -1832,6 +1832,8 @@ function insertPlaceholder() {
   scheduleChapterSave(currentChapterId);
   renderStickies();
   scheduleNavRefresh();
+  // the note opens beside it, ready to be written; a click back in the text carries on
+  focusSticky(sid);
 }
 
 // Notes in the text: the writer's ⚑ marks and the assistant's ✦ comments,
@@ -2432,18 +2434,28 @@ function bodyPlainText(body) {
   return t;
 }
 
-function textPosToRange(body, pos) {
+// pos in the chapter's text → a caret. Where it falls between two text nodes
+// (the end of one paragraph and the start of the next), `atNext` picks the
+// start of the later one.
+function textPosToRange(body, pos, atNext = false) {
   const w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
-  let n, acc = 0;
+  let n, acc = 0, last = null;
   while ((n = w.nextNode())) {
     const len = n.textContent.length;
-    if (acc + len >= pos) {
+    last = n;
+    if (acc + len > pos || (acc + len === pos && !atNext)) {
       const r = document.createRange();
       r.setStart(n, pos - acc);
       r.collapse(true);
       return r;
     }
     acc += len;
+  }
+  if (last && acc === pos) {
+    const r = document.createRange();
+    r.setStart(last, last.textContent.length);
+    r.collapse(true);
+    return r;
   }
   return null;
 }
@@ -2487,6 +2499,7 @@ async function moveSelectionToDarlings(html, text) {
 
   let anchorPrefix = null;
   let anchorSuffix = null;
+  let anchorAtStart = false;
   if (range) {
     const startNode = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
     const startBlock = startNode && startNode.closest ? startNode.closest('p') : null;
@@ -2513,6 +2526,16 @@ async function moveSelectionToDarlings(html, text) {
       post.selectNodeContents(body);
       post.setStart(r.startContainer, r.startOffset);
       anchorSuffix = post.toString().slice(0, 60);
+      // was the cut at the very start of a paragraph? Its plain-text spot is
+      // also the end of the paragraph before, and the restore needs to know which
+      const sn = r.startContainer.nodeType === Node.TEXT_NODE ? r.startContainer.parentElement : r.startContainer;
+      const block = sn && sn.closest ? sn.closest('p') : null;
+      if (block && body.contains(block)) {
+        const lead = document.createRange();
+        lead.selectNodeContents(block);
+        lead.setEnd(r.startContainer, r.startOffset);
+        anchorAtStart = lead.toString() === '';
+      }
     }
   }
   if (chId) {
@@ -2539,6 +2562,7 @@ async function moveSelectionToDarlings(html, text) {
     chapterNum: chIdx >= 0 ? chIdx + 1 : null,
     anchorPrefix,
     anchorSuffix,
+    anchorAtStart,
     date: new Date().toISOString()
   });
   await window.neo.writeJSON(book.id, 'darlings', darlings);
@@ -3014,7 +3038,11 @@ async function restoreDarling(id) {
     const body = document.querySelector(`.chapter[data-id="${d.chapterId}"] .chapter-body`);
     const pos = body ? findDarlingPosition(body, d) : -1;
     if (body && pos !== -1) {
-      const at = textPosToRange(body, pos);
+      let at = textPosToRange(body, pos, !!d.anchorAtStart);
+      // older cuts don't know: never back into a *** line
+      if (at && d.anchorAtStart === undefined && at.startContainer.parentElement?.closest?.('p.scene-break')) {
+        at = textPosToRange(body, pos, true);
+      }
       if (at) {
         let scrollTo = at.startContainer.parentElement?.closest?.('p') || body;
         if (d.html && /<p[\s>]/i.test(d.html)) {
