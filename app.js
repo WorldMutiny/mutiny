@@ -2340,6 +2340,8 @@ $('#side-pin').onclick = () => {
   const pinned = pane.dataset.pinned === '1';
   pane.dataset.pinned = pinned ? '0' : '1';
   $('#side-pin').classList.toggle('pinned', !pinned);
+  $('#side-pin').dataset.i18nTitle = pinned ? 'side.pinTitle' : 'side.unpinTitle';
+  $('#side-pin').title = t($('#side-pin').dataset.i18nTitle);
   $('#editor-view').classList.toggle('side-pinned', !pinned);
   if (!pinned) pane.classList.add('open');
 };

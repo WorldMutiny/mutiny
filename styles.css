@@ -671,10 +671,20 @@ body.bright .spell-menu button { color: var(--fg-strong); }
   padding: 0 16px 14px; font-size: 12px; text-transform: uppercase;
   letter-spacing: 2px; color: var(--muted);
 }
+/* a push-pin: tilted and hollow = the pane closes when you leave it;
+   upright and filled = it stays open */
 #side-pin {
-  background: none; border: none; color: var(--fainter); font-size: 15px;
+  display: grid; place-items: center; width: 30px; height: 30px; padding: 0; margin: -6px -6px -6px 0;
+  background: none; border: 1px solid transparent; border-radius: calc(6px * var(--round));
+  color: var(--muted); cursor: pointer; transition: color 0.15s ease, background 0.15s ease;
 }
-#side-pin.pinned { color: var(--accent); }
+#side-pin svg {
+  width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; transform: rotate(45deg); transition: transform 0.15s ease;
+}
+#side-pin:hover { color: var(--fg-strong); background: var(--surface); }
+#side-pin.pinned { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-line); }
+#side-pin.pinned svg { transform: none; fill: currentColor; }
 .sticky {
   margin: 0 12px 12px; background: var(--note-bg); border-radius: calc(6px * var(--round));
   padding: 10px 12px; font-size: 13px; line-height: 1.45; color: var(--fg-2);
