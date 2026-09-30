@@ -979,7 +979,10 @@ function renderChapters() {
     sep.textContent = '—';
     const titleSpan = document.createElement('span');
     titleSpan.className = 'ch-title';
-    titleSpan.dataset.ph = t('section.titlePh');
+    // a section from a template's outline shows its guiding question until it has a title
+    const prompt = (book.outlinePrompts || {})[chId];
+    titleSpan.dataset.ph = prompt || t('section.titlePh');
+    if (prompt) head.classList.add('has-prompt');
     titleSpan.contentEditable = 'true';
     titleSpan.spellcheck = false;
     titleSpan.textContent = book.chapterTitles[chId] || '';
@@ -2755,6 +2758,7 @@ function switchTab(name) {
     $('#aux-title').textContent = tabName(name);
     auxEditor.hidden = false;
     auxEditor.dataset.kind = name;
+    auxEditor.dataset.ph = t('notes.ph');
     window.neo.readAux(book.id, name).then((html) => {
       auxEditor.innerHTML = html || '';
       auxEditor.focus({ preventScroll: true });
@@ -4501,7 +4505,7 @@ function templateSelect() {
   const cur = bookTemplate();
   return `<select id="st-template">${TEMPLATE_TYPES.filter((ty) => TEMPLATE_READY.has(ty.id)).map((ty) =>
     `<optgroup label="${escHtml(t('type.' + ty.id))}">${ty.forms.map((f) =>
-      `<option value="${ty.id}/${f}"${ty.id === cur.kind && f === cur.form ? ' selected' : ''}>${escHtml(t('form.' + ty.id + '.' + f))}</option>`).join('')}</optgroup>`).join('')}</select>`;
+      `<option value="${ty.id}/${f}"${ty.id === cur.kind && f === cur.form ? ' selected' : ''}>${escHtml(templateName(ty.id, f))}</option>`).join('')}</optgroup>`).join('')}</select>`;
 }
 
 // Goals & settings → This text: the details its type keeps
@@ -4871,12 +4875,15 @@ function showHelp() {
       <div class="help-grid">
         ${row(K('⌘E', 'Ctrl+E'), t('help.email'))}
         ${row(K('⌘⇧I', 'Ctrl+Shift+I'), t('help.import'))}
-        ${row(t('help.exportKey'), 'txt · md · html · pdf · docx')}
+        ${row(t('help.newKey'), t('help.new'))}
+        ${row(t('help.exportKey'), t('help.exportFormats'))}
+        ${row('F1', t('help.manual'))}
       </div>
 
       <div class="help-sec">${t('help.mouse')}</div>
       <div class="help-grid">
         ${row(t('help.dragTextKey'), t('help.dragText'))}
+        ${row(t('help.rightClickDraftKey'), t('help.rightClickDraft'))}
         ${row(t('help.rightClickKey'), t('help.rightClick'))}
         ${row(t('help.dragSectionsKey'), t('help.dragSections'))}
         ${row(t('help.dblClickKey'), t('help.dblClick'))}

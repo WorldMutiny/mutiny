@@ -662,7 +662,8 @@ function renderChat() {
   const log = view.querySelector('.chat-log');
   log.innerHTML = '';
   if (!aiEnabled()) {
-    log.innerHTML = `<div class="stickies-empty">${t('chat.off')}</div>`;
+    log.innerHTML = `<div class="stickies-empty">${t('chat.off')}<br><br><button class="btn-gold chat-turn-on">${t('chat.turnOn')}</button></div>`;
+    log.querySelector('.chat-turn-on').onclick = () => openAiSettings();
   } else if (!chatLog.length) {
     log.innerHTML = `<div class="stickies-empty">${t('chat.empty')}</div>`;
   }

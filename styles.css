@@ -578,7 +578,7 @@ body.bright .spell-menu button { color: var(--fg-strong); }
   font-family: var(--body-font); font-size: calc(var(--editor-size, 16px) * var(--page-zoom, 1)); line-height: 1.7; outline: none;
   min-height: 50vh;
 }
-#aux-editor:empty::before { content: 'Write freely…'; color: #b9b4a8; font-style: italic; }
+#aux-editor:empty::before { content: attr(data-ph); color: #b9b4a8; font-style: italic; }
 
 /* --- Structured outline tab --- */
 .ol-line { display: flex; gap: 12px; align-items: baseline; padding: 3px 0; }
@@ -892,6 +892,9 @@ body.night #paper { box-shadow: 0 4px 30px rgba(0,0,0,0.7); border: 1px solid #2
   content: attr(data-ph); letter-spacing: 0; font-weight: 400;
   font-size: 0.8em; margin-left: 10px;
 }
+/* a section from a template: its guiding question stands in for the title, in grey */
+.chapter-head.has-prompt .ch-num { display: none; }
+.chapter-head.has-prompt .ch-title:empty::before { opacity: 0.9; margin-left: 0; font-size: 1em; font-weight: 700; font-style: italic; }
 body.night .chapter-head, body.night #tp-title { color: var(--page-title, #cdc8d6); }
 body.night .chapter-head .ch-num { color: #5f596e; }
 /* the opening section flows straight on from the title — no marker */
