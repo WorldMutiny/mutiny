@@ -124,39 +124,6 @@ function split(md) {
   return out;
 }
 
-// ---------------------------------------------------------------- the pixel wordmark
-
-// 5×7 letters, drawn in bands of the accent, lightest on top (like Omarchy's)
-const GLYPHS = {
-  M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
-  U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110'],
-  T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
-  I: ['01110', '00100', '00100', '00100', '00100', '00100', '01110'],
-  N: ['10001', '11001', '10101', '10011', '10001', '10001', '10001'],
-  Y: ['10001', '10001', '01010', '00100', '00100', '00100', '00100']
-};
-function wordmark() {
-  const P = 11, GAP = 1;
-  const word = 'MUTINY';
-  const width = (word.length * (5 + GAP) - GAP) * P;
-  const css = getComputedStyle(document.documentElement);
-  const accent = css.getPropertyValue('--accent').trim() || '#BE3F50';
-  const top = css.getPropertyValue('--fg-strong').trim() || '#ffffff';
-  const bottom = css.getPropertyValue('--bg').trim() || '#000000';
-  let rects = '';
-  [...word].forEach((ch, n) => {
-    GLYPHS[ch].forEach((row, y) => {
-      // rows 0–2 lighten towards the text colour, 3 is the accent, 4–6 sink into the background
-      const fill = y < 3 ? `color-mix(in srgb, ${accent} ${55 + y * 15}%, ${top})`
-        : y === 3 ? accent : `color-mix(in srgb, ${accent} ${100 - (y - 3) * 18}%, ${bottom})`;
-      [...row].forEach((bit, x) => {
-        if (bit === '1') rects += `<rect x="${(n * (5 + GAP) + x) * P}" y="${y * P}" width="${P}" height="${P}" style="fill:${fill}"/>`;
-      });
-    });
-  });
-  $('#wordmark').innerHTML = `<svg viewBox="0 0 ${width} ${7 * P}" width="${width}" height="${7 * P}" shape-rendering="crispEdges">${rects}</svg>`;
-}
-
 // ---------------------------------------------------------------- showing
 
 function show(n, anchor) {
@@ -200,7 +167,6 @@ async function load(wanted) {
     anchors[c.slug] = k;
     for (const h of c.md.matchAll(/^#{3}\s+(.*)$/gm)) anchors[slug(h[1])] = k;
   });
-  wordmark();
   drawLangs();
   drawChapters();
   show(Math.min(keep, chapters.length - 1));

@@ -53,7 +53,7 @@ body {
 }
 #langs button.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 #brand { text-align: center; margin: 24px auto 40px; }
-#wordmark svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+#wordmark { display: block; margin: 0 auto; width: min(560px, 100%); height: auto; image-rendering: pixelated; }
 #brand-sub { margin-top: 14px; font-size: 13px; letter-spacing: 4px; color: var(--muted); }
 
 /* a chapter */

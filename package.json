@@ -92,6 +92,7 @@
       "!NEO-README.md",
       "!.github/**",
       "!Claude outputs/**",
+      "!brand/**",
       "!scripts/**",
       "!node_modules/@anthropic-ai/claude-agent-sdk-*/**"
     ],

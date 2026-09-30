@@ -1,4 +1,6 @@
-# Mutiny
+<p align="center"><img src="brand/mutiny-logo.svg" alt="Mutiny" width="520"></p>
+
+<h1 align="center">Mutiny</h1>
 
 > *"Computers aren't the thing. They're the thing that gets us to the thing."*
 

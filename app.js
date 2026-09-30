@@ -5466,7 +5466,7 @@ async function showAbout() {
   bd.className = 'modal-backdrop';
   bd.innerHTML = `
     <div class="modal" style="width:340px;text-align:center">
-      <h2 style="font-size:22px;letter-spacing:6px;margin-bottom:4px">MUTINY</h2>
+      <h2 style="margin:4px 0 6px"><img src="logo.svg" alt="Mutiny" style="width:210px;height:auto;display:block;margin:0 auto" /></h2>
       <p style="margin-top:0"><a href="#" class="about-site" style="color:var(--link);font-size:13px">worldmutiny.com</a></p>
       <p style="color:var(--muted)">${t('about.version', { v })}</p>
       <p style="font-size:13px;color:var(--faint)">${t('about.tagline')}</p>
