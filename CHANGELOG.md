@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2 — the new logo
+
+- **The MUTINY wordmark** — every letter in the same graffiti hand as the app icon's M, in red with its teal ghost — now heads About Mutiny and the manual's cover (F1).
+- **The Mutiny Manifesto** is in the repository (`MANIFESTO.md`, in English and Spanish), linked from the README: seven principles for writing with your name on it.
+- The brand files — the icon from 16 to 1024 px, the wordmark in colour, light and dark, the favicon and a short usage guide — live in `brand/`.
+
 ## 1.0.1 — security and privacy
 
 From a full audit of the code after 1.0:
