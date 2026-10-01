@@ -48,7 +48,7 @@ Todo cambio empezó como una frase que alguien tenía miedo de escribir. Mutiny 
 
 3. **Tu página es tuya.** Sin cuentas, sin nube, sin nadie leyendo por encima de tu hombro. Tus textos son archivos normales en tu computadora. Si Mutiny desapareciera mañana, cada palabra seguiría ahí.
 
-4. **La IA pregunta. Tú decides.** Un buen editor te hace pensar más. El asistente de Mutiny investiga, duda y cuestiona tu argumento. Nunca escribe tus ideas por ti y nunca cambia una palabra sin tu sí.
+4. **La IA pregunta. Tú decides.** Un buen editor te hace pensar más. El asistente de Mutiny investiga, duda y cuestiona tu argumento. Nunca escribe tus ideas por ti y nunca cambia una palabra sin que tú lo autorices.
 
 5. **Argumenta en serio.** Las opiniones son baratas; los argumentos cuestan trabajo. Mutiny te da las herramientas que los escritores siempre se ganaron a pulso: un esquema antes del borrador, fuentes que puedes citar, la objeción más fuerte de frente.
 
